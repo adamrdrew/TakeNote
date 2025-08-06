@@ -20,8 +20,8 @@ struct NoteListEntry: View {
     func deleteNote() {
 
         onDelete(note)
-        modelContext.delete(note)
-        try? modelContext.save()
+        //modelContext.delete(note)
+        //try? modelContext.save()
     }
 
     func startRename() {
@@ -62,7 +62,7 @@ struct NoteListEntry: View {
                     inDeleteMode = true
                 }
             ) {
-                Label("Delete", systemImage: "trash")
+                Label("Move to Trash", systemImage: "trash")
             }
             Button(action: {
                 startRename()
@@ -71,7 +71,7 @@ struct NoteListEntry: View {
             }
         }
         .alert(
-            "Are you sure you want to delete \(note.title)?",
+            "Are you sure you want to move\(note.title) to the trash?",
             isPresented: $inDeleteMode
         ) {
             Button("Delete", role: .destructive) {

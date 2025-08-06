@@ -37,7 +37,6 @@ struct FolderListEntry: View {
 
     var body: some View {
         HStack {
-            Image(systemName: "folder")
             if inRenameMode {
                 TextField("New Folder Name", text: $newName)
                     .focused($nameInputFocused)
@@ -45,7 +44,7 @@ struct FolderListEntry: View {
                         finishRename()
                     }
             } else {
-                Text(folder.name)
+                Label(folder.name, systemImage: folder.symbol)
                     .font(.headline)
             }
         }
@@ -64,7 +63,7 @@ struct FolderListEntry: View {
             }
 
         }
-        .alert("Are you sure you want to delete \(folder.name)?", isPresented: $inDeleteMode) {
+        .alert("Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.", isPresented: $inDeleteMode) {
             Button("Delete", role: .destructive) {
                 deleteFolder()
             }
