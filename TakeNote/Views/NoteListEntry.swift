@@ -74,7 +74,7 @@ struct NoteListEntry: View {
             "Are you sure you want to move\(note.title) to the trash?",
             isPresented: $inDeleteMode
         ) {
-            Button("Delete", role: .destructive) {
+            Button("Move to Trash", role: .destructive) {
                 deleteNote()
             }
             Button("Cancel", role: .cancel) {

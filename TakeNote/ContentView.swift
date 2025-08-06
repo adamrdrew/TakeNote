@@ -24,6 +24,7 @@ struct ContentView: View {
 
     @State private var selectedFolder: Folder?
     @State private var selectedNote: Note?
+    @State private var emptyTrashAlertVisible: Bool = false
 
     func onFolderDelete(_ deletedFolder: Folder) {
         if let trashFolder = trashFolders.first {
@@ -92,7 +93,12 @@ struct ContentView: View {
         self.selectedFolder = newFolder
     }
 
+    func showEmptyTrashAlert() {
+        emptyTrashAlertVisible = true
+    }
+    
     func emptyTrash() {
+        emptyTrashAlertVisible = false
         if let trashFolder = trashFolders.first {
             trashFolder.notes.removeAll()
             try? modelContext.save()
@@ -107,7 +113,7 @@ struct ContentView: View {
             )
             .toolbar {
                 if selectedFolder?.name == ContentView.trashFolderName && (selectedFolder?.notes.isEmpty ?? true) == false {
-                    Button(action: emptyTrash) {
+                    Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
                 }
@@ -123,6 +129,10 @@ struct ContentView: View {
             )
         } detail: {
             NoteEditor(selectedNote: $selectedNote)
+        }
+        .alert("Are you sure you want to empty the trash? This action cannot be undone.", isPresented: $emptyTrashAlertVisible) {
+            Button("Empty Trash", role: .destructive, action: emptyTrash)
+            Button("Cancel", action: { emptyTrashAlertVisible = false })
         }
         .onAppear(perform: folderInit)
     }
