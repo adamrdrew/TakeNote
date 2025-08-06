@@ -15,14 +15,14 @@ struct NoteListEntry: View {
     @State private var inDeleteMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    var onDelete : ((_ note: Note) -> Void) = { note in }
-    
+    var onDelete: ((_ deletedNote: Note) -> Void) = {Note in}
+
     func deleteNote() {
         onDelete(note)
         modelContext.delete(note)
         try? modelContext.save()
     }
-    
+
     func startRename() {
         inRenameMode = true
         newName = note.title
@@ -55,9 +55,12 @@ struct NoteListEntry: View {
         }
         .padding(10)
         .contextMenu {
-            Button(role: .destructive, action: {
-                inDeleteMode = true
-            }) {
+            Button(
+                role: .destructive,
+                action: {
+                    inDeleteMode = true
+                }
+            ) {
                 Label("Delete", systemImage: "trash")
             }
             Button(action: {
@@ -66,7 +69,10 @@ struct NoteListEntry: View {
                 Label("Rename", systemImage: "square.and.pencil")
             }
         }
-        .alert("Are you sure you want to delete \(note.title)?", isPresented: $inDeleteMode) {
+        .alert(
+            "Are you sure you want to delete \(note.title)?",
+            isPresented: $inDeleteMode
+        ) {
             Button("Delete", role: .destructive) {
                 deleteNote()
             }
