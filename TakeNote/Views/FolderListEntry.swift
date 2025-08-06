@@ -18,9 +18,9 @@ struct FolderListEntry: View {
     @State var inDeleteMode : Bool = false
 
     func deleteFolder() {
+        onDelete(folder)
         modelContext.delete(folder)
         try? modelContext.save()
-        onDelete(folder)
     }
 
     func startRename() {

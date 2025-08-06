@@ -19,17 +19,17 @@ struct ContentView: View {
 
     @State private var selectedFolder: Folder?
     @State private var selectedNote: Note?
-    
+
     func onFolderDelete(_ deletedFolder: Folder) {
         if deletedFolder != self.selectedFolder {
             return
         }
-        selectedFolder = folders.first(where: { $0.name == ContentView.defaultFolderName })
+        selectedFolder = folders.first(where: {
+            $0.name == ContentView.defaultFolderName
+        })
         selectedNote = nil
     }
-    
-    
-    
+
     func folderInit() {
         if defaultFolders.count != 0 {
             return
@@ -52,12 +52,15 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            FolderList(selectedFolder: $selectedFolder, onDelete: onFolderDelete)
-                .toolbar {
-                    Button(action: addFolder) {
-                        Label("Add Folder", systemImage: "folder.badge.plus")
-                    }
+            FolderList(
+                selectedFolder: $selectedFolder,
+                onDelete: onFolderDelete
+            )
+            .toolbar {
+                Button(action: addFolder) {
+                    Label("Add Folder", systemImage: "folder.badge.plus")
                 }
+            }
         } content: {
             NoteList(
                 selectedFolder: $selectedFolder,

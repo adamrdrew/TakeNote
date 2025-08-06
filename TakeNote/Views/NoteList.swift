@@ -22,13 +22,19 @@ struct NoteList: View {
         try? modelContext.save()
     }
 
+    func onNoteDelete(_ deletedNote: Note?) {
+        if deletedNote == self.selectedNote {
+            selectedNote = nil
+        }
+    }
+    
     var body: some View {
         Group {
             List(selection: $selectedNote) {
                 if let notes = selectedFolder?.notes {
 
                     ForEach(notes, id: \.self) { note in
-                        NoteListEntry(note: note, onDelete: onDelete)
+                        NoteListEntry(note: note, onDelete: onNoteDelete)
 
                     }
                 } else {

@@ -15,12 +15,12 @@ struct NoteListEntry: View {
     @State private var inDeleteMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    var onDelete : (() -> Void) = { }
+    var onDelete : ((_ note: Note) -> Void) = { note in }
     
     func deleteNote() {
+        onDelete(note)
         modelContext.delete(note)
         try? modelContext.save()
-        onDelete()
     }
     
     func startRename() {
