@@ -10,7 +10,7 @@ import SwiftUI
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    var note: Note
+    var note : Note
     @State private var inRenameMode: Bool = false
     @State private var inDeleteMode: Bool = false
     @State private var newName: String = ""
@@ -18,6 +18,7 @@ struct NoteListEntry: View {
     var onDelete: ((_ deletedNote: Note) -> Void) = {Note in}
 
     func deleteNote() {
+
         onDelete(note)
         modelContext.delete(note)
         try? modelContext.save()

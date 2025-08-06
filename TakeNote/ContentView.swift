@@ -30,13 +30,16 @@ struct ContentView: View {
         selectedNote = nil
     }
 
-    func onNoteDelete( _ deletedNote: Note) {
+    func onNoteDelete(_ deletedNote: Note) {
+        if let folder = selectedFolder {
+            folder.notes.removeAll { $0 == deletedNote }
+        }
         if selectedNote != deletedNote {
             return
         }
         selectedNote = nil
     }
-    
+
     func folderInit() {
         if defaultFolders.count != 0 {
             return
@@ -75,7 +78,7 @@ struct ContentView: View {
                 onDelete: onNoteDelete
             )
         } detail: {
-            //NoteEditor(selectedNote: $selectedNote)
+            NoteEditor(selectedNote: $selectedNote)
         }
         .onAppear(perform: folderInit)
     }
