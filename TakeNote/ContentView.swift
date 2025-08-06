@@ -21,7 +21,7 @@ struct ContentView: View {
     @State private var selectedNote: Note?
 
     func onFolderDelete(_ deletedFolder: Folder) {
-        if deletedFolder != self.selectedFolder {
+        if deletedFolder != selectedFolder {
             return
         }
         selectedFolder = folders.first(where: {
