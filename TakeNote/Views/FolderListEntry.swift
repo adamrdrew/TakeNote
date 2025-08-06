@@ -14,10 +14,13 @@ struct FolderListEntry: View {
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
+    var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
+    @State var inDeleteMode : Bool = false
 
     func deleteFolder() {
         modelContext.delete(folder)
         try? modelContext.save()
+        onDelete(folder)
     }
 
     func startRename() {
@@ -48,8 +51,8 @@ struct FolderListEntry: View {
         }
         .contextMenu {
             if folder.canBeDeleted {
-                Button(action: {
-                    deleteFolder()
+                Button(role: .destructive, action: {
+                    inDeleteMode = true
                 }) {
                     Label("Delete", systemImage: "trash")
                 }
@@ -61,6 +64,13 @@ struct FolderListEntry: View {
             }
 
         }
-    }
+        .alert("Are you sure you want to delete \(folder.name)?", isPresented: $inDeleteMode) {
+            Button("Delete", role: .destructive) {
+                deleteFolder()
+            }
+            Button("Cancel", role: .cancel) {
+                inDeleteMode = false
+            }
+        }    }
 
 }
