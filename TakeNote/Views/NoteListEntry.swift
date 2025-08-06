@@ -11,13 +11,41 @@ import SwiftUI
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     var note: Note
+    @State private var inRenameMode: Bool = false
+    @State private var newName: String = ""
+    @FocusState private var nameInputFocused: Bool
+
+    func deleteNote() {
+        modelContext.delete(note)
+        try? modelContext.save()
+    }
+    
+    func startRename() {
+        inRenameMode = true
+        newName = note.title
+        nameInputFocused = true
+    }
+
+    func finishRename() {
+        inRenameMode = false
+        note.title = newName
+        try? modelContext.save()
+    }
 
     var body: some View {
         VStack {
             HStack {
                 Image(systemName: "note.text")
-                Text(note.title)
-                    .font(.headline)
+                if inRenameMode {
+                    TextField("New Folder Name", text: $newName)
+                        .focused($nameInputFocused)
+                        .onSubmit {
+                            finishRename()
+                        }
+                } else {
+                    Text(note.title)
+                        .font(.headline)
+                }
 
             }
             Text(note.createdDate, style: .date)
@@ -25,9 +53,14 @@ struct NoteListEntry: View {
         .padding(10)
         .contextMenu {
             Button(action: {
-                modelContext.delete(note)
+                deleteNote()
             }) {
                 Label("Delete", systemImage: "trash")
+            }
+            Button(action: {
+                startRename()
+            }) {
+                Label("Rename", systemImage: "square.and.pencil")
             }
         }
     }

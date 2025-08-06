@@ -5,25 +5,41 @@
 //  Created by Adam Drew on 8/5/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
-struct FolderListEntry : View {
+struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    var folder : Folder
+    var folder: Folder
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    
-    var body : some View {
+
+    func deleteFolder() {
+        modelContext.delete(folder)
+        try? modelContext.save()
+    }
+
+    func startRename() {
+        inRenameMode = true
+        newName = folder.name
+        nameInputFocused = true
+    }
+
+    func finishRename() {
+        inRenameMode = false
+        folder.name = newName
+        try? modelContext.save()
+    }
+
+    var body: some View {
         HStack {
             Image(systemName: "folder")
             if inRenameMode {
                 TextField("New Folder Name", text: $newName)
                     .focused($nameInputFocused)
                     .onSubmit {
-                        inRenameMode = false
-                        folder.name = newName
+                        finishRename()
                     }
             } else {
                 Text(folder.name)
@@ -31,22 +47,20 @@ struct FolderListEntry : View {
             }
         }
         .contextMenu {
-            Button(action: {
-                modelContext.delete(folder)
-            }) {
-                Label("Delete", systemImage: "trash")
+            if folder.canBeDeleted {
+                Button(action: {
+                    deleteFolder()
+                }) {
+                    Label("Delete", systemImage: "trash")
+                }
             }
-            
             Button(action: {
-                newName = folder.name
-                inRenameMode = true
-                nameInputFocused = true
+                startRename()
             }) {
-                Label("Rename", systemImage: "globe")
+                Label("Rename", systemImage: "square.and.pencil")
             }
-            
-            
+
         }
     }
-    
+
 }
