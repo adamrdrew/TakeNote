@@ -12,15 +12,13 @@ struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     var note : Note
     @State private var inRenameMode: Bool = false
-    @State private var inDeleteMode: Bool = false
+    @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedNote: Note) -> Void) = {Note in}
+    var onTrash: ((_ deletedNote: Note) -> Void) = {Note in}
 
-    func deleteNote() {
-
-        onDelete(note)
-        //modelContext.delete(note)
+    func moveToTrash() {
+        onTrash(note)
     }
 
     func startRename() {
@@ -58,7 +56,7 @@ struct NoteListEntry: View {
             Button(
                 role: .destructive,
                 action: {
-                    inDeleteMode = true
+                    inMoveToTrashMode = true
                 }
             ) {
                 Label("Move to Trash", systemImage: "trash")
@@ -71,13 +69,13 @@ struct NoteListEntry: View {
         }
         .alert(
             "Are you sure you want to move \(note.title) to the trash?",
-            isPresented: $inDeleteMode
+            isPresented: $inMoveToTrashMode
         ) {
             Button("Move to Trash", role: .destructive) {
-                deleteNote()
+                moveToTrash()
             }
             Button("Cancel", role: .cancel) {
-                inDeleteMode = false
+                inMoveToTrashMode = false
             }
         }
     }
