@@ -31,6 +31,7 @@ struct ContentView: View {
             for note in deletedFolder.notes {
                 trashFolder.notes.append(note)
             }
+            try? modelContext.save()
         }
         if deletedFolder != selectedFolder {
             return
