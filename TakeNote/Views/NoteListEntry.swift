@@ -10,12 +10,13 @@ import SwiftUI
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    var note : Note
+    var note: Note
+    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
+    var selectedFolder: Folder?
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    var onTrash: ((_ deletedNote: Note) -> Void) = {Note in}
 
     func moveToTrash() {
         onTrash(note)
@@ -54,18 +55,20 @@ struct NoteListEntry: View {
         .draggable(NoteIDWrapper(id: note.persistentModelID))
         .padding(10)
         .contextMenu {
-            Button(
-                role: .destructive,
-                action: {
-                    inMoveToTrashMode = true
+            if selectedFolder?.isTrash == false {
+                Button(
+                    role: .destructive,
+                    action: {
+                        inMoveToTrashMode = true
+                    }
+                ) {
+                    Label("Move to Trash", systemImage: "trash")
                 }
-            ) {
-                Label("Move to Trash", systemImage: "trash")
-            }
-            Button(action: {
-                startRename()
-            }) {
-                Label("Rename", systemImage: "square.and.pencil")
+                Button(action: {
+                    startRename()
+                }) {
+                    Label("Rename", systemImage: "square.and.pencil")
+                }
             }
         }
         .alert(

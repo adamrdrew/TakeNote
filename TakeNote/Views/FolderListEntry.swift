@@ -64,7 +64,7 @@ struct FolderListEntry: View {
                         finishRename()
                     }
             } else {
-                Label(folder.name, systemImage: folder.symbol)
+                Label(folder.name, systemImage: folder.getSystemImageName())
                     .font(.headline)
             }
         }

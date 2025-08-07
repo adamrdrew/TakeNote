@@ -26,7 +26,7 @@ struct NoteList: View {
             List(selection: $selectedNote) {
                 if let notes = selectedFolder?.notes {
                     ForEach(notes, id: \.self) { note in
-                        NoteListEntry(note: note, onTrash: onMoveToTrash)
+                        NoteListEntry(note: note, onTrash: onMoveToTrash, selectedFolder: selectedFolder)
                     }
                 } else {
                     Text("No folder selected")

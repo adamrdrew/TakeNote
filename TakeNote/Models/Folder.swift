@@ -24,4 +24,22 @@ class Folder : Identifiable {
         self.isInbox = isInbox
         self.symbol = symbol
     }
+    
+    
+    func getSystemImageName() -> String {
+        if isTrash && notes.isEmpty {
+            return "trash"
+        }
+        if isTrash && !notes.isEmpty {
+            return "trash.fill"
+        }
+        if isInbox && notes.isEmpty {
+            return "tray"
+        }
+        if isInbox && !notes.isEmpty {
+            return "tray.fill"
+        }
+        return symbol
+    }
+    
 }
