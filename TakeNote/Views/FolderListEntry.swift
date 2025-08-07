@@ -15,7 +15,7 @@ struct FolderListEntry: View {
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
     var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
-    @State var inDeleteMode : Bool = false
+    @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
         onDelete(folder)
@@ -35,6 +35,26 @@ struct FolderListEntry: View {
         try? modelContext.save()
     }
 
+    func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
+        for wrappedID in wrappedIDs {
+            let id = wrappedID.id
+            
+            // Find the note we're going to move by ID
+            guard let note = modelContext.model(for: id) as? Note else {
+                continue
+            }
+
+            // Add the destination folder to the note and save
+            note.folder = folder
+            do {
+                try modelContext.save()
+            } catch {
+                return
+            }
+            
+        }
+    }
+
     var body: some View {
         HStack {
             if inRenameMode {
@@ -48,11 +68,19 @@ struct FolderListEntry: View {
                     .font(.headline)
             }
         }
+        .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
+            wrappedIDs,
+            _ in
+            dropNoteToFolder(wrappedIDs)
+        }
         .contextMenu {
             if folder.canBeDeleted {
-                Button(role: .destructive, action: {
-                    inDeleteMode = true
-                }) {
+                Button(
+                    role: .destructive,
+                    action: {
+                        inDeleteMode = true
+                    }
+                ) {
                     Label("Delete", systemImage: "trash")
                 }
             }
@@ -63,13 +91,17 @@ struct FolderListEntry: View {
             }
 
         }
-        .alert("Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.", isPresented: $inDeleteMode) {
+        .alert(
+            "Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.",
+            isPresented: $inDeleteMode
+        ) {
             Button("Delete", role: .destructive) {
                 deleteFolder()
             }
             Button("Cancel", role: .cancel) {
                 inDeleteMode = false
             }
-        }    }
+        }
+    }
 
 }

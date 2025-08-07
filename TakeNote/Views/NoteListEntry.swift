@@ -51,6 +51,7 @@ struct NoteListEntry: View {
             }
             Text(note.createdDate, style: .date)
         }
+        .draggable(NoteIDWrapper(id: note.persistentModelID))
         .padding(10)
         .contextMenu {
             Button(
