@@ -15,7 +15,7 @@ struct FolderListEntry: View {
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
     var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
-    @State var inDeleteMode : Bool = false
+    @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
         onDelete(folder)
@@ -48,11 +48,58 @@ struct FolderListEntry: View {
                     .font(.headline)
             }
         }
+        .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
+            wrappedIDs,
+            _ in
+            print("Entering folder drop destination")
+            // Bail if we don't have an ID
+            guard let id = wrappedIDs.first?.id else {
+                print("No ID found.")
+                return
+            }
+
+            // Get an array of notes that match the persistentModelId
+            let notes = try? modelContext.fetch(
+                FetchDescriptor<Note>(
+                    predicate: #Predicate { $0.persistentModelID == id },
+                    sortBy: [
+                        .init(\.createdDate)
+                    ]
+                )
+            )
+
+            // Bail if there is no note to move
+            guard let note = notes?.first else {
+                print("No note to move found")
+                return
+            }
+            
+            print("Note to move \(note.title) found...")
+            
+            let sourceFolder = note.folder
+
+            // Remove the note from the source folder and save
+            sourceFolder.notes.remove(
+                at: sourceFolder.notes.firstIndex(of: note)!
+            )
+            try? modelContext.save()
+
+            note.folder = folder
+            try? modelContext.save()
+            
+            // Add the note to the destination folder and save
+            folder.notes.append(note)
+            try? modelContext.save()
+
+        }
         .contextMenu {
             if folder.canBeDeleted {
-                Button(role: .destructive, action: {
-                    inDeleteMode = true
-                }) {
+                Button(
+                    role: .destructive,
+                    action: {
+                        inDeleteMode = true
+                    }
+                ) {
                     Label("Delete", systemImage: "trash")
                 }
             }
@@ -63,13 +110,17 @@ struct FolderListEntry: View {
             }
 
         }
-        .alert("Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.", isPresented: $inDeleteMode) {
+        .alert(
+            "Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.",
+            isPresented: $inDeleteMode
+        ) {
             Button("Delete", role: .destructive) {
                 deleteFolder()
             }
             Button("Cancel", role: .cancel) {
                 inDeleteMode = false
             }
-        }    }
+        }
+    }
 
 }

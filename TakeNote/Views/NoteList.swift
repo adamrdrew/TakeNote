@@ -17,8 +17,10 @@ struct NoteList: View {
     func addNote() {
         guard let folder = selectedFolder else { return }
         let note = Note()
-        folder.notes.append(note)
+        note.folder = folder
         modelContext.insert(note)
+        try? modelContext.save()
+        folder.notes.append(note)
         try? modelContext.save()
     }
 

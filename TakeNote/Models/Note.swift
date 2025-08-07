@@ -7,16 +7,32 @@
 
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
+
+
+extension UTType {
+    static let noteID = UTType(exportedAs: "com.takenote.noteid")
+}
+
+struct NoteIDWrapper: Codable, Transferable {
+    let id: PersistentIdentifier
+
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .noteID)
+    }
+}
 
 @Model
 class Note : Identifiable {
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()
+    var folder : Folder
     
     init() {
         self.title = "New Note"
         self.content = ""
         self.createdDate = Date()
+        self.folder = Folder()
     }
 }
