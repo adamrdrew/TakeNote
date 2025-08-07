@@ -123,7 +123,7 @@ struct ContentView: View {
                 onDelete: onFolderDelete
             )
             .toolbar {
-                if (selectedFolder?.isTrash ?? false) == true && (selectedFolder?.notes.isEmpty ?? true) == false {
+                if selectedFolder?.isTrash == true && selectedFolder?.notes.isEmpty == false {
                     Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
