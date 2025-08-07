@@ -43,15 +43,15 @@ struct ContentView: View {
     }
 
     func moveNoteToTrash(_ noteToTrash: Note) {
+        print("Attempting to trash note \(noteToTrash.title)")
+        let trashFolder = trashFolders.first
+        trashFolder?.notes.append(noteToTrash)
+        try? modelContext.save()
+        
         if let folder = selectedFolder {
             folder.notes.removeAll { $0 == noteToTrash }
         }
-        var trashFolder = trashFolders.first
-        if trashFolder == nil {
-            createTrashFolder()
-            trashFolder = trashFolders.first
-        }
-        trashFolder?.notes.append(noteToTrash)
+
         try? modelContext.save()
         if selectedNote != noteToTrash {
             return
@@ -107,7 +107,7 @@ struct ContentView: View {
     func showEmptyTrashAlert() {
         emptyTrashAlertVisible = true
     }
-    
+
     func emptyTrash() {
         emptyTrashAlertVisible = false
         if let trashFolder = trashFolders.first {
@@ -115,7 +115,7 @@ struct ContentView: View {
             try? modelContext.save()
         }
     }
-    
+
     var body: some View {
         NavigationSplitView {
             FolderList(
@@ -123,7 +123,9 @@ struct ContentView: View {
                 onDelete: folderDelete
             )
             .toolbar {
-                if selectedFolder?.isTrash == true && selectedFolder?.notes.isEmpty == false {
+                if selectedFolder?.isTrash == true
+                    && selectedFolder?.notes.isEmpty == false
+                {
                     Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
@@ -141,7 +143,10 @@ struct ContentView: View {
         } detail: {
             NoteEditor(selectedNote: $selectedNote)
         }
-        .alert("Are you sure you want to empty the trash? This action cannot be undone.", isPresented: $emptyTrashAlertVisible) {
+        .alert(
+            "Are you sure you want to empty the trash? This action cannot be undone.",
+            isPresented: $emptyTrashAlertVisible
+        ) {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
             Button("Cancel", action: { emptyTrashAlertVisible = false })
         }
