@@ -33,6 +33,12 @@ class Note : Identifiable {
         self.title = "New Note"
         self.content = ""
         self.createdDate = Date()
-        self.folder = Folder()
+    @Relationship(inverse: \Folder.notes) var folder : Folder?
+    
+    init(folder: Folder? = nil) {
+        self.title = "New Note"
+        self.content = ""
+        self.createdDate = Date()
+        self.folder = folder
     }
 }
