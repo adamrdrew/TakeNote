@@ -21,7 +21,6 @@ struct NoteListEntry: View {
 
         onDelete(note)
         //modelContext.delete(note)
-        //try? modelContext.save()
     }
 
     func startRename() {
