@@ -46,6 +46,7 @@ struct ContentView: View {
             folder.notes.removeAll { $0 == deletedNote }
         }
         trashFolders.first?.notes.append(deletedNote)
+        try? modelContext.save()
         if selectedNote != deletedNote {
             return
         }
