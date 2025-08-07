@@ -38,7 +38,7 @@ struct NoteListEntry: View {
             HStack {
                 Image(systemName: "note.text")
                 if inRenameMode {
-                    TextField("New Folder Name", text: $newName)
+                    TextField("New Note Name", text: $newName)
                         .focused($nameInputFocused)
                         .onSubmit {
                             finishRename()

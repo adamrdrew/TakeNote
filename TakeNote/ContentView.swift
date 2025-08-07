@@ -9,15 +9,15 @@ import SwiftData
 import SwiftUI
 
 struct ContentView: View {
-    static let defaultFolderName = "Inbox"
+    static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     @Environment(\.modelContext) private var modelContext
     @Query(
-        filter: #Predicate<Folder> { folder in folder.name == defaultFolderName
+        filter: #Predicate<Folder> { folder in folder.isInbox
         }
-    ) var defaultFolders: [Folder]
+    ) var inboxFolders: [Folder]
     @Query(
-        filter: #Predicate<Folder> { folder in folder.name == trashFolderName
+        filter: #Predicate<Folder> { folder in folder.isTrash
         }
     ) var trashFolders: [Folder]
     @Query var folders: [Folder]
@@ -37,46 +37,49 @@ struct ContentView: View {
             return
         }
         selectedFolder = folders.first(where: {
-            $0.name == ContentView.defaultFolderName
+            $0.name == ContentView.inboxFolderName
         })
         selectedNote = nil
     }
 
-    func onNoteDelete(_ deletedNote: Note) {
+    func onMoveNoteToTrash(_ noteToTrash: Note) {
         if let folder = selectedFolder {
-            folder.notes.removeAll { $0 == deletedNote }
+            folder.notes.removeAll { $0 == noteToTrash }
         }
-        trashFolders.first?.notes.append(deletedNote)
+        trashFolders.first?.notes.append(noteToTrash)
         try? modelContext.save()
-        if selectedNote != deletedNote {
+        if selectedNote != noteToTrash {
             return
         }
         selectedNote = nil
     }
 
     func folderInit() {
-        if defaultFolders.count != 0 {
+        if inboxFolders.count != 0 {
             return
         }
-        createDefaultFolder()
+        createInboxFolder()
         createTrashFolder()
     }
 
-    private func createDefaultFolder() {
-        let defaultFolder = Folder(
+    private func createInboxFolder() {
+        let inboxFolder = Folder(
             canBeDeleted: false,
             isTrash: false,
-            name: ContentView.defaultFolderName
+            isInbox: true,
+            name: ContentView.inboxFolderName,
+            symbol: "tray"
         )
-        modelContext.insert(defaultFolder)
+        modelContext.insert(inboxFolder)
         try? modelContext.save()
-        self.selectedFolder = defaultFolder
+        self.selectedFolder = inboxFolder
     }
 
     private func createTrashFolder() {
         let trashFolder = Folder(
             canBeDeleted: false,
             isTrash: true,
+            isInbox: false,
             name: ContentView.trashFolderName,
             symbol: "trash"
         )
@@ -88,6 +91,7 @@ struct ContentView: View {
         let newFolder = Folder(
             canBeDeleted: true,
             isTrash: false,
+            isInbox: false,
             name: "New Folder"
         )
         modelContext.insert(newFolder)
@@ -114,7 +118,7 @@ struct ContentView: View {
                 onDelete: onFolderDelete
             )
             .toolbar {
-                if selectedFolder?.name == ContentView.trashFolderName && (selectedFolder?.notes.isEmpty ?? true) == false {
+                if (selectedFolder?.isTrash ?? false) == true && (selectedFolder?.notes.isEmpty ?? true) == false {
                     Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
@@ -127,7 +131,7 @@ struct ContentView: View {
             NoteList(
                 selectedFolder: $selectedFolder,
                 selectedNote: $selectedNote,
-                onDelete: onNoteDelete
+                onMoveToTrash: onMoveNoteToTrash
             )
         } detail: {
             NoteEditor(selectedNote: $selectedNote)
