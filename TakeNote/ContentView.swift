@@ -26,7 +26,7 @@ struct ContentView: View {
     @State private var selectedNote: Note?
     @State private var emptyTrashAlertVisible: Bool = false
 
-    func onFolderDelete(_ deletedFolder: Folder) {
+    func folderDelete(_ deletedFolder: Folder) {
         if let trashFolder = trashFolders.first {
             for note in deletedFolder.notes {
                 trashFolder.notes.append(note)
@@ -42,7 +42,7 @@ struct ContentView: View {
         selectedNote = nil
     }
 
-    func onMoveNoteToTrash(_ noteToTrash: Note) {
+    func moveNoteToTrash(_ noteToTrash: Note) {
         if let folder = selectedFolder {
             folder.notes.removeAll { $0 == noteToTrash }
         }
@@ -120,7 +120,7 @@ struct ContentView: View {
         NavigationSplitView {
             FolderList(
                 selectedFolder: $selectedFolder,
-                onDelete: onFolderDelete
+                onDelete: folderDelete
             )
             .toolbar {
                 if selectedFolder?.isTrash == true && selectedFolder?.notes.isEmpty == false {
@@ -136,7 +136,7 @@ struct ContentView: View {
             NoteList(
                 selectedFolder: $selectedFolder,
                 selectedNote: $selectedNote,
-                onMoveToTrash: onMoveNoteToTrash
+                onMoveToTrash: moveNoteToTrash
             )
         } detail: {
             NoteEditor(selectedNote: $selectedNote)
