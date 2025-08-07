@@ -12,7 +12,7 @@ struct NoteList: View {
     @Binding var selectedFolder: Folder?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
-    var onDelete: ((_ deletedNote: Note) -> Void) = {Note in}
+    var onMoveToTrash: ((_ deletedNote: Note) -> Void) = {Note in}
 
     func addNote() {
         guard let folder = selectedFolder else { return }
@@ -27,7 +27,7 @@ struct NoteList: View {
             List(selection: $selectedNote) {
                 if let notes = selectedFolder?.notes {
                     ForEach(notes, id: \.self) { note in
-                        NoteListEntry(note: note, onDelete: onDelete)
+                        NoteListEntry(note: note, onTrash: onMoveToTrash)
                     }
                 } else {
                     Text("No folder selected")

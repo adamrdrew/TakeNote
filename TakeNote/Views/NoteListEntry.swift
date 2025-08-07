@@ -12,16 +12,13 @@ struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     var note : Note
     @State private var inRenameMode: Bool = false
-    @State private var inDeleteMode: Bool = false
+    @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedNote: Note) -> Void) = {Note in}
+    var onTrash: ((_ deletedNote: Note) -> Void) = {Note in}
 
-    func deleteNote() {
-
-        onDelete(note)
-        modelContext.delete(note)
-        try? modelContext.save()
+    func moveToTrash() {
+        onTrash(note)
     }
 
     func startRename() {
@@ -41,7 +38,7 @@ struct NoteListEntry: View {
             HStack {
                 Image(systemName: "note.text")
                 if inRenameMode {
-                    TextField("New Folder Name", text: $newName)
+                    TextField("New Note Name", text: $newName)
                         .focused($nameInputFocused)
                         .onSubmit {
                             finishRename()
@@ -59,10 +56,10 @@ struct NoteListEntry: View {
             Button(
                 role: .destructive,
                 action: {
-                    inDeleteMode = true
+                    inMoveToTrashMode = true
                 }
             ) {
-                Label("Delete", systemImage: "trash")
+                Label("Move to Trash", systemImage: "trash")
             }
             Button(action: {
                 startRename()
@@ -71,14 +68,14 @@ struct NoteListEntry: View {
             }
         }
         .alert(
-            "Are you sure you want to delete \(note.title)?",
-            isPresented: $inDeleteMode
+            "Are you sure you want to move \(note.title) to the trash?",
+            isPresented: $inMoveToTrashMode
         ) {
-            Button("Delete", role: .destructive) {
-                deleteNote()
+            Button("Move to Trash", role: .destructive) {
+                moveToTrash()
             }
             Button("Cancel", role: .cancel) {
-                inDeleteMode = false
+                inMoveToTrashMode = false
             }
         }
     }
