@@ -46,7 +46,12 @@ struct ContentView: View {
         if let folder = selectedFolder {
             folder.notes.removeAll { $0 == noteToTrash }
         }
-        trashFolders.first?.notes.append(noteToTrash)
+        var trashFolder = trashFolders.first
+        if trashFolder == nil {
+            createTrashFolder()
+            trashFolder = trashFolders.first
+        }
+        trashFolder?.notes.append(noteToTrash)
         try? modelContext.save()
         if selectedNote != noteToTrash {
             return
