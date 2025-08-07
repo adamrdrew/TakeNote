@@ -51,10 +51,8 @@ struct FolderListEntry: View {
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
             _ in
-            print("Entering folder drop destination")
             // Bail if we don't have an ID
             guard let id = wrappedIDs.first?.id else {
-                print("No ID found.")
                 return
             }
 
@@ -70,12 +68,9 @@ struct FolderListEntry: View {
 
             // Bail if there is no note to move
             guard let note = notes?.first else {
-                print("No note to move found")
                 return
             }
-            
-            print("Note to move \(note.title) found...")
-            
+                        
             let sourceFolder = note.folder
 
             // Remove the note from the source folder and save
@@ -84,6 +79,7 @@ struct FolderListEntry: View {
             )
             try? modelContext.save()
 
+            // Add the destination folder to the note and save
             note.folder = folder
             try? modelContext.save()
             
