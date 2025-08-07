@@ -43,7 +43,6 @@ struct ContentView: View {
     }
 
     func moveNoteToTrash(_ noteToTrash: Note) {
-        print("Attempting to trash note \(noteToTrash.title)")
         let trashFolder = trashFolders.first
         trashFolder?.notes.append(noteToTrash)
         try? modelContext.save()
