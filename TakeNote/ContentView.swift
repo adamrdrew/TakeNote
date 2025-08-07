@@ -29,7 +29,7 @@ struct ContentView: View {
     func folderDelete(_ deletedFolder: Folder) {
         if let trashFolder = trashFolders.first {
             for note in deletedFolder.notes {
-                trashFolder.notes.append(note)
+                note.folder = trashFolder
             }
             try? modelContext.save()
         }
@@ -43,15 +43,12 @@ struct ContentView: View {
     }
 
     func moveNoteToTrash(_ noteToTrash: Note) {
-        let trashFolder = trashFolders.first
-        trashFolder?.notes.append(noteToTrash)
+        guard let trashFolder = trashFolders.first else {
+            return
+        }
+        noteToTrash.folder = trashFolder
         try? modelContext.save()
         
-        if let folder = selectedFolder {
-            folder.notes.removeAll { $0 == noteToTrash }
-        }
-
-        try? modelContext.save()
         if selectedNote != noteToTrash {
             return
         }
@@ -110,8 +107,9 @@ struct ContentView: View {
     func emptyTrash() {
         emptyTrashAlertVisible = false
         if let trashFolder = trashFolders.first {
-            trashFolder.notes.removeAll()
-            try? modelContext.save()
+            for note in trashFolder.notes {
+                modelContext.delete(note)
+            }
         }
     }
 

@@ -20,8 +20,6 @@ struct NoteList: View {
         note.folder = folder
         modelContext.insert(note)
         try? modelContext.save()
-        //folder.notes.append(note)
-        //try? modelContext.save()
     }
 
     var body: some View {
