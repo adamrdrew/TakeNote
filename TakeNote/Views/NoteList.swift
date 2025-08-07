@@ -12,7 +12,7 @@ struct NoteList: View {
     @Binding var selectedFolder: Folder?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
-    var onMoveToTrash: ((_ deletedNote: Note) -> Void) = {Note in}
+    var onMoveToTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
     func addNote() {
         guard let folder = selectedFolder else { return }
@@ -35,8 +35,10 @@ struct NoteList: View {
         }
         .toolbar {
             ToolbarItem {
-                Button(action: addNote) {
-                    Image(systemName: "note.text.badge.plus")
+                if selectedFolder?.isTrash == false {
+                    Button(action: addNote) {
+                        Image(systemName: "note.text.badge.plus")
+                    }
                 }
             }
         }
