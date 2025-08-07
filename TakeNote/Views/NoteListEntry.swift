@@ -71,7 +71,7 @@ struct NoteListEntry: View {
             }
         }
         .alert(
-            "Are you sure you want to move\(note.title) to the trash?",
+            "Are you sure you want to move \(note.title) to the trash?",
             isPresented: $inDeleteMode
         ) {
             Button("Move to Trash", role: .destructive) {
