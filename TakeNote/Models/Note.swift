@@ -27,7 +27,7 @@ class Note : Identifiable {
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()
-    var folder : Folder
+    @Relationship(inverse: \Folder.notes) var folder : Folder
     
     init() {
         self.title = "New Note"

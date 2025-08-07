@@ -35,6 +35,34 @@ struct FolderListEntry: View {
         try? modelContext.save()
     }
 
+    func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
+        for wrappedID in wrappedIDs {
+            let id = wrappedID.id
+            // Get an array of notes that match the persistentModelId
+            let notes = try? modelContext.fetch(
+                FetchDescriptor<Note>(
+                    predicate: #Predicate { $0.persistentModelID == id },
+                    sortBy: [
+                        .init(\.createdDate)
+                    ]
+                )
+            )
+
+            // Bail if there is no note to move
+            guard let note = notes?.first else {
+                return
+            }
+
+            // Add the destination folder to the note and save
+            note.folder = folder
+            try? modelContext.save()
+
+            // Add the note to the destination folder and save
+            folder.notes.append(note)
+            try? modelContext.save()
+        }
+    }
+
     var body: some View {
         HStack {
             if inRenameMode {
@@ -51,41 +79,7 @@ struct FolderListEntry: View {
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
             _ in
-            // Bail if we don't have an ID
-            guard let id = wrappedIDs.first?.id else {
-                return
-            }
-
-            // Get an array of notes that match the persistentModelId
-            let notes = try? modelContext.fetch(
-                FetchDescriptor<Note>(
-                    predicate: #Predicate { $0.persistentModelID == id },
-                    sortBy: [
-                        .init(\.createdDate)
-                    ]
-                )
-            )
-
-            // Bail if there is no note to move
-            guard let note = notes?.first else {
-                return
-            }
-                        
-            let sourceFolder = note.folder
-
-            // Remove the note from the source folder and save
-            sourceFolder.notes.remove(
-                at: sourceFolder.notes.firstIndex(of: note)!
-            )
-            try? modelContext.save()
-
-            // Add the destination folder to the note and save
-            note.folder = folder
-            try? modelContext.save()
-            
-            // Add the note to the destination folder and save
-            folder.notes.append(note)
-            try? modelContext.save()
+            dropNoteToFolder(wrappedIDs)
 
         }
         .contextMenu {
