@@ -29,16 +29,11 @@ class Note : Identifiable {
     var createdDate: Date = Date()
     @Relationship(inverse: \Folder.notes) var folder : Folder
     
-    init() {
-        self.title = "New Note"
-        self.content = ""
-        self.createdDate = Date()
-    @Relationship(inverse: \Folder.notes) var folder : Folder?
-    
-    init(folder: Folder? = nil) {
+    init(folder: Folder) {
         self.title = "New Note"
         self.content = ""
         self.createdDate = Date()
         self.folder = folder
     }
+
 }
