@@ -41,13 +41,17 @@ struct FolderListEntry: View {
             
             // Find the note we're going to move by ID
             guard let note = modelContext.model(for: id) as? Note else {
-                return
+                continue
             }
 
             // Add the destination folder to the note and save
             note.folder = folder
-            try? modelContext.save()
-
+            do {
+                try modelContext.save()
+            } catch {
+                return
+            }
+            
         }
     }
 
@@ -68,7 +72,6 @@ struct FolderListEntry: View {
             wrappedIDs,
             _ in
             dropNoteToFolder(wrappedIDs)
-
         }
         .contextMenu {
             if folder.canBeDeleted {
