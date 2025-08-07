@@ -1,0 +1,63 @@
+# Xcode
+DerivedData/
+build/
+*.xcuserstate
+*.xcworkspace
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcuserstate
+*.xcodeproj/xcuserdata/
+*.xcodeproj/xcshareddata/
+*.xcodeproj/project.xcworkspace/
+*.xcodeproj/xcshareddata/WorkspaceSettings.xcsettings
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Carthage
+Carthage/Build/
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/
+fastlane/test_output/
+
+# Archives
+*.xcarchive
+
+# User-specific files
+*.swp
+*.swo
+*.DS_Store
+
+# Crash reports
+*.crash
+
+# Other
+*.moved-aside
+*.orig
+
+# Keep source code
+!*.swift
+!*.h
+!*.m
+!*.cpp
+!*.c
+!*.mm
+!*.plist
+!*.storyboard
+!*.xib
+!*.entitlements
+!*.xcconfig
+!*.md
+!*.json
+!*.png
+!*.jpg
