@@ -38,18 +38,9 @@ struct FolderListEntry: View {
     func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
-            // Get an array of notes that match the persistentModelId
-            let notes = try? modelContext.fetch(
-                FetchDescriptor<Note>(
-                    predicate: #Predicate { $0.persistentModelID == id },
-                    sortBy: [
-                        .init(\.createdDate)
-                    ]
-                )
-            )
-
-            // Bail if there is no note to move
-            guard let note = notes?.first else {
+            
+            // Find the note we're going to move by ID
+            guard let note = modelContext.model(for: id) as? Note else {
                 return
             }
 
@@ -57,9 +48,6 @@ struct FolderListEntry: View {
             note.folder = folder
             try? modelContext.save()
 
-            // Add the note to the destination folder and save
-            folder.notes.append(note)
-            try? modelContext.save()
         }
     }
 
