@@ -58,6 +58,7 @@ struct NoteListEntry: View {
                                 systemImage: note.starred ? "star.fill" : "star"
                             ) {
                                 note.starred = !note.starred
+                                try? modelContext.save()
                             }
                             .buttonStyle(BorderlessButtonStyle())
                             .foregroundColor(note.starred ? .yellow : .secondary)
