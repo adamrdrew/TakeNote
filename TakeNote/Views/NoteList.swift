@@ -39,6 +39,7 @@ struct NoteList: View {
                                         selectedFolder: selectedFolder,
                                         onTrash: onTrash
                                     )
+
                                 }
                             }
                         }
@@ -46,14 +47,18 @@ struct NoteList: View {
                     }
                     Section(header: Text(selectedFolder?.name ?? "Notes")) {
                         ForEach(notes, id: \.self) { note in
-                            NoteListEntry(
-                                note: note,
-                                selectedFolder: selectedFolder,
-                                onTrash: onTrash
-                            )
+                            if !note.starred {
+                                NoteListEntry(
+                                    note: note,
+                                    selectedFolder: selectedFolder,
+                                    onTrash: onTrash
+                                )
+                            }
+
                         }
                     }
                 }
+
             } else {
                 Text("No folder selected")
             }
