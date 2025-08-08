@@ -21,20 +21,41 @@ struct NoteList: View {
         try? modelContext.save()
     }
 
+    func folderHasStarredNotes() -> Bool {
+        return selectedFolder?.notes.map { $0.starred }.contains(true) ?? false
+    }
+
     var body: some View {
         Group {
-            List(selection: $selectedNote) {
-                if let notes = selectedFolder?.notes {
-                    ForEach(notes, id: \.self) { note in
-                        NoteListEntry(
-                            note: note,
-                            selectedFolder: selectedFolder,
-                            onTrash: onTrash
-                        )
+            if let notes = selectedFolder?.notes {
+                List(selection: $selectedNote) {
+
+                    if folderHasStarredNotes() {
+                        Section(header: Text("Starred")) {
+                            ForEach(notes, id: \.self) { note in
+                                if note.starred {
+                                    NoteListEntry(
+                                        note: note,
+                                        selectedFolder: selectedFolder,
+                                        onTrash: onTrash
+                                    )
+                                }
+                            }
+                        }
+
                     }
-                } else {
-                    Text("No folder selected")
+                    Section(header: Text(selectedFolder?.name ?? "Notes")) {
+                        ForEach(notes, id: \.self) { note in
+                            NoteListEntry(
+                                note: note,
+                                selectedFolder: selectedFolder,
+                                onTrash: onTrash
+                            )
+                        }
+                    }
                 }
+            } else {
+                Text("No folder selected")
             }
         }
         .toolbar {
