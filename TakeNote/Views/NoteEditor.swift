@@ -5,27 +5,39 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
+import CodeEditorView
+import LanguageSupport
 import MarkdownUI
 import SwiftData
 import SwiftUI
 
 struct NoteEditor: View {
     @Binding var selectedNote: Note?
+    @State private var position: CodeEditor.Position = CodeEditor.Position()
+    @State private var messages: Set<TextLocated<Message>> = Set()
+
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
     var body: some View {
         if let note = selectedNote {
             VStack {
                 GeometryReader { geometry in
-                    ScrollView {
-                        TextEditor(
+                        CodeEditor(
                             text: Binding(
                                 get: { note.content },
                                 set: { selectedNote?.content = $0 }
-                            )
+                            ),
+                            position: $position,
+                            messages: $messages,
+                            language: .markdown()
                         )
-                        .font(.system(size: 16).monospaced())
                         .frame(height: geometry.size.height)
-                    }
+                        .environment(
+                            \.codeEditorTheme,
+                            colorScheme == .dark
+                                ? Theme.defaultDark : Theme.defaultLight
+                        )
+
                 }
                 Divider()
                 GeometryReader { geometry in
