@@ -22,7 +22,7 @@ struct NoteList: View {
     }
 
     func folderHasStarredNotes() -> Bool {
-        return selectedFolder?.notes.map { $0.starred }.contains(true) ?? false
+        return selectedFolder?.notes.contains { $0.starred } ?? false
     }
 
     var body: some View {
