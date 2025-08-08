@@ -11,6 +11,8 @@ import SwiftUI
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
+
     var note: Note
     var selectedFolder: Folder?
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
@@ -19,6 +21,10 @@ struct NoteListEntry: View {
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
 
+    func openEditorWindow() {
+        openWindow(id: "note-editor-window", value: NoteIDWrapper(id: note.persistentModelID))
+    }
+    
     func moveToTrash() {
         onTrash(note)
     }
@@ -67,10 +73,14 @@ struct NoteListEntry: View {
 
                         Text(note.createdDate, style: .date)
                     }
+
                 }
 
             }
 
+        }
+        .onTapGesture(count: 2) {
+            openEditorWindow()
         }
         .draggable(NoteIDWrapper(id: note.persistentModelID))
         .padding(10)
@@ -89,6 +99,13 @@ struct NoteListEntry: View {
                 }) {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
+            }
+            Button(
+                action: {
+                    openEditorWindow()
+                }
+            ) {
+                Label("Open Editor Window", systemImage: "macwindow")
             }
         }
         .alert(
