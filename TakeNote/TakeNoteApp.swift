@@ -5,15 +5,39 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
-import SwiftUI
 import SwiftData
+import SwiftUI
 
 @main
 struct TakeNoteApp: App {
+    let container: ModelContainer
+
+    init() {
+        do {
+            container = try ModelContainer(
+                for: Note.self,
+                Folder.self,
+                configurations: {
+                    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+                    return config
+                }()
+            )
+        } catch {
+            fatalError("Failed to initialize ModelContainer: \(error)")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: [Note.self, Folder.self], inMemory: true)
+        .modelContainer(container)
+
+        WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
+            noteID in
+            NoteEditorWindow(noteID: noteID)
+        }
+        .modelContainer(container)
+
     }
 }

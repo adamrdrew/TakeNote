@@ -15,6 +15,7 @@ struct NoteEditor: View {
     @Binding var selectedNote: Note?
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
+    @State private var showPreview: Bool = true
 
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
@@ -22,37 +23,57 @@ struct NoteEditor: View {
         if let note = selectedNote {
             VStack {
                 GeometryReader { geometry in
-                        CodeEditor(
-                            text: Binding(
-                                get: { note.content },
-                                set: { selectedNote?.content = $0 }
-                            ),
-                            position: $position,
-                            messages: $messages,
-                            language: .markdown()
-                        )
-                        .frame(height: geometry.size.height)
-                        .environment(
-                            \.codeEditorTheme,
-                            colorScheme == .dark
-                                ? Theme.defaultDark : Theme.defaultLight
-                        )
+                    CodeEditor(
+                        text: Binding(
+                            get: { note.content },
+                            set: { selectedNote?.content = $0 }
+                        ),
+                        position: $position,
+                        messages: $messages,
+                        language: .markdown()
+                    )
+                    .frame(height: geometry.size.height)
+                    .environment(
+                        \.codeEditorTheme,
+                        colorScheme == .dark
+                            ? Theme.defaultDark : Theme.defaultLight
+                    )
 
                 }
-                Divider()
-                GeometryReader { geometry in
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 0) {
-                            Markdown(note.content)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding()
+                if showPreview {
+                    Divider()
+                    GeometryReader { geometry in
+                        ScrollView {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Markdown(note.content)
+                                    .frame(
+                                        maxWidth: .infinity,
+                                        alignment: .leading
+                                    )
+                                    .padding()
+                            }
+                            .frame(
+                                minHeight: geometry.size.height,
+                                maxHeight: .infinity,
+                                alignment: .top
+                            )
                         }
-                        .frame(
-                            minHeight: geometry.size.height,
-                            maxHeight: .infinity,
-                            alignment: .top
+                    }
+                }
+
+            }
+            .toolbar {
+                ToolbarItem() {
+                    Button(action: {
+                        showPreview.toggle()
+                    }) {
+                        Image(
+                            systemName: showPreview
+                                ? "eyeglasses.slash"
+                                : "eyeglasses"
                         )
                     }
+
                 }
 
             }

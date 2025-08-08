@@ -14,7 +14,7 @@ extension UTType {
     static let noteID = UTType(exportedAs: "com.takenote.noteid")
 }
 
-struct NoteIDWrapper: Codable, Transferable {
+struct NoteIDWrapper: Codable, Transferable, Hashable {
     let id: PersistentIdentifier
 
     static var transferRepresentation: some TransferRepresentation {
