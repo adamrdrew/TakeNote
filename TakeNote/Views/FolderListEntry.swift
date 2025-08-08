@@ -13,8 +13,10 @@ struct FolderListEntry: View {
     var folder: Folder
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
+    @State private var showEmptyTrashWarning: Bool = false
     @FocusState private var nameInputFocused: Bool
     var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
+    var onEmptyTrash: (() -> Void) = {}
     @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
@@ -38,7 +40,7 @@ struct FolderListEntry: View {
     func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
-            
+
             // Find the note we're going to move by ID
             guard let note = modelContext.model(for: id) as? Note else {
                 continue
@@ -51,7 +53,7 @@ struct FolderListEntry: View {
             } catch {
                 return
             }
-            
+
         }
     }
 
@@ -64,8 +66,12 @@ struct FolderListEntry: View {
                         finishRename()
                     }
             } else {
-                Label(folder.name, systemImage: folder.getSystemImageName())
-                    .font(.headline)
+                HStack {
+                    Label(folder.name, systemImage: folder.getSystemImageName())
+                        .font(.headline)
+                    Spacer()
+                    Label("\(folder.notes.count)", systemImage: "note.text")
+                }
             }
         }
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
@@ -84,12 +90,32 @@ struct FolderListEntry: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-            Button(action: {
-                startRename()
-            }) {
-                Label("Rename", systemImage: "square.and.pencil")
+            if !folder.isTrash && !folder.isInbox {
+                Button(action: {
+                    startRename()
+                }) {
+                    Label("Rename", systemImage: "square.and.pencil")
+                }
             }
-
+            if folder.isTrash && folder.notes.count > 0 {
+                Button(action: {
+                    showEmptyTrashWarning = true
+                }) {
+                    Label("Empty Trash", systemImage: "trash.slash")
+                }
+            }
+        }
+        .alert(
+            "Are you sure you want to empty the trash? This action cannot be undone.",
+            isPresented: $showEmptyTrashWarning
+        ) {
+            Button("Empty Trash", role: .destructive) {
+                onEmptyTrash()
+                showEmptyTrashWarning = false
+            }
+            Button("Cancel", role: .cancel) {
+                showEmptyTrashWarning = false
+            }
         }
         .alert(
             "Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.",

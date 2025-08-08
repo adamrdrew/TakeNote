@@ -117,7 +117,8 @@ struct ContentView: View {
         NavigationSplitView {
             FolderList(
                 selectedFolder: $selectedFolder,
-                onDelete: folderDelete
+                onDelete: folderDelete,
+                onEmptyTrash: emptyTrash
             )
             .toolbar {
                 if selectedFolder?.isTrash == true
@@ -135,7 +136,7 @@ struct ContentView: View {
             NoteList(
                 selectedFolder: $selectedFolder,
                 selectedNote: $selectedNote,
-                onMoveToTrash: moveNoteToTrash
+                onTrash: moveNoteToTrash
             )
         } detail: {
             NoteEditor(selectedNote: $selectedNote)

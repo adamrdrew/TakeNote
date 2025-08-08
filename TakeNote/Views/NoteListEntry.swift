@@ -11,8 +11,8 @@ import SwiftUI
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     var note: Note
-    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     var selectedFolder: Folder?
+    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
@@ -36,8 +36,7 @@ struct NoteListEntry: View {
 
     var body: some View {
         VStack {
-            HStack {
-                Image(systemName: "note.text")
+            VStack {
                 if inRenameMode {
                     TextField("New Note Name", text: $newName)
                         .focused($nameInputFocused)
@@ -45,12 +44,15 @@ struct NoteListEntry: View {
                             finishRename()
                         }
                 } else {
-                    Text(note.title)
-                        .font(.headline)
+                    VStack {
+                        Label(note.title, systemImage: "note.text")
+                            .font(.headline)
+                        Text(note.createdDate, style: .date)
+                    }
                 }
 
             }
-            Text(note.createdDate, style: .date)
+
         }
         .draggable(NoteIDWrapper(id: note.persistentModelID))
         .padding(10)
