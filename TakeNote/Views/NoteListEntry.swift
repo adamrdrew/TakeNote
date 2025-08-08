@@ -8,6 +8,7 @@
 import SwiftData
 import SwiftUI
 
+
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     var note: Note
@@ -34,6 +35,9 @@ struct NoteListEntry: View {
         try? modelContext.save()
     }
 
+    
+
+    
     var body: some View {
         VStack {
             VStack {
@@ -45,8 +49,21 @@ struct NoteListEntry: View {
                         }
                 } else {
                     VStack {
-                        Label(note.title, systemImage: "note.text")
-                            .font(.headline)
+                        HStack {
+                            Label(note.title, systemImage: "note.text")
+                                .font(.headline)
+                            Spacer()
+                            Button(
+                                "",
+                                systemImage: note.starred ? "star.fill" : "star"
+                            ) {
+                                note.starred = !note.starred
+                            }
+                            .buttonStyle(BorderlessButtonStyle())
+                            .foregroundColor(note.starred ? .yellow : .secondary)
+
+                        }
+
                         Text(note.createdDate, style: .date)
                     }
                 }
