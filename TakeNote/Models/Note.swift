@@ -27,6 +27,7 @@ class Note : Identifiable {
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()
+    var starred : Bool = false
     @Relationship(inverse: \Folder.notes) var folder : Folder
     
     init(folder: Folder) {
@@ -34,6 +35,7 @@ class Note : Identifiable {
         self.content = ""
         self.createdDate = Date()
         self.folder = folder
+        self.starred = false
     }
 
 }
