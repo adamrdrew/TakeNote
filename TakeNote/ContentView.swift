@@ -151,6 +151,9 @@ struct ContentView: View {
             Button("Cancel", action: { emptyTrashAlertVisible = false })
         }
         .onAppear(perform: folderInit)
+        .onOpenURL { url in
+            print(url)
+        }
     }
 }
 
