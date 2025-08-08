@@ -35,7 +35,7 @@ struct NoteEditorWindow: View {
             return
         }
 
-        // Find the note we're going to move by ID
+        // Retrieve the note by ID
         guard let loadedNote = modelContext.model(for: id) as? Note else {
             return
         }
