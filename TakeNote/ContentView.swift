@@ -22,12 +22,14 @@ struct ContentView: View {
     ) var trashFolders: [Folder]
     @Query var folders: [Folder]
 
+    @Query var noteLabels: [NoteLabel]
+
     @State private var selectedFolder: Folder?
     @State private var selectedNote: Note?
     @State private var emptyTrashAlertVisible: Bool = false
-    
-    @State private var showLinkToNoteError : Bool = false
-    @State private var linkToNoteErrorMessage : String = ""
+
+    @State private var showLinkToNoteError: Bool = false
+    @State private var linkToNoteErrorMessage: String = ""
 
     func folderDelete(_ deletedFolder: Folder) {
         if let trashFolder = trashFolders.first {
@@ -58,12 +60,32 @@ struct ContentView: View {
         selectedNote = nil
     }
 
+    func dataInit() {
+        folderInit()
+        labelInit()
+    }
+
     func folderInit() {
         if inboxFolders.count != 0 {
             return
         }
         createInboxFolder()
         createTrashFolder()
+    }
+
+    func labelInit() {
+        guard noteLabels.count == 0 else {
+            return
+        }
+        var home = NoteLabel(name: "🏠 Home", color: "green")
+        var work = NoteLabel(name: "💼 Work", color: "blue")
+        var shopping = NoteLabel(name: "🛒 Shopping", color: "red")
+        var personal = NoteLabel(name: "👨‍👩‍👧‍👦 Personal", color: "purple")
+        modelContext.insert(home)
+        modelContext.insert(work)
+        modelContext.insert(shopping)
+        modelContext.insert(personal)
+        try? modelContext.save()
     }
 
     private func createInboxFolder() {
@@ -157,9 +179,9 @@ struct ContentView: View {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
             Button("Cancel", action: { emptyTrashAlertVisible = false })
         }
-        .onAppear(perform: folderInit)
+        .onAppear(perform: dataInit)
         .onOpenURL { url in
-            var notes : [Note] = []
+            var notes: [Note] = []
 
             guard let uuid = UUID(uuidString: url.lastPathComponent) else {
                 linkToNoteErrorMessage = "Invalid note link"
@@ -178,21 +200,21 @@ struct ContentView: View {
                 showLinkToNoteError = true
                 return
             }
-            
+
             if notes.isEmpty {
                 linkToNoteErrorMessage = "No notes matching link found"
                 showLinkToNoteError = true
                 return
             }
-            
-            
+
             if let note = notes.first {
                 self.selectedNote = note
                 self.selectedFolder = note.folder
                 return
             }
 
-            linkToNoteErrorMessage = "Something went wrong setting note from link"
+            linkToNoteErrorMessage =
+                "Something went wrong setting note from link"
             showLinkToNoteError = true
         }
     }
