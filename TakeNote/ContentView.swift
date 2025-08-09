@@ -159,18 +159,26 @@ struct ContentView: View {
         }
         .onAppear(perform: folderInit)
         .onOpenURL { url in
+            var notes : [Note] = []
+
             guard let uuid = UUID(uuidString: url.lastPathComponent) else {
                 linkToNoteErrorMessage = "Invalid note link"
                 showLinkToNoteError = true
                 return
             }
 
-            let notes = try! modelContext.fetch(
-                FetchDescriptor<Note>(
-                    predicate: #Predicate { $0.uuid == uuid }
+            do {
+                notes = try modelContext.fetch(
+                    FetchDescriptor<Note>(
+                        predicate: #Predicate { $0.uuid == uuid }
+                    )
                 )
-            )
-
+            } catch {
+                linkToNoteErrorMessage = "Error querying notes."
+                showLinkToNoteError = true
+                return
+            }
+            
             if notes.isEmpty {
                 linkToNoteErrorMessage = "No notes matching link found"
                 showLinkToNoteError = true
