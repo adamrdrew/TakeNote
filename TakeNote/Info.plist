@@ -7,8 +7,6 @@
 		<dict>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
-			<key>CFBundleURLIconFile</key>
-			<string>/Users/adam/Documents/TakeNote Icons/Exported PNG image 6.png</string>
 			<key>CFBundleURLName</key>
 			<string>com.adamrdrew.takenote</string>
 			<key>CFBundleURLSchemes</key>

@@ -9,12 +9,10 @@
 /* Begin PBXBuildFile section */
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
-		66AC24F72E469C6F009B0C3F /* Exported PNG image 6.png in Resources */ = {isa = PBXBuildFile; fileRef = 66AC24F62E469C6F009B0C3F /* Exported PNG image 6.png */; };
 		66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 66EEDE102E3FFBDD00A899AE /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		66AC24F62E469C6F009B0C3F /* Exported PNG image 6.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Exported PNG image 6.png"; sourceTree = "<group>"; };
 		66B6907A2E3FCDF20013519B /* TakeNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TakeNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -56,7 +54,6 @@
 		66B690712E3FCDF20013519B = {
 			isa = PBXGroup;
 			children = (
-				66AC24F62E469C6F009B0C3F /* Exported PNG image 6.png */,
 				66B6907C2E3FCDF20013519B /* TakeNote */,
 				66B6907B2E3FCDF20013519B /* Products */,
 			);
@@ -141,7 +138,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				66AC24F72E469C6F009B0C3F /* Exported PNG image 6.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
