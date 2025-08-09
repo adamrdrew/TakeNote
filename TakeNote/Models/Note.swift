@@ -31,7 +31,7 @@ class Note : Identifiable {
     // This odd syntax makes the setter private to the instance
     // so we can act like this is a private property
     // but SwiftData can still set it
-    private(set) var uuid : UUID
+    private(set) var uuid : UUID = UUID()
     @Relationship(inverse: \Folder.notes) var folder : Folder
     
     init(folder: Folder) {
