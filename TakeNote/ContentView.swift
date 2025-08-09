@@ -25,6 +25,9 @@ struct ContentView: View {
     @State private var selectedFolder: Folder?
     @State private var selectedNote: Note?
     @State private var emptyTrashAlertVisible: Bool = false
+    
+    @State private var showLinkToNoteError : Bool = false
+    @State private var linkToNoteErrorMessage : String = ""
 
     func folderDelete(_ deletedFolder: Folder) {
         if let trashFolder = trashFolders.first {
@@ -142,6 +145,12 @@ struct ContentView: View {
             NoteEditor(selectedNote: $selectedNote)
         }
         .alert(
+            "Link Error: \(linkToNoteErrorMessage)",
+            isPresented: $showLinkToNoteError
+        ) {
+            Button("OK", action: { showLinkToNoteError = false })
+        }
+        .alert(
             "Are you sure you want to empty the trash? This action cannot be undone.",
             isPresented: $emptyTrashAlertVisible
         ) {
@@ -151,7 +160,9 @@ struct ContentView: View {
         .onAppear(perform: folderInit)
         .onOpenURL { url in
             guard let uuid = UUID(uuidString: url.lastPathComponent) else {
-                return 
+                linkToNoteErrorMessage = "Invalid note link"
+                showLinkToNoteError = true
+                return
             }
 
             let notes = try! modelContext.fetch(
@@ -160,12 +171,21 @@ struct ContentView: View {
                 )
             )
 
+            if notes.isEmpty {
+                linkToNoteErrorMessage = "No notes matching link found"
+                showLinkToNoteError = true
+                return
+            }
+            
             for note in notes {
                 guard note.uuid == uuid else { continue }
                 self.selectedNote = note
                 self.selectedFolder = note.folder
                 return
             }
+            
+            linkToNoteErrorMessage = "Something went wrong setting note from link"
+            showLinkToNoteError = true
         }
     }
 }
