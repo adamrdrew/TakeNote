@@ -48,7 +48,7 @@ struct ContentView: View {
         }
         noteToTrash.folder = trashFolder
         try? modelContext.save()
-        
+
         if selectedNote != noteToTrash {
             return
         }
@@ -113,8 +113,6 @@ struct ContentView: View {
         }
     }
 
-    
-    
     var body: some View {
         NavigationSplitView {
             FolderList(
@@ -152,7 +150,22 @@ struct ContentView: View {
         }
         .onAppear(perform: folderInit)
         .onOpenURL { url in
-            print(url)
+            guard let uuid = UUID(uuidString: url.lastPathComponent) else {
+                return 
+            }
+
+            let notes = try! modelContext.fetch(
+                FetchDescriptor<Note>(
+                    predicate: #Predicate { $0.uuid == uuid }
+                )
+            )
+
+            for note in notes {
+                guard note.uuid == uuid else { continue }
+                self.selectedNote = note
+                self.selectedFolder = note.folder
+                return
+            }
         }
     }
 }

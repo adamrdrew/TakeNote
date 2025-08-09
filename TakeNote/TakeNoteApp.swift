@@ -30,6 +30,7 @@ struct TakeNoteApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+            .handlesExternalEvents(preferring: ["takenote://"], allowing: ["*"])
         }
         .modelContainer(container)
 
