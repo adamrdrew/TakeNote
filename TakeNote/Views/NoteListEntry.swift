@@ -7,7 +7,7 @@
 
 import SwiftData
 import SwiftUI
-
+import AppKit
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
@@ -106,6 +106,13 @@ struct NoteListEntry: View {
                 }
             ) {
                 Label("Open Editor Window", systemImage: "macwindow")
+            }
+            Button(action:{
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(note.getURL(), forType: .string)
+            }){
+                Label("Copy link", systemImage: "link")
             }
         }
         .alert(

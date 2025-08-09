@@ -28,6 +28,10 @@ class Note : Identifiable {
     var content: String = ""
     var createdDate: Date = Date()
     var starred : Bool = false
+    // This odd syntax makes the setter private to the instance
+    // so we can act like this is a private property
+    // but SwiftData can still set it
+    private(set) var uuid : UUID = UUID()
     @Relationship(inverse: \Folder.notes) var folder : Folder
     
     init(folder: Folder) {
@@ -36,6 +40,11 @@ class Note : Identifiable {
         self.createdDate = Date()
         self.folder = folder
         self.starred = false
+        self.uuid = UUID()
+    }
+    
+    public func getURL() -> String {
+        return "takenote://note/\(uuid.uuidString)"
     }
 
 }
