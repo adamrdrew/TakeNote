@@ -189,6 +189,7 @@ struct ContentView: View {
             if let note = notes.first {
                 self.selectedNote = note
                 self.selectedFolder = note.folder
+                return
             }
 
             linkToNoteErrorMessage = "Something went wrong setting note from link"
