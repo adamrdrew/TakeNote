@@ -185,13 +185,12 @@ struct ContentView: View {
                 return
             }
             
-            for note in notes {
-                guard note.uuid == uuid else { continue }
+            
+            if let note = notes.first {
                 self.selectedNote = note
                 self.selectedFolder = note.folder
-                return
             }
-            
+
             linkToNoteErrorMessage = "Something went wrong setting note from link"
             showLinkToNoteError = true
         }
