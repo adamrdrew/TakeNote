@@ -33,6 +33,7 @@ class Note : Identifiable {
     // but SwiftData can still set it
     private(set) var uuid : UUID = UUID()
     @Relationship(inverse: \Folder.notes) var folder : Folder
+    @Relationship(inverse: \Label.notes) var labels : Set<Label> = []
     
     init(folder: Folder) {
         self.title = "New Note"
