@@ -16,22 +16,28 @@ struct NoteEditor: View {
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
-
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
+
+    func generateSummary() async {
+        if selectedNote != nil {
+            await selectedNote?.generateSummary()
+        }
+    }
 
     var body: some View {
         if let note = selectedNote {
             VStack {
                 GeometryReader { geometry in
-                    CodeEditor(
-                        text: Binding(
-                            get: { note.content },
-                            set: { selectedNote?.content = $0 }
-                        ),
-                        position: $position,
-                        messages: $messages,
-                        language: .markdown()
-                    )
+                        CodeEditor(
+                            text: Binding(
+                                get: { note.content },
+                                set: { selectedNote?.content = $0 }
+                            ),
+                            position: $position,
+                            messages: $messages,
+                            language: .markdown()
+                        )
+
                     .frame(height: geometry.size.height)
                     .environment(
                         \.codeEditorTheme,
@@ -43,27 +49,31 @@ struct NoteEditor: View {
                 if showPreview {
                     Divider()
                     GeometryReader { geometry in
+
                         ScrollView {
                             VStack(alignment: .leading, spacing: 0) {
+
                                 Markdown(note.content)
                                     .frame(
                                         maxWidth: .infinity,
                                         alignment: .leading
                                     )
                                     .padding()
+
                             }
                             .frame(
                                 minHeight: geometry.size.height,
                                 maxHeight: .infinity,
                                 alignment: .top
                             )
+
                         }
                     }
                 }
 
             }
             .toolbar {
-                ToolbarItem() {
+                ToolbarItem {
                     Button(action: {
                         showPreview.toggle()
                     }) {
@@ -75,6 +85,7 @@ struct NoteEditor: View {
                     }
 
                 }
+
 
             }
         } else {
