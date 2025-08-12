@@ -37,6 +37,9 @@ struct ContentView: View {
     @State private var showLinkToNoteError: Bool = false
     @State private var linkToNoteErrorMessage: String = ""
 
+    @State var folderSectionExpanded: Bool = true
+    @State var tagSectionExpanded: Bool = true
+
     func folderDelete(_ deletedFolder: NoteContainer) {
         if let trashFolder = trashFolders.first {
             for note in deletedFolder.notes {
@@ -185,21 +188,34 @@ struct ContentView: View {
         NavigationSplitView {
             VStack {
                 List(selection: $selectedFolder) {
-                    Section(header: Label("Folders", systemImage: "folder")) {
-                        FolderList(
-                            selectedFolder: $selectedFolder,
-                            onDelete: folderDelete,
-                            onEmptyTrash: emptyTrash
-                        )
-                    }
+                    Section(
+                        isExpanded: $folderSectionExpanded,
+                        content: {
+                            FolderList(
+                                selectedFolder: $selectedFolder,
+                                onDelete: folderDelete,
+                                onEmptyTrash: emptyTrash
+                            )
+                        },
+                        header: {
+                            Text("Folders")
+                        }
+                    )
+                    .headerProminence(.increased)
 
-                    Section(header: Label("Tags", systemImage: "tag")) {
-                        TagList(
-                            selectedFolder: $selectedFolder,
-                            onDelete: tagDelete
-                        )
-                    }
-                }
+                    Section(
+                        isExpanded: $tagSectionExpanded,
+                        content: {
+                            TagList(
+                                selectedFolder: $selectedFolder,
+                                onDelete: tagDelete
+                            )
+                        },
+                        header: {
+                            Text("Tags")
+                        }
+                    ).headerProminence(.increased)
+                }.listStyle(.sidebar)
 
             }
             .toolbar {
