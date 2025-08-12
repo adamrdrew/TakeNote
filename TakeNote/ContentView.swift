@@ -147,6 +147,17 @@ struct ContentView: View {
         try? modelContext.save()
         self.selectedFolder = newFolder
     }
+    
+    func addTag() {
+        let newTag = NoteContainer(
+            isTrash: false,
+            isInbox: false,
+            name: "New Tag",
+            isTag: true)
+        newTag.setColor(red: 0.0, green: 0.5, blue: 1.0)
+        modelContext.insert(newTag)
+        try? modelContext.save()
+    }
 
     func showEmptyTrashAlert() {
         emptyTrashAlertVisible = true
@@ -164,7 +175,7 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             VStack {
-                Section(header: Text("Home")) {
+                Section(header: Label("Folders", systemImage: "folder")) {
                     FolderList(
                         selectedFolder: $selectedFolder,
                         onDelete: folderDelete,
@@ -172,7 +183,7 @@ struct ContentView: View {
                     )
                 }
 
-                Section(header: Text("Tags")) {
+                Section(header: Label("Tags", systemImage: "tag")) {
                     TagList(
                         selectedFolder: $selectedFolder
                     )
@@ -188,6 +199,15 @@ struct ContentView: View {
                 }
                 Button(action: addFolder) {
                     Label("Add Folder", systemImage: "folder.badge.plus")
+                }
+                Button(action: addTag) {
+                    ZStack(alignment: .bottomTrailing) {
+                        Image(systemName: "tag")
+                            .scaleEffect(x: -1, y: 1)
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 7))
+                            .offset(x: 2, y: -10)
+                    }
                 }
             }
         } content: {

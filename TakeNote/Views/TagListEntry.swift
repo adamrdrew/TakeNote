@@ -37,10 +37,10 @@ struct TagListEntry: View {
         HStack(spacing: 8) {
             NoteLabelBadge(noteLabel: tag)
             Text(tag.name)
-                .font(.callout.weight(.medium))
-                .foregroundStyle(.primary)
+                .font(.headline)
                 .lineLimit(1)
                 .truncationMode(.tail)
+            
             Spacer()
             Label("\(tag.notes.count)", systemImage: "note.text")
         }
