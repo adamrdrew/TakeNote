@@ -1,0 +1,31 @@
+//
+//  NoteLabelBadge.swift
+//  TakeNote
+//
+//  Created by Adam Drew on 8/11/25.
+//
+
+import SwiftData
+import SwiftUI
+
+struct NoteLabelBadge: View {
+    var noteLabel: NoteContainer
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(
+                    noteLabel.getColor()
+                )
+                .glassEffect()
+                .overlay(
+                    Circle().stroke(.separator, lineWidth: 0.5)
+                )
+
+        }
+        .frame(width: 12, height: 12)
+        .accessibilityHidden(true)
+
+    }
+
+}

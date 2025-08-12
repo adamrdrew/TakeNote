@@ -10,12 +10,14 @@ import SwiftUI
 
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    var folder: Folder
+    var folder: NoteContainer
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
+        deletedFolder in
+    }
     var onEmptyTrash: (() -> Void) = {}
     @State var inDeleteMode: Bool = false
 
@@ -40,20 +42,17 @@ struct FolderListEntry: View {
     func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
-
             // Find the note we're going to move by ID
             guard let note = modelContext.model(for: id) as? Note else {
                 continue
             }
-
             // Add the destination folder to the note and save
             note.folder = folder
-            do {
-                try modelContext.save()
-            } catch {
-                return
-            }
-
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            return
         }
     }
 
@@ -70,7 +69,10 @@ struct FolderListEntry: View {
                     Label(folder.name, systemImage: folder.getSystemImageName())
                         .font(.headline)
                     Spacer()
-                    Label("\(folder.notes.count)", systemImage: "note.text")
+                    HStack {
+                        Text("\(folder.notes.count)")
+                        Image(systemName: "note.text")
+                    }
                 }
             }
         }

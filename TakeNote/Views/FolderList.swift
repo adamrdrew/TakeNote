@@ -10,16 +10,23 @@ import SwiftUI
 
 struct FolderList: View {
     @Environment(\.modelContext) private var modelContext
-    @Binding var selectedFolder: Folder?
-    @Query var folders: [Folder]
-    var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
-    var onEmptyTrash: (() -> Void) = { }
+    @Binding var selectedFolder: NoteContainer?
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in !folder.isTag
+        }
+    ) var folders: [NoteContainer]
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
+        deletedFolder in
+    }
+    var onEmptyTrash: (() -> Void) = {}
 
     var body: some View {
-        List(selection: $selectedFolder) {
-            ForEach(folders, id: \.self) { folder in
-                FolderListEntry(folder: folder, onDelete: onDelete, onEmptyTrash: onEmptyTrash)
-            }
+        ForEach(folders, id: \.self) { folder in
+            FolderListEntry(
+                folder: folder,
+                onDelete: onDelete,
+                onEmptyTrash: onEmptyTrash
+            )
         }
     }
 }

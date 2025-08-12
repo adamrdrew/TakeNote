@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedFolder: Folder?
+    @Binding var selectedFolder: NoteContainer?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
@@ -31,7 +31,7 @@ struct NoteList: View {
                 List(selection: $selectedNote) {
 
                     if folderHasStarredNotes() {
-                        Section(header: Text("Starred")) {
+                        Section(header: Label("Starred", systemImage: "star")) {
                             ForEach(notes, id: \.self) { note in
                                 if note.starred {
                                     NoteListEntry(
@@ -45,7 +45,7 @@ struct NoteList: View {
                         }
 
                     }
-                    Section(header: Text(selectedFolder?.name ?? "Notes")) {
+                    Section(header: Label(selectedFolder?.name ?? "Notes", systemImage: selectedFolder?.getSystemImageName() ?? "folder")) {
                         ForEach(notes, id: \.self) { note in
                             if !note.starred {
                                 NoteListEntry(
@@ -65,7 +65,7 @@ struct NoteList: View {
         }
         .toolbar {
             ToolbarItem {
-                if selectedFolder?.isTrash == false {
+                if selectedFolder?.isTrash == false && selectedFolder?.isTag == false {
                     Button(action: addNote) {
                         Image(systemName: "note.text.badge.plus")
                     }

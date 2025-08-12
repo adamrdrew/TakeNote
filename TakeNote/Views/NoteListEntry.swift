@@ -5,16 +5,16 @@
 //  Created by Adam Drew on 8/5/25.
 //
 
+import AppKit
 import SwiftData
 import SwiftUI
-import AppKit
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
 
     var note: Note
-    var selectedFolder: Folder?
+    var selectedFolder: NoteContainer?
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
@@ -22,9 +22,12 @@ struct NoteListEntry: View {
     @FocusState private var nameInputFocused: Bool
 
     func openEditorWindow() {
-        openWindow(id: "note-editor-window", value: NoteIDWrapper(id: note.persistentModelID))
+        openWindow(
+            id: "note-editor-window",
+            value: NoteIDWrapper(id: note.persistentModelID)
+        )
     }
-    
+
     func moveToTrash() {
         onTrash(note)
     }
@@ -41,9 +44,6 @@ struct NoteListEntry: View {
         try? modelContext.save()
     }
 
-    
-
-    
     var body: some View {
         VStack {
             VStack {
@@ -58,6 +58,9 @@ struct NoteListEntry: View {
                         HStack {
                             Label(note.title, systemImage: "note.text")
                                 .font(.headline)
+                            if let noteLabel = note.tag {
+                                NoteLabelBadge(noteLabel: noteLabel)
+                            }
                             Spacer()
                             Button(
                                 "",
@@ -67,11 +70,22 @@ struct NoteListEntry: View {
                                 try? modelContext.save()
                             }
                             .buttonStyle(BorderlessButtonStyle())
-                            .foregroundColor(note.starred ? .yellow : .secondary)
+                            .foregroundColor(
+                                note.starred ? .yellow : .secondary
+                            )
 
                         }
+                        HStack {
+                            Text(note.createdDate, style: .date)
+                            Spacer()
+                            if selectedFolder?.isTag == true {
+                                Label(
+                                    note.folder.name,
+                                    systemImage: "folder"
+                                )
+                            }
+                        }
 
-                        Text(note.createdDate, style: .date)
                     }
 
                 }
@@ -85,6 +99,7 @@ struct NoteListEntry: View {
         .draggable(NoteIDWrapper(id: note.persistentModelID))
         .padding(10)
         .contextMenu {
+
             if selectedFolder?.isTrash == false {
                 Button(
                     role: .destructive,
@@ -107,12 +122,26 @@ struct NoteListEntry: View {
             ) {
                 Label("Open Editor Window", systemImage: "macwindow")
             }
-            Button(action:{
+            Button(action: {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
                 pasteboard.setString(note.getURL(), forType: .string)
-            }){
+            }) {
                 Label("Copy link", systemImage: "link")
+            }
+            if let noteLabel = note.tag {
+                Button(
+                    role: .destructive,
+                    action: {
+                        note.tag = nil
+                        try? modelContext.save()
+                    }
+                ) {
+                    Label(
+                        "Remove tag: \(noteLabel.name)",
+                        systemImage: "xmark"
+                    )
+                }
             }
         }
         .alert(
