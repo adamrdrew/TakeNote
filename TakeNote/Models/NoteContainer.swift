@@ -16,9 +16,7 @@ class NoteContainer: Identifiable {
     internal var isTrash: Bool = false
     internal var isInbox: Bool = false
     internal var isTag: Bool = false
-    var red: Double = 0.34
-    var green: Double = 0.119
-    var blue: Double = 0.230
+    var colorRGBA: UInt32 = 0xE5E5E5FF
     var symbol: String = "folder"
     var notes: [Note] { isTag ? tagNotes : folderNotes }
 
@@ -36,12 +34,6 @@ class NoteContainer: Identifiable {
         self.isInbox = isInbox
         self.symbol = symbol
         self.isTag = isTag
-    }
-
-    func setColor(red: Double, green: Double, blue: Double) {
-        self.red = red
-        self.green = green
-        self.blue = blue
     }
 
     func getSystemImageName() -> String {
@@ -68,6 +60,25 @@ class NoteContainer: Identifiable {
             return "tag.fill"
         }
         return symbol
+    }
+    
+    func getColor() -> Color {
+        let r = Double((colorRGBA >> 24) & 0xFF) / 255.0
+        let g = Double((colorRGBA >> 16) & 0xFF) / 255.0
+        let b = Double((colorRGBA >>  8) & 0xFF) / 255.0
+        let a = Double( colorRGBA        & 0xFF) / 255.0
+        return Color(.sRGB, red: r, green: g, blue: b, opacity: a)
+    }
+    
+    func setColor(_ color: Color) {
+        guard let ns = NSColor(color).usingColorSpace(.sRGB) else { return }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 1
+        ns.getRed(&r, green: &g, blue: &b, alpha: &a)
+        let R = UInt32(clamping: Int(r * 255.0))
+        let G = UInt32(clamping: Int(g * 255.0))
+        let B = UInt32(clamping: Int(b * 255.0))
+        let A = UInt32(clamping: Int(a * 255.0))
+        colorRGBA = (R << 24) | (G << 16) | (B << 8) | A
     }
 
 }

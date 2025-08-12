@@ -94,21 +94,22 @@ struct ContentView: View {
             name: "Home",
             isTag: true
         )
+        home.setColor(Color(.blue))
         let work = NoteContainer(
             name: "Work",
             isTag: true
         )
-        work.setColor(red: 0.034, green: 0.230, blue: 0.096)
+        work.setColor(Color(.green))
         let shopping = NoteContainer(
             name: "Shopping",
             isTag: true
         )
-        shopping.setColor(red: 0.158, green: 0.034, blue: 0.230)
+        shopping.setColor(Color(.red))
         let personal = NoteContainer(
             name: "Personal",
             isTag: true
         )
-        personal.setColor(red: 0.23, green: 0.01, blue: 0.40)
+        personal.setColor(Color(.purple))
         modelContext.insert(home)
         modelContext.insert(work)
         modelContext.insert(shopping)
@@ -161,7 +162,7 @@ struct ContentView: View {
             isInbox: false,
             name: "New Tag",
             isTag: true)
-        newTag.setColor(red: 0.0, green: 0.5, blue: 1.0)
+        newTag.setColor(Color(.blue))
         modelContext.insert(newTag)
         try? modelContext.save()
     }

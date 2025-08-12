@@ -17,7 +17,10 @@ struct TagListEntry: View {
     }
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
+    @State var showColorPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
+    
+    @State var newTagColor: Color = Color(.blue)
 
     func deleteTag() {
         modelContext.delete(tag)
@@ -76,6 +79,25 @@ struct TagListEntry: View {
                 Label("\(tag.notes.count)", systemImage: "note.text")
             }
         }
+        .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Tag Color").font(.headline)
+                ColorPicker("Color", selection: $newTagColor, supportsOpacity: true)
+                    .labelsHidden()
+                HStack {
+                    Spacer()
+                    Button("Cancel") { showColorPopover = false }
+                    Button("Save") {
+                        tag.setColor(newTagColor)
+                        try? modelContext.save()
+                        showColorPopover = false
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+            }
+            .padding()
+            .frame(width: 260)
+        }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
@@ -97,6 +119,9 @@ struct TagListEntry: View {
         .contextMenu {
             Button(action: startRename) {
                 Label("Rename Tag", systemImage: "pencil")
+            }
+            Button(action: { showColorPopover = true }) {
+                Label("Set Color", systemImage: "eyedropper")
             }
             if tag.canBeDeleted {
                 Button(
