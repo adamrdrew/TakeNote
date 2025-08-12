@@ -10,12 +10,12 @@ import SwiftUI
 
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    var folder: Folder
+    var folder: NoteContainer
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedFolder: Folder) -> Void) = { deletedFolder in }
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = { deletedFolder in }
     var onEmptyTrash: (() -> Void) = {}
     @State var inDeleteMode: Bool = false
 

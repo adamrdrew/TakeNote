@@ -16,7 +16,7 @@ struct TakeNoteApp: App {
         do {
             container = try ModelContainer(
                 for: Note.self,
-                Folder.self,
+                NoteContainer.self,
                 configurations: {
                     let config = ModelConfiguration(isStoredInMemoryOnly: true)
                     return config

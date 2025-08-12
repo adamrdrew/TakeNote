@@ -13,25 +13,31 @@ struct ContentView: View {
     static let trashFolderName = "Trash"
     @Environment(\.modelContext) private var modelContext
     @Query(
-        filter: #Predicate<Folder> { folder in folder.isInbox
+        filter: #Predicate<NoteContainer> { folder in folder.isInbox
         }
-    ) var inboxFolders: [Folder]
+    ) var inboxFolders: [NoteContainer]
     @Query(
-        filter: #Predicate<Folder> { folder in folder.isTrash
+        filter: #Predicate<NoteContainer> { folder in folder.isTrash
         }
-    ) var trashFolders: [Folder]
-    @Query var folders: [Folder]
+    ) var trashFolders: [NoteContainer]
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in !folder.isTag
+        }
+    ) var folders: [NoteContainer]
 
-    @Query var noteLabels: [NoteLabel]
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in folder.isTag
+        }
+    ) var tags: [NoteContainer]
 
-    @State private var selectedFolder: Folder?
+    @State private var selectedFolder: NoteContainer?
     @State private var selectedNote: Note?
     @State private var emptyTrashAlertVisible: Bool = false
 
     @State private var showLinkToNoteError: Bool = false
     @State private var linkToNoteErrorMessage: String = ""
 
-    func folderDelete(_ deletedFolder: Folder) {
+    func folderDelete(_ deletedFolder: NoteContainer) {
         if let trashFolder = trashFolders.first {
             for note in deletedFolder.notes {
                 note.folder = trashFolder
@@ -62,25 +68,40 @@ struct ContentView: View {
 
     func dataInit() {
         folderInit()
-        labelInit()
+        tagsInit()
     }
 
     func folderInit() {
-        if inboxFolders.count != 0 {
+        if inboxFolders.count != 0  {
             return
         }
         createInboxFolder()
         createTrashFolder()
     }
 
-    func labelInit() {
-        guard noteLabels.count == 0 else {
+    func tagsInit() {
+        guard tags.count == 0 else {
             return
         }
-        var home = NoteLabel(name: "🏠 Home", color: "green")
-        var work = NoteLabel(name: "💼 Work", color: "blue")
-        var shopping = NoteLabel(name: "🛒 Shopping", color: "red")
-        var personal = NoteLabel(name: "👨‍👩‍👧‍👦 Personal", color: "purple")
+        let home = NoteContainer(
+            name: "Home",
+            isTag: true
+        )
+        let work = NoteContainer(
+            name: "Work",
+            isTag: true
+        )
+        work.setColor(red: 0.034, green: 0.230, blue: 0.096)
+        let shopping = NoteContainer(
+            name: "Shopping",
+            isTag: true
+        )
+        shopping.setColor(red: 0.158, green: 0.034, blue: 0.230)
+        let personal = NoteContainer(
+            name: "Personal",
+            isTag: true
+        )
+        personal.setColor(red: 0.23, green: 0.01, blue: 0.40)
         modelContext.insert(home)
         modelContext.insert(work)
         modelContext.insert(shopping)
@@ -89,12 +110,13 @@ struct ContentView: View {
     }
 
     private func createInboxFolder() {
-        let inboxFolder = Folder(
+        let inboxFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
             isInbox: true,
             name: ContentView.inboxFolderName,
-            symbol: "tray"
+            symbol: "tray",
+            isTag: false,
         )
         modelContext.insert(inboxFolder)
         try? modelContext.save()
@@ -102,19 +124,20 @@ struct ContentView: View {
     }
 
     private func createTrashFolder() {
-        let trashFolder = Folder(
+        let trashFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: true,
             isInbox: false,
             name: ContentView.trashFolderName,
-            symbol: "trash"
+            symbol: "trash",
+            isTag: false,
         )
         modelContext.insert(trashFolder)
         try? modelContext.save()
     }
 
     func addFolder() {
-        let newFolder = Folder(
+        let newFolder = NoteContainer(
             canBeDeleted: true,
             isTrash: false,
             isInbox: false,
@@ -140,11 +163,21 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            FolderList(
-                selectedFolder: $selectedFolder,
-                onDelete: folderDelete,
-                onEmptyTrash: emptyTrash
-            )
+            VStack {
+                Section(header: Text("Home")) {
+                    FolderList(
+                        selectedFolder: $selectedFolder,
+                        onDelete: folderDelete,
+                        onEmptyTrash: emptyTrash
+                    )
+                }
+
+                Section(header: Text("Tags")) {
+                    TagList(
+                        selectedFolder: $selectedFolder
+                    )
+                }
+            }
             .toolbar {
                 if selectedFolder?.isTrash == true
                     && selectedFolder?.notes.isEmpty == false

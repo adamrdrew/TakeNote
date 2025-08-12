@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedFolder: Folder?
+    @Binding var selectedFolder: NoteContainer?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
