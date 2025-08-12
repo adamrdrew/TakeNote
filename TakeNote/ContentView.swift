@@ -52,7 +52,7 @@ struct ContentView: View {
         })
         selectedNote = nil
     }
-    
+
     func tagDelete(_ deletedTag: NoteContainer) {
         if deletedTag == selectedFolder {
             selectedFolder = inboxFolders.first
@@ -79,7 +79,7 @@ struct ContentView: View {
     }
 
     func folderInit() {
-        if inboxFolders.count != 0  {
+        if inboxFolders.count != 0 {
             return
         }
         createInboxFolder()
@@ -155,13 +155,14 @@ struct ContentView: View {
         try? modelContext.save()
         self.selectedFolder = newFolder
     }
-    
+
     func addTag() {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
             name: "New Tag",
-            isTag: true)
+            isTag: true
+        )
         newTag.setColor(Color(.blue))
         modelContext.insert(newTag)
         try? modelContext.save()
@@ -183,20 +184,23 @@ struct ContentView: View {
     var body: some View {
         NavigationSplitView {
             VStack {
-                Section(header: Label("Folders", systemImage: "folder")) {
-                    FolderList(
-                        selectedFolder: $selectedFolder,
-                        onDelete: folderDelete,
-                        onEmptyTrash: emptyTrash
-                    )
+                List(selection: $selectedFolder) {
+                    Section(header: Label("Folders", systemImage: "folder")) {
+                        FolderList(
+                            selectedFolder: $selectedFolder,
+                            onDelete: folderDelete,
+                            onEmptyTrash: emptyTrash
+                        )
+                    }
+
+                    Section(header: Label("Tags", systemImage: "tag")) {
+                        TagList(
+                            selectedFolder: $selectedFolder,
+                            onDelete: tagDelete
+                        )
+                    }
                 }
 
-                Section(header: Label("Tags", systemImage: "tag")) {
-                    TagList(
-                        selectedFolder: $selectedFolder,
-                        onDelete: tagDelete
-                    )
-                }
             }
             .toolbar {
                 if selectedFolder?.isTrash == true
