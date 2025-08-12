@@ -72,6 +72,7 @@ class Note : Identifiable {
             return
         }
         aiSummaryIsGenerating  = true
+        aiSummary = ""
         let instructions =
             "Generate a terse, and consice, one line summary of the provided text. Do not mention the source text at all, just provide the summary. Do not say things like 'the provided text says' or 'according to the provided text' or any other reference to the text itself. Just say whats in the text."
         let session = LanguageModelSession(instructions: instructions)

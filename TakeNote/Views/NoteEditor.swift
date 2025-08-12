@@ -6,7 +6,6 @@
 //
 
 import CodeEditorView
-import FoundationModels
 import LanguageSupport
 import MarkdownUI
 import SwiftData
@@ -17,7 +16,6 @@ struct NoteEditor: View {
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
-    internal var model = SystemLanguageModel.default
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
 
     func generateSummary() async {
@@ -87,22 +85,7 @@ struct NoteEditor: View {
                     }
 
                 }
-                if model.availability == .available {
-                    ToolbarItem {
-                        Button(action: {
-                            Task {
-                                await generateSummary()
-                            }
-                        }) {
 
-                            Image(
-                                systemName: "apple.intelligence"
-                            )
-
-                        }
-
-                    }
-                }
 
             }
         } else {
