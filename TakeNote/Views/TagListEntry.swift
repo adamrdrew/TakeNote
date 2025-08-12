@@ -11,7 +11,15 @@ import SwiftUI
 struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
+    @State var inDeleteMode: Bool = false
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = { deletedFolder in }
 
+    
+    func deleteTag() {
+        modelContext.delete(tag)
+        try? modelContext.save()
+        onDelete(tag)
+    }
     
     func dropNoteToTag(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
@@ -50,6 +58,29 @@ struct TagListEntry: View {
             wrappedIDs,
             _ in
             dropNoteToTag(wrappedIDs)
+        }
+        .alert(
+            "Are you sure you want to delete \(tag.name)?",
+            isPresented: $inDeleteMode
+        ) {
+            Button("Delete", role: .destructive) {
+                deleteTag()
+            }
+            Button("Cancel", role: .cancel) {
+                inDeleteMode = false
+            }
+        }
+        .contextMenu {
+            if tag.canBeDeleted {
+                Button(
+                    role: .destructive,
+                    action: {
+                        inDeleteMode = true
+                    }
+                ) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
         }
     }
 }

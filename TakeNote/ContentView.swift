@@ -52,6 +52,13 @@ struct ContentView: View {
         })
         selectedNote = nil
     }
+    
+    func tagDelete(_ deletedTag: NoteContainer) {
+        if deletedTag == selectedFolder {
+            selectedFolder = inboxFolders.first
+            selectedNote = nil
+        }
+    }
 
     func moveNoteToTrash(_ noteToTrash: Note) {
         guard let trashFolder = trashFolders.first else {
@@ -185,7 +192,8 @@ struct ContentView: View {
 
                 Section(header: Label("Tags", systemImage: "tag")) {
                     TagList(
-                        selectedFolder: $selectedFolder
+                        selectedFolder: $selectedFolder,
+                        onDelete: tagDelete
                     )
                 }
             }

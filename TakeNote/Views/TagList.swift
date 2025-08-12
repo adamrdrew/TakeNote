@@ -17,11 +17,13 @@ public struct TagList: View {
     ) var tags: [NoteContainer]
         
     @Binding var selectedFolder: NoteContainer?
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = { deletedFolder in }
+
         
     public var body: some View {
         List(selection: $selectedFolder) {
             ForEach(tags, id: \.self) { tag in
-                TagListEntry(tag: tag)
+                TagListEntry(tag: tag, onDelete: onDelete)
             }
         }
     }
