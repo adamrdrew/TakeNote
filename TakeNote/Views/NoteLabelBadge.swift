@@ -15,9 +15,7 @@ struct NoteLabelBadge: View {
         ZStack {
             Circle()
                 .fill(
-                    Color(
-                        noteLabel.getColor()
-                    )
+                    noteLabel.getColor()
                 )
                 .glassEffect()
                 .overlay(

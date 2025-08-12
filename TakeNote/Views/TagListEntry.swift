@@ -19,7 +19,7 @@ struct TagListEntry: View {
     @State var newTagName: String = ""
     @State var showColorPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
-    
+
     @State var newTagColor: Color = Color(.blue)
 
     func deleteTag() {
@@ -43,27 +43,24 @@ struct TagListEntry: View {
     func dropNoteToTag(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
-
             // Find the note we're going to move by ID
             guard let note = modelContext.model(for: id) as? Note else {
                 continue
             }
-
             // Add the destination tag to the note and save
             note.tag = tag
-            do {
-                try modelContext.save()
-            } catch {
-                return
-            }
-
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            return
         }
     }
 
     var body: some View {
         HStack(spacing: 8) {
             if inRenameMode {
-                TextField("New Folder Name", text: $newTagName)
+                TextField("New Tag Name", text: $newTagName)
                     .focused($nameInputFocused)
                     .onSubmit {
                         finishRename()
@@ -85,8 +82,12 @@ struct TagListEntry: View {
         .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Tag Color").font(.headline)
-                ColorPicker("Color", selection: $newTagColor, supportsOpacity: true)
-                    .labelsHidden()
+                ColorPicker(
+                    "Color",
+                    selection: $newTagColor,
+                    supportsOpacity: true
+                )
+                .labelsHidden()
                 HStack {
                     Spacer()
                     Button("Cancel") { showColorPopover = false }
@@ -123,7 +124,11 @@ struct TagListEntry: View {
             Button(action: startRename) {
                 Label("Rename Tag", systemImage: "pencil")
             }
-            Button(action: { showColorPopover = true }) {
+            Button(action: {
+                newTagColor = tag.getColor()
+                showColorPopover = true
+            }) {
+
                 Label("Set Color", systemImage: "eyedropper")
             }
             if tag.canBeDeleted {
