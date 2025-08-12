@@ -70,7 +70,10 @@ struct FolderListEntry: View {
                     Label(folder.name, systemImage: folder.getSystemImageName())
                         .font(.headline)
                     Spacer()
-                    Label("\(folder.notes.count)", systemImage: "note.text")
+                    HStack {
+                        Text("\(folder.notes.count)")
+                        Image(systemName: "note.text")
+                    }
                 }
             }
         }

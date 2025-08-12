@@ -76,7 +76,10 @@ struct TagListEntry: View {
                     .truncationMode(.tail)
 
                 Spacer()
-                Label("\(tag.notes.count)", systemImage: "note.text")
+                HStack {
+                    Text("\(tag.notes.count)")
+                    Image(systemName: "note.text")
+                }
             }
         }
         .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
