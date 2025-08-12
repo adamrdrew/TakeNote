@@ -12,15 +12,31 @@ struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
     @State var inDeleteMode: Bool = false
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = { deletedFolder in }
+    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
+        deletedFolder in
+    }
+    @State var inRenameMode: Bool = false
+    @State var newTagName: String = ""
+    @FocusState private var nameInputFocused: Bool
 
-    
     func deleteTag() {
         modelContext.delete(tag)
         try? modelContext.save()
         onDelete(tag)
     }
-    
+
+    func startRename() {
+        inRenameMode = true
+        nameInputFocused = true
+        newTagName = tag.name
+    }
+
+    func finishRename() {
+        inRenameMode = false
+        tag.name = newTagName
+        try? modelContext.save()
+    }
+
     func dropNoteToTag(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
@@ -43,14 +59,22 @@ struct TagListEntry: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            NoteLabelBadge(noteLabel: tag)
-            Text(tag.name)
-                .font(.headline)
-                .lineLimit(1)
-                .truncationMode(.tail)
-            
-            Spacer()
-            Label("\(tag.notes.count)", systemImage: "note.text")
+            if inRenameMode {
+                TextField("New Folder Name", text: $newTagName)
+                    .focused($nameInputFocused)
+                    .onSubmit {
+                        finishRename()
+                    }
+            } else {
+                NoteLabelBadge(noteLabel: tag)
+                Text(tag.name)
+                    .font(.headline)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+
+                Spacer()
+                Label("\(tag.notes.count)", systemImage: "note.text")
+            }
         }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
@@ -71,6 +95,9 @@ struct TagListEntry: View {
             }
         }
         .contextMenu {
+            Button(action: startRename) {
+                Label("Rename Tag", systemImage: "pencil")
+            }
             if tag.canBeDeleted {
                 Button(
                     role: .destructive,
