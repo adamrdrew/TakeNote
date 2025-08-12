@@ -45,7 +45,13 @@ struct NoteList: View {
                         }
 
                     }
-                    Section(header: Label(selectedFolder?.name ?? "Notes", systemImage: selectedFolder?.getSystemImageName() ?? "folder")) {
+                    Section(
+                        header: Label(
+                            selectedFolder?.name ?? "Notes",
+                            systemImage: selectedFolder?.getSystemImageName()
+                                ?? "folder"
+                        )
+                    ) {
                         ForEach(notes, id: \.self) { note in
                             if !note.starred {
                                 NoteListEntry(
@@ -58,6 +64,12 @@ struct NoteList: View {
                         }
                     }
                 }
+                .onChange(of: selectedNote) { oldValue, newValue in
+                    if let oldValue {
+                        Task { await oldValue.generateSummary() }
+                    }
+                }
+
 
             } else {
                 Text("No folder selected")
@@ -65,7 +77,9 @@ struct NoteList: View {
         }
         .toolbar {
             ToolbarItem {
-                if selectedFolder?.isTrash == false && selectedFolder?.isTag == false {
+                if selectedFolder?.isTrash == false
+                    && selectedFolder?.isTag == false
+                {
                     Button(action: addNote) {
                         Image(systemName: "note.text.badge.plus")
                     }

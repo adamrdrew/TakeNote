@@ -217,6 +217,7 @@ struct ContentView: View {
                     ).headerProminence(.increased)
                 }.listStyle(.sidebar)
 
+
             }
             .navigationSplitViewColumnWidth(min: 250, ideal: 250, max: 350)
             .toolbar {

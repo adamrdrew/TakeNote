@@ -21,6 +21,11 @@ struct NoteListEntry: View {
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
 
+    private let verticalPadding: CGFloat = 8
+    private let horizontalPadding: CGFloat = 12
+    private let hSpacing: CGFloat = 8
+    private let vSpacing: CGFloat = 6
+
     func openEditorWindow() {
         openWindow(
             id: "note-editor-window",
@@ -45,59 +50,91 @@ struct NoteListEntry: View {
     }
 
     var body: some View {
-        VStack {
-            VStack {
+        VStack(alignment: .leading, spacing: vSpacing) {
+            // Title row
+            HStack(alignment: .firstTextBaseline, spacing: hSpacing) {
                 if inRenameMode {
                     TextField("New Note Name", text: $newName)
                         .focused($nameInputFocused)
-                        .onSubmit {
-                            finishRename()
-                        }
+                        .font(.headline.weight(.semibold))
+                        .textFieldStyle(.roundedBorder)
+                        .onSubmit { finishRename() }
                 } else {
-                    VStack {
-                        HStack {
-                            Label(note.title, systemImage: "note.text")
-                                .font(.headline)
-                            if let noteLabel = note.tag {
-                                NoteLabelBadge(noteLabel: noteLabel)
-                            }
-                            Spacer()
-                            Button(
-                                "",
-                                systemImage: note.starred ? "star.fill" : "star"
-                            ) {
-                                note.starred = !note.starred
-                                try? modelContext.save()
-                            }
-                            .buttonStyle(BorderlessButtonStyle())
-                            .foregroundColor(
-                                note.starred ? .yellow : .secondary
-                            )
-
-                        }
-                        HStack {
-                            Text(note.createdDate, style: .date)
-                            Spacer()
-                            if selectedFolder?.isTag == true {
-                                Label(
-                                    note.folder.name,
-                                    systemImage: "folder"
-                                )
-                            }
-                        }
-
+                    Label {
+                        Text(note.title)
+                            .font(.headline.weight(.semibold))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: "note.text")
+                            .symbolRenderingMode(.hierarchical)
                     }
-
+                    .labelStyle(.titleAndIcon)
                 }
 
+                if let noteLabel = note.tag {
+                    NoteLabelBadge(noteLabel: noteLabel)
+                        .alignmentGuide(.firstTextBaseline) { d in
+                            d[.firstTextBaseline]
+                        }
+                }
+
+                Spacer(minLength: 0)
+
+                Button("", systemImage: note.starred ? "star.fill" : "star") {
+                    note.starred.toggle()
+                    try? modelContext.save()
+                }
+                .buttonStyle(.plain)
+                .imageScale(.medium)
+                .foregroundStyle(note.starred ? .yellow : .secondary)
+                .help(note.starred ? "Unstar" : "Star")
             }
 
-        }
-        .onTapGesture(count: 2) {
-            openEditorWindow()
+            // Metadata row
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(note.createdDate, style: .date)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
+                Spacer(minLength: 0)
+
+                if selectedFolder?.isTag == true {
+                    Label {
+                        Text(note.folder.name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: "folder")
+                            .symbolRenderingMode(.hierarchical)
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                }
+            }
+
+            // Summary row (optional)
+            if !note.aiSummary.isEmpty {
+                Label {
+                    Text(note.aiSummary)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "apple.intelligence")
+                        .symbolRenderingMode(.hierarchical)
+                }
+            }
         }
         .draggable(NoteIDWrapper(id: note.persistentModelID))
-        .padding(10)
+        .padding(.vertical, verticalPadding)
+        .padding(.horizontal, horizontalPadding)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .highPriorityGesture(
+            TapGesture(count: 2)
+                .onEnded { openEditorWindow() }
+        )
         .contextMenu {
 
             if selectedFolder?.isTrash == false {
