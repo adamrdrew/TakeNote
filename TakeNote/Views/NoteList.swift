@@ -31,7 +31,7 @@ struct NoteList: View {
                 List(selection: $selectedNote) {
 
                     if folderHasStarredNotes() {
-                        Section(header: Text("Starred")) {
+                        Section(header: Label("Starred", systemImage: "star")) {
                             ForEach(notes, id: \.self) { note in
                                 if note.starred {
                                     NoteListEntry(
@@ -45,7 +45,7 @@ struct NoteList: View {
                         }
 
                     }
-                    Section(header: Text(selectedFolder?.name ?? "Notes")) {
+                    Section(header: Label(selectedFolder?.name ?? "Notes", systemImage: selectedFolder?.getSystemImageName() ?? "folder")) {
                         ForEach(notes, id: \.self) { note in
                             if !note.starred {
                                 NoteListEntry(
