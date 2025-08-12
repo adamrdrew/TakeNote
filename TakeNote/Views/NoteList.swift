@@ -65,7 +65,7 @@ struct NoteList: View {
         }
         .toolbar {
             ToolbarItem {
-                if selectedFolder?.isTrash == false {
+                if selectedFolder?.isTrash == false && selectedFolder?.isTag == false {
                     Button(action: addNote) {
                         Image(systemName: "note.text.badge.plus")
                     }
