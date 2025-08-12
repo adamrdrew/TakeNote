@@ -113,7 +113,6 @@ struct NoteListEntry: View {
                 }
             }
 
-            // Summary row (optional)
             if !note.aiSummary.isEmpty {
                 Label {
                     Text(note.aiSummary)
@@ -125,6 +124,23 @@ struct NoteListEntry: View {
                     Image(systemName: "apple.intelligence")
                         .symbolRenderingMode(.hierarchical)
                 }
+            }
+
+            if note.aiSummaryIsGenerating {
+                Label {
+                    Text("AI Summary Generating...")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "apple.intelligence")
+                        .symbolRenderingMode(.hierarchical)
+
+                }
+                .symbolEffect(.bounce.down)
+                .symbolEffect(.rotate)
+
             }
         }
         .draggable(NoteIDWrapper(id: note.persistentModelID))

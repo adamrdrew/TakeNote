@@ -32,6 +32,7 @@ class Note : Identifiable {
     var starred : Bool = false
     var aiSummary : String = ""
     var contentHash : String = ""
+    var aiSummaryIsGenerating : Bool = false
     // This odd syntax makes the setter private to the instance
     // so we can act like this is a private property
     // but SwiftData can still set it
@@ -70,6 +71,7 @@ class Note : Identifiable {
         if model.availability != .available {
             return
         }
+        aiSummaryIsGenerating  = true
         let instructions =
             "Generate a terse, and consice, one line summary of the provided text. Do not mention the source text at all, just provide the summary. Do not say things like 'the provided text says' or 'according to the provided text' or any other reference to the text itself. Just say whats in the text."
         let session = LanguageModelSession(instructions: instructions)
@@ -77,6 +79,7 @@ class Note : Identifiable {
         let prompt = content
         let response = try? await session.respond(to: prompt)
         aiSummary = response?.content ?? ""
+        aiSummaryIsGenerating  = false
     }
 
 }
