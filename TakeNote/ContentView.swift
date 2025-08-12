@@ -218,6 +218,7 @@ struct ContentView: View {
                 }.listStyle(.sidebar)
 
             }
+            .navigationSplitViewColumnWidth(min: 250, ideal: 250, max: 350)
             .toolbar {
                 if selectedFolder?.isTrash == true
                     && selectedFolder?.notes.isEmpty == false

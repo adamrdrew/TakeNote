@@ -33,7 +33,7 @@ class Note : Identifiable {
     // but SwiftData can still set it
     private(set) var uuid : UUID = UUID()
     @Relationship(inverse: \NoteContainer.folderNotes) var folder : NoteContainer
-    @Relationship(inverse: \NoteContainer.tagNotes) var tag : NoteContainer?
+    @Relationship(deleteRule: .nullify, inverse: \NoteContainer.tagNotes) var tag : NoteContainer?
     
     init(folder: NoteContainer) {
         self.title = "New Note"
