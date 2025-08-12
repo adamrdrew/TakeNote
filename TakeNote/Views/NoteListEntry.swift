@@ -123,6 +123,14 @@ struct NoteListEntry: View {
                 } icon: {
                     Image(systemName: "apple.intelligence")
                         .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(
+                            .linearGradient(
+                                colors: [.blue, .orange, .purple],
+                                startPoint: .top,
+                                endPoint: .bottomTrailing
+                            ),
+
+                        )
                 }
             }
 
@@ -140,6 +148,14 @@ struct NoteListEntry: View {
                 }
                 .symbolEffect(.bounce.down)
                 .symbolEffect(.rotate)
+                .foregroundStyle(
+                    .linearGradient(
+                        colors: [.blue, .orange, .purple],
+                        startPoint: .top,
+                        endPoint: .bottomTrailing
+                    ),
+
+                )
 
             }
         }
