@@ -78,7 +78,14 @@ struct NoteListEntry: View {
                         HStack {
                             Text(note.createdDate, style: .date)
                             Spacer()
+                            if selectedFolder?.isTag == true {
+                                Label(
+                                    note.folder.name,
+                                    systemImage: "folder"
+                                )
+                            }
                         }
+
                     }
 
                 }
