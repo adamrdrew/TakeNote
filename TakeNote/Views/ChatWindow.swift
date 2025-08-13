@@ -85,7 +85,7 @@ struct ChatWindow: View {
             - Answer from the provided SOURCE EXCERPTS.
             - Use CHAT HISTORY only to resolve context (pronouns, follow-ups, constraints, user intent). Do NOT treat it as evidence for facts.
             - Do not use outside/world knowledge.
-            - If you can't find a direct answer to the question in the SOURCE EXERPTS use the information in them to infer what the right answer might be to the best of your ability
+            - If you can't find a direct answer to the question in the SOURCE EXCERPTS use the information in them to infer what the right answer might be to the best of your ability
 
             AUTHORITY ORDER
             1) SOURCE EXCERPTS (highest authority)
