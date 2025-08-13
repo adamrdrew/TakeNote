@@ -144,33 +144,7 @@ struct ChatWindow: View {
 
                         // Subtle typing indicator when generating
                         if responseIsGenerating {
-                            HStack {
-                                Label {
-                                    Text("Thinking...")
-                                        .font(.headline)
-                                        .foregroundStyle(.secondary)
-                                        .lineLimit(2)
-                                        .truncationMode(.tail)
-                                } icon: {
-                                    Image(systemName: "apple.intelligence")
-                                        .symbolRenderingMode(.hierarchical)
-
-                                }
-                                .padding()
-                                .symbolEffect(.bounce.down)
-                                .symbolEffect(.rotate)
-                                .foregroundStyle(
-                                    .linearGradient(
-                                        colors: [.orange, .pink, .blue, .purple],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
-
-                                )
-                                Spacer()
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.top, 2)
+                            AIMessage(message: "Thinking...", font: .headline)
                         }
 
                         // Bottom spacer to anchor scroll

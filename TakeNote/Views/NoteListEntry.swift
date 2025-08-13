@@ -119,27 +119,7 @@ struct NoteListEntry: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
 
                 if note.aiSummaryIsGenerating {
-                    Label {
-                        Text("AI Summary Generating...")
-                            .font(.callout)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                    } icon: {
-                        Image(systemName: "apple.intelligence")
-                            .symbolRenderingMode(.hierarchical)
-
-                    }
-                    .symbolEffect(.bounce.down)
-                    .symbolEffect(.rotate)
-                    .foregroundStyle(
-                        .linearGradient(
-                            colors: [.orange, .pink, .blue, .purple],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        ),
-
-                    )
+                    AIMessage(message: "AI Summary Generating...", font: .callout)
 
                 } else {
                     if !note.aiSummary.isEmpty {
