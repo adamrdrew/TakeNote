@@ -12,6 +12,9 @@ struct NoteList: View {
     @Binding var selectedFolder: NoteContainer?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
+    @State var showFileImportError: Bool = false
+    @State var fileImportErrorMessage: String = ""
+    
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
     func addNote() {
@@ -73,6 +76,38 @@ struct NoteList: View {
 
             } else {
                 Text("No folder selected")
+            }
+        }
+        .dropDestination(for: URL.self, isEnabled: true) { items, location in
+            var noteImported = false
+            for url in items {
+                guard let fileContents = try? String(contentsOf: url, encoding: String.defaultCStringEncoding) else {
+                    fileImportErrorMessage = "Failed to read file contents"
+                    showFileImportError = true
+                    return
+                }
+                guard let folder = selectedFolder else {
+                    fileImportErrorMessage = "No folder selected"
+                    showFileImportError = true
+                    return
+                }
+                let newNote = Note(folder: folder)
+                newNote.title = url.lastPathComponent
+                newNote.content = fileContents
+                modelContext.insert(newNote)
+                noteImported = true
+            }
+            if !noteImported { return }
+            do {
+                try modelContext.save()
+            } catch {
+                fileImportErrorMessage = "Failed to save new note: \(error)"
+                showFileImportError = true
+            }
+        }
+        .alert(fileImportErrorMessage, isPresented: $showFileImportError) {
+            Button("OK") {
+                showFileImportError = false
             }
         }
         .toolbar {
