@@ -169,7 +169,7 @@ struct NoteListEntry: View {
                                 .lineLimit(2)
                                 .truncationMode(.tail)
                         } icon: {
-                            Image(systemName: "text.justify")
+                            Image(systemName: "text.magnifyingglass")
                                 .foregroundStyle(.secondary)
                         }
                     }

@@ -44,59 +44,50 @@ struct NoteList: View {
 
     var body: some View {
         VStack {
-            if selectedFolder?.notes.isEmpty ?? true {
-                Spacer()
-                Text("No Notes")
-                    .font(.title)
-                    .padding()
-                    .foregroundStyle(.secondary)
-                Spacer()
-            } else {
-                List(selection: $selectedNote) {
-                    if folderHasStarredNotes() {
-                        Section(header: Label("Starred", systemImage: "star")) {
-                            ForEach(filteredNotes, id: \.self) { note in
-                                if note.starred {
-                                    NoteListEntry(
-                                        note: note,
-                                        selectedFolder: selectedFolder,
-                                        onTrash: onTrash
-                                    )
 
-                                }
-                            }
-                        }
-
-                    }
-                    Section(
-                        header: Label(
-                            selectedFolder?.name ?? "Notes",
-                            systemImage: selectedFolder?.getSystemImageName()
-                                ?? "folder"
-                        )
-                    ) {
+            List(selection: $selectedNote) {
+                if folderHasStarredNotes() {
+                    Section(header: Text("Favorites").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
-                            if !note.starred {
+                            if note.starred {
                                 NoteListEntry(
                                     note: note,
                                     selectedFolder: selectedFolder,
                                     onTrash: onTrash
                                 )
-                            }
 
+                            }
                         }
                     }
+
                 }
-                .searchable(text: $noteSearchText, prompt: "Search")
-                .onChange(of: selectedNote) { oldValue, newValue in
-                    if let oldValue {
-                        Task { await oldValue.generateSummary() }
-                        if oldValue.contentHasChanged() {
-                            search.reindex(note: oldValue)
+                Section(
+                    header: Text("Notes").font(.headline)
+                ) {
+                    ForEach(filteredNotes, id: \.self) { note in
+                        if !note.starred {
+                            NoteListEntry(
+                                note: note,
+                                selectedFolder: selectedFolder,
+                                onTrash: onTrash
+                            )
                         }
+
                     }
                 }
             }
+            .searchable(text: $noteSearchText, prompt: "Search")
+            .onChange(of: selectedNote) { oldValue, newValue in
+                if let oldValue {
+                    Task { await oldValue.generateSummary() }
+                    if oldValue.contentHasChanged() {
+                        search.reindex(note: oldValue)
+                    }
+                }
+            }
+
+
+
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             var noteImported = false

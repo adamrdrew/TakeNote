@@ -276,6 +276,9 @@ struct ContentView: View {
             NoteEditor(selectedNote: $selectedNote)
         }
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
+        .navigationTitle(selectedFolder?.name ?? "TakeNote")
+        
+        
 
         .alert(
             "Link Error: \(linkToNoteErrorMessage)",

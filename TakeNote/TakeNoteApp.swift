@@ -29,7 +29,7 @@ struct TakeNoteApp: App {
     }
 
     var body: some Scene {
-        Window("TakeNote", id: "main-window") {
+        Window("", id: "main-window") {
             ContentView()
                 .environmentObject(search)
                 .handlesExternalEvents(
@@ -38,6 +38,7 @@ struct TakeNoteApp: App {
                 )
         }
         .modelContainer(container)
+        .windowToolbarStyle(.expanded)
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
