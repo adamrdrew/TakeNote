@@ -237,10 +237,11 @@ struct NoteListEntry: View {
                 break
             case .failure(let error):
                 exportError = error.localizedDescription
+                showExportError = true
             }
         }
         .alert(
-            "Something went wrong exporting your file: \(String(describing: exportError))",
+            "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",
             isPresented: $showExportError
         ) {
             Button("OK", role: .cancel) {
