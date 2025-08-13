@@ -105,7 +105,7 @@ struct NoteList: View {
                 noteImported = true
             }
             if !noteImported {
-                fileImportErrorMessage = "No valid notes imported"
+                fileImportErrorMessage = "No valid notes imported: \(fileImportErrorMessage)"
                 showFileImportError = true
                 return
             }
