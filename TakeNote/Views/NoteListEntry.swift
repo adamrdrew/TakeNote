@@ -20,6 +20,8 @@ struct NoteListEntry: View {
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
     @State private var showExportDialog : Bool = false
+    @State private var exportError: String? = nil
+    @State private var showExportError : Bool = false
     @FocusState private var nameInputFocused: Bool
     
 
@@ -230,7 +232,20 @@ struct NoteListEntry: View {
             document: TextFile(initialText: note.content),
             defaultFilename: "\(note.title).md"
         ) { result in
-            print("File saved")
+            switch result {
+            case .success:
+                break
+            case .failure(let error):
+                exportError = error.localizedDescription
+            }
+        }
+        .alert(
+            "Something went wrong exporting your file: \(String(describing: exportError))",
+            isPresented: $showExportError
+        ) {
+            Button("OK", role: .cancel) {
+                showExportError = false
+            }
         }
         .alert(
             "Are you sure you want to move \(note.title) to the trash?",
