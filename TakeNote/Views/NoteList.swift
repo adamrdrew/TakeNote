@@ -82,6 +82,12 @@ struct NoteList: View {
             var noteImported = false
             var errorEncountered = false
             for url in items {
+                if url.pathExtension != "md" && url.pathExtension != "txt" {
+                    print("Died in guard for \(url.pathExtension)")
+                    errorEncountered = true
+                    fileImportErrorMessage = "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
+                    continue
+                }
                 guard let fileContents = try? String(contentsOf: url, encoding: .utf8) else {
                     fileImportErrorMessage = "Failed to read file contents"
                     errorEncountered = true
