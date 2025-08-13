@@ -19,7 +19,11 @@ struct NoteListEntry: View {
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
+    @State private var showExportDialog : Bool = false
+    @State private var exportError: String? = nil
+    @State private var showExportError : Bool = false
     @FocusState private var nameInputFocused: Bool
+    
 
     private let verticalPadding: CGFloat = 8
     private let horizontalPadding: CGFloat = 12
@@ -191,6 +195,16 @@ struct NoteListEntry: View {
             ) {
                 Label("Open Editor Window", systemImage: "macwindow")
             }
+            if !note.isEmpty {
+                Button(
+                    action: {
+                        showExportDialog = true
+                    }
+                ){
+                    Label("Export", systemImage: "square.and.arrow.down")
+                }
+            }
+
             Button(action: {
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
@@ -211,6 +225,27 @@ struct NoteListEntry: View {
                         systemImage: "xmark"
                     )
                 }
+            }
+        }
+        .fileExporter(
+            isPresented: $showExportDialog,
+            document: TextFile(initialText: note.content),
+            defaultFilename: "\(note.title).md"
+        ) { result in
+            switch result {
+            case .success:
+                break
+            case .failure(let error):
+                exportError = error.localizedDescription
+                showExportError = true
+            }
+        }
+        .alert(
+            "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",
+            isPresented: $showExportError
+        ) {
+            Button("OK", role: .cancel) {
+                showExportError = false
             }
         }
         .alert(

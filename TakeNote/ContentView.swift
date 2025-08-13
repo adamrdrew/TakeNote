@@ -8,6 +8,7 @@
 import SwiftData
 import SwiftUI
 
+
 struct ContentView: View {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
@@ -216,7 +217,6 @@ struct ContentView: View {
                         }
                     ).headerProminence(.increased)
                 }.listStyle(.sidebar)
-
 
             }
             .navigationSplitViewColumnWidth(min: 250, ideal: 250, max: 350)
