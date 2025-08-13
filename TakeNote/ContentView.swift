@@ -268,6 +268,7 @@ struct ContentView: View {
                     Button(action: addNote) {
                         Image(systemName: "note.text.badge.plus")
                     }
+
                 }
 
             }

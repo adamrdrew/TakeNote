@@ -44,7 +44,7 @@ struct NoteList: View {
 
     var body: some View {
         VStack {
-            if filteredNotes.isEmpty {
+            if selectedFolder?.notes.isEmpty ?? true {
                 Spacer()
                 Text("No Notes")
                     .font(.title)
