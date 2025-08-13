@@ -134,9 +134,9 @@ struct NoteListEntry: View {
                     .symbolEffect(.rotate)
                     .foregroundStyle(
                         .linearGradient(
-                            colors: [.blue, .orange, .purple],
-                            startPoint: .top,
-                            endPoint: .bottomTrailing
+                            colors: [.orange, .pink, .blue, .purple],
+                            startPoint: .leading,
+                            endPoint: .trailing
                         ),
 
                     )
@@ -154,20 +154,27 @@ struct NoteListEntry: View {
                                 .symbolRenderingMode(.hierarchical)
                                 .foregroundStyle(
                                     .linearGradient(
-                                        colors: [.blue, .orange, .purple],
-                                        startPoint: .top,
-                                        endPoint: .bottomTrailing
+                                        colors: [
+                                            .orange, .pink, .blue, .purple,
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     ),
 
                                 )
                         }
                     } else {
                         Label {
-                            Text(note.content.replacingOccurrences(of: "\n", with: " "))
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                                .truncationMode(.tail)
+                            Text(
+                                note.content.replacingOccurrences(
+                                    of: "\n",
+                                    with: " "
+                                )
+                            )
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .truncationMode(.tail)
                         } icon: {
                             Image(systemName: "text.magnifyingglass")
                                 .foregroundStyle(.secondary)
