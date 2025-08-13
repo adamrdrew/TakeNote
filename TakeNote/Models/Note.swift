@@ -33,6 +33,7 @@ class Note : Identifiable {
     var aiSummary : String = ""
     var contentHash : String = ""
     var aiSummaryIsGenerating : Bool = false
+    var isEmpty : Bool { return content.isEmpty }
     // This odd syntax makes the setter private to the instance
     // so we can act like this is a private property
     // but SwiftData can still set it
@@ -58,19 +59,33 @@ class Note : Identifiable {
         return digest.map { String(format: "%02hhx", $0) }.joined()
     }
     
-    func generateSummary() async {
-        if content == "" {
-            return
-        }
+    func contentHasChanged () -> Bool {
         let newHash = generateContentHash()
-        if newHash == contentHash {
-            return
-        }
-        contentHash = newHash
+        return newHash != contentHash
+    }
+    
+    func canGenerateAISummary () -> Bool {
         let model = SystemLanguageModel.default
+        if isEmpty {
+            return false
+        }
+        if !contentHasChanged() {
+            return false
+        }
+        if aiSummaryIsGenerating {
+            return false
+        }
         if model.availability != .available {
+            return false
+        }
+        return true
+    }
+    
+    func generateSummary() async {
+        if !canGenerateAISummary() {
             return
         }
+        contentHash = generateContentHash()
         aiSummaryIsGenerating  = true
         aiSummary = ""
         let instructions =
