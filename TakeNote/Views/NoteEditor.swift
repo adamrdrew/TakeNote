@@ -89,8 +89,12 @@ struct NoteEditor: View {
             }
         } else {
             VStack {
-                Text("Select a Note")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Spacer()
+                Text("No Note Selected")
+                    .font(.title)
+                    .padding()
+                    .foregroundStyle(.secondary)
+                Spacer()
             }
         }
     }

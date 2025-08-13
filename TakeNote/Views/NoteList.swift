@@ -15,17 +15,20 @@ struct NoteList: View {
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
-    
+
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
             selectedFolder?.notes ?? []
         } else {
-            selectedFolder?.notes.filter { $0.title.localizedStandardContains(noteSearchText) || $0.content.localizedStandardContains(noteSearchText)  } ?? []
+            selectedFolder?.notes.filter {
+                $0.title.localizedStandardContains(noteSearchText)
+                    || $0.content.localizedStandardContains(noteSearchText)
+            } ?? []
         }
     }
-    
+
     @EnvironmentObject private var search: SearchIndexService
-    
+
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
     func addNote() {
@@ -40,15 +43,16 @@ struct NoteList: View {
     }
 
     var body: some View {
-       VStack {
-            if let notes = selectedFolder?.notes {
-                //if !notes.isEmpty {
-                 //   TextField("Search", text: $noteSearchText)
-                  //      .padding()
-                //}
-
+        VStack {
+            if filteredNotes.isEmpty {
+                Spacer()
+                Text("No Notes")
+                    .font(.title)
+                    .padding()
+                    .foregroundStyle(.secondary)
+                Spacer()
+            } else {
                 List(selection: $selectedNote) {
-
                     if folderHasStarredNotes() {
                         Section(header: Label("Starred", systemImage: "star")) {
                             ForEach(filteredNotes, id: \.self) { note in
@@ -92,10 +96,6 @@ struct NoteList: View {
                         }
                     }
                 }
-
-
-            } else {
-                Text("No folder selected")
             }
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
@@ -104,10 +104,16 @@ struct NoteList: View {
             for url in items {
                 if url.pathExtension != "md" && url.pathExtension != "txt" {
                     errorEncountered = true
-                    fileImportErrorMessage = "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
+                    fileImportErrorMessage =
+                        "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
                     continue
                 }
-                guard let fileContents = try? String(contentsOf: url, encoding: .utf8) else {
+                guard
+                    let fileContents = try? String(
+                        contentsOf: url,
+                        encoding: .utf8
+                    )
+                else {
                     fileImportErrorMessage = "Failed to read file contents"
                     errorEncountered = true
                     continue
@@ -126,7 +132,8 @@ struct NoteList: View {
                 noteImported = true
             }
             if !noteImported {
-                fileImportErrorMessage = "No valid notes imported: \(fileImportErrorMessage)"
+                fileImportErrorMessage =
+                    "No valid notes imported: \(fileImportErrorMessage)"
                 showFileImportError = true
                 return
             }
