@@ -97,22 +97,22 @@ struct ContentView: View {
             return
         }
         let home = NoteContainer(
-            name: "Home",
+            name: "🏠 Home",
             isTag: true
         )
         home.setColor(Color(.blue))
         let work = NoteContainer(
-            name: "Work",
+            name: "🏢 Work",
             isTag: true
         )
         work.setColor(Color(.green))
         let shopping = NoteContainer(
-            name: "Shopping",
+            name: "🛒 Shopping",
             isTag: true
         )
         shopping.setColor(Color(.red))
         let personal = NoteContainer(
-            name: "Personal",
+            name: "❤️ Personal",
             isTag: true
         )
         personal.setColor(Color(.purple))
