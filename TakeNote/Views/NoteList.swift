@@ -98,7 +98,11 @@ struct NoteList: View {
                 modelContext.insert(newNote)
                 noteImported = true
             }
-            if !noteImported { return }
+            if !noteImported {
+                fileImportErrorMessage = "No valid notes imported"
+                errorEncountered = true
+                return
+            }
             showFileImportError = errorEncountered
             do {
                 try modelContext.save()
