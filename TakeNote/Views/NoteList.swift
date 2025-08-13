@@ -80,16 +80,17 @@ struct NoteList: View {
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             var noteImported = false
+            var errorEncountered = false
             for url in items {
-                guard let fileContents = try? String(contentsOf: url, encoding: String.defaultCStringEncoding) else {
+                guard let fileContents = try? String(contentsOf: url, encoding: .utf8) else {
                     fileImportErrorMessage = "Failed to read file contents"
-                    showFileImportError = true
-                    return
+                    errorEncountered = true
+                    continue
                 }
                 guard let folder = selectedFolder else {
                     fileImportErrorMessage = "No folder selected"
-                    showFileImportError = true
-                    return
+                    errorEncountered = true
+                    continue
                 }
                 let newNote = Note(folder: folder)
                 newNote.title = url.lastPathComponent
@@ -98,6 +99,7 @@ struct NoteList: View {
                 noteImported = true
             }
             if !noteImported { return }
+            showFileImportError = errorEncountered
             do {
                 try modelContext.save()
             } catch {
