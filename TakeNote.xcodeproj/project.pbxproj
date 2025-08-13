@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
+		66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 66B616EC2E4CC2B6009A1857 /* SQLite */; };
 		66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 66EEDE102E3FFBDD00A899AE /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
@@ -42,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */,
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
 				66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */,
@@ -90,6 +92,7 @@
 				66EEDE102E3FFBDD00A899AE /* MarkdownUI */,
 				66AC246E2E4609FB009B0C3F /* CodeEditorView */,
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
+				66B616EC2E4CC2B6009A1857 /* SQLite */,
 			);
 			productName = TakeNote;
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
@@ -122,6 +125,7 @@
 			packageReferences = (
 				66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
+				66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66B6907B2E3FCDF20013519B /* Products */;
@@ -394,6 +398,14 @@
 				minimumVersion = 0.15.4;
 			};
 		};
+		66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/stephencelis/SQLite.swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.15.4;
+			};
+		};
 		66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
@@ -414,6 +426,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */;
 			productName = LanguageSupport;
+		};
+		66B616EC2E4CC2B6009A1857 /* SQLite */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */;
+			productName = SQLite;
 		};
 		66EEDE102E3FFBDD00A899AE /* MarkdownUI */ = {
 			isa = XCSwiftPackageProductDependency;

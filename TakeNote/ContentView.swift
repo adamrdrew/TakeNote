@@ -5,14 +5,16 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
+import FoundationModels
 import SwiftData
 import SwiftUI
-
 
 struct ContentView: View {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
+    let model = SystemLanguageModel.default
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.openWindow) private var openWindow
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isInbox
         }
@@ -121,6 +123,13 @@ struct ContentView: View {
         try? modelContext.save()
     }
 
+    func addNote() {
+        guard let folder = selectedFolder else { return }
+        let note = Note(folder: folder)
+        modelContext.insert(note)
+        try? modelContext.save()
+    }
+
     private func createInboxFolder() {
         let inboxFolder = NoteContainer(
             canBeDeleted: false,
@@ -187,50 +196,41 @@ struct ContentView: View {
 
     var body: some View {
         NavigationSplitView {
-            VStack {
-                List(selection: $selectedFolder) {
-                    Section(
-                        isExpanded: $folderSectionExpanded,
-                        content: {
-                            FolderList(
-                                selectedFolder: $selectedFolder,
-                                onDelete: folderDelete,
-                                onEmptyTrash: emptyTrash
-                            )
-                        },
-                        header: {
-                            Text("Folders")
-                        }
-                    )
-                    .headerProminence(.increased)
-
-                    Section(
-                        isExpanded: $tagSectionExpanded,
-                        content: {
-                            TagList(
-                                selectedFolder: $selectedFolder,
-                                onDelete: tagDelete
-                            )
-                        },
-                        header: {
-                            Text("Tags")
-                        }
-                    ).headerProminence(.increased)
-                }.listStyle(.sidebar)
-
-            }
-            .navigationSplitViewColumnWidth(min: 250, ideal: 250, max: 350)
-            .toolbar {
-                if selectedFolder?.isTrash == true
-                    && selectedFolder?.notes.isEmpty == false
-                {
-                    Button(action: showEmptyTrashAlert) {
-                        Label("Empty Trash", systemImage: "trash.slash")
+            List(selection: $selectedFolder) {
+                Section(
+                    isExpanded: $folderSectionExpanded,
+                    content: {
+                        FolderList(
+                            selectedFolder: $selectedFolder,
+                            onDelete: folderDelete,
+                            onEmptyTrash: emptyTrash
+                        )
+                    },
+                    header: {
+                        Text("Folders")
                     }
-                }
+                )
+                .headerProminence(.increased)
+
+                Section(
+                    isExpanded: $tagSectionExpanded,
+                    content: {
+                        TagList(
+                            selectedFolder: $selectedFolder,
+                            onDelete: tagDelete
+                        )
+                    },
+                    header: {
+                        Text("Tags")
+                    }
+                ).headerProminence(.increased)
+            }
+            .listStyle(.sidebar)
+            .toolbar {
                 Button(action: addFolder) {
                     Label("Add Folder", systemImage: "folder.badge.plus")
                 }
+
                 Button(action: addTag) {
                     ZStack(alignment: .bottomTrailing) {
                         Image(systemName: "tag")
@@ -241,15 +241,41 @@ struct ContentView: View {
                     }
                 }
             }
+
         } content: {
             NoteList(
                 selectedFolder: $selectedFolder,
                 selectedNote: $selectedNote,
                 onTrash: moveNoteToTrash
-            )
+            ).toolbar {
+                if model.availability == .available {
+
+                    Button(action: { openWindow(id: "chat-window") }) {
+                        Label("Chat", systemImage: "message")
+                    }
+
+                }
+                if selectedFolder?.isTrash == true
+                    && selectedFolder?.notes.isEmpty == false
+                {
+                    Button(action: showEmptyTrashAlert) {
+                        Label("Empty Trash", systemImage: "trash.slash")
+                    }
+                }
+                if selectedFolder?.isTrash == false
+                    && selectedFolder?.isTag == false
+                {
+                    Button(action: addNote) {
+                        Image(systemName: "note.text.badge.plus")
+                    }
+                }
+
+            }
         } detail: {
             NoteEditor(selectedNote: $selectedNote)
         }
+        .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
+
         .alert(
             "Link Error: \(linkToNoteErrorMessage)",
             isPresented: $showLinkToNoteError

@@ -14,6 +14,17 @@ struct NoteList: View {
     @Environment(\.modelContext) private var modelContext
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
+    @State var noteSearchText: String = ""
+    
+    var filteredNotes: [Note] {
+        if noteSearchText.isEmpty {
+            selectedFolder?.notes ?? []
+        } else {
+            selectedFolder?.notes.filter { $0.title.localizedStandardContains(noteSearchText) || $0.content.localizedStandardContains(noteSearchText)  } ?? []
+        }
+    }
+    
+    @EnvironmentObject private var search: SearchIndexService
     
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
@@ -29,13 +40,18 @@ struct NoteList: View {
     }
 
     var body: some View {
-        Group {
+       VStack {
             if let notes = selectedFolder?.notes {
+                //if !notes.isEmpty {
+                 //   TextField("Search", text: $noteSearchText)
+                  //      .padding()
+                //}
+
                 List(selection: $selectedNote) {
 
                     if folderHasStarredNotes() {
                         Section(header: Label("Starred", systemImage: "star")) {
-                            ForEach(notes, id: \.self) { note in
+                            ForEach(filteredNotes, id: \.self) { note in
                                 if note.starred {
                                     NoteListEntry(
                                         note: note,
@@ -55,7 +71,7 @@ struct NoteList: View {
                                 ?? "folder"
                         )
                     ) {
-                        ForEach(notes, id: \.self) { note in
+                        ForEach(filteredNotes, id: \.self) { note in
                             if !note.starred {
                                 NoteListEntry(
                                     note: note,
@@ -67,9 +83,13 @@ struct NoteList: View {
                         }
                     }
                 }
+                .searchable(text: $noteSearchText, prompt: "Search")
                 .onChange(of: selectedNote) { oldValue, newValue in
                     if let oldValue {
                         Task { await oldValue.generateSummary() }
+                        if oldValue.contentHasChanged() {
+                            search.reindex(note: oldValue)
+                        }
                     }
                 }
 
@@ -102,6 +122,7 @@ struct NoteList: View {
                 newNote.content = fileContents
                 modelContext.insert(newNote)
                 Task { await newNote.generateSummary() }
+                search.reindex(note: newNote)
                 noteImported = true
             }
             if !noteImported {
@@ -122,16 +143,6 @@ struct NoteList: View {
                 showFileImportError = false
             }
         }
-        .toolbar {
-            ToolbarItem {
-                if selectedFolder?.isTrash == false
-                    && selectedFolder?.isTag == false
-                {
-                    Button(action: addNote) {
-                        Image(systemName: "note.text.badge.plus")
-                    }
-                }
-            }
-        }
+
     }
 }
