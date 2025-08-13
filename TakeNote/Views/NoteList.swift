@@ -102,6 +102,7 @@ struct NoteList: View {
                 newNote.title = url.lastPathComponent
                 newNote.content = fileContents
                 modelContext.insert(newNote)
+                Task { await newNote.generateSummary() }
                 noteImported = true
             }
             if !noteImported {
