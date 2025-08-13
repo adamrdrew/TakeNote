@@ -14,7 +14,21 @@ struct NoteList: View {
     @Environment(\.modelContext) private var modelContext
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
-    
+    @State var noteSearchText: String = ""
+
+    var filteredNotes: [Note] {
+        if noteSearchText.isEmpty {
+            selectedFolder?.notes ?? []
+        } else {
+            selectedFolder?.notes.filter {
+                $0.title.localizedStandardContains(noteSearchText)
+                    || $0.content.localizedStandardContains(noteSearchText)
+            } ?? []
+        }
+    }
+
+    @EnvironmentObject private var search: SearchIndexService
+
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
     func addNote() {
@@ -29,54 +43,51 @@ struct NoteList: View {
     }
 
     var body: some View {
-        Group {
-            if let notes = selectedFolder?.notes {
-                List(selection: $selectedNote) {
+        VStack {
 
-                    if folderHasStarredNotes() {
-                        Section(header: Label("Starred", systemImage: "star")) {
-                            ForEach(notes, id: \.self) { note in
-                                if note.starred {
-                                    NoteListEntry(
-                                        note: note,
-                                        selectedFolder: selectedFolder,
-                                        onTrash: onTrash
-                                    )
-
-                                }
-                            }
-                        }
-
-                    }
-                    Section(
-                        header: Label(
-                            selectedFolder?.name ?? "Notes",
-                            systemImage: selectedFolder?.getSystemImageName()
-                                ?? "folder"
-                        )
-                    ) {
-                        ForEach(notes, id: \.self) { note in
-                            if !note.starred {
+            List(selection: $selectedNote) {
+                if folderHasStarredNotes() {
+                    Section(header: Text("Favorites").font(.headline)) {
+                        ForEach(filteredNotes, id: \.self) { note in
+                            if note.starred {
                                 NoteListEntry(
                                     note: note,
                                     selectedFolder: selectedFolder,
                                     onTrash: onTrash
                                 )
-                            }
 
+                            }
                         }
                     }
+
                 }
-                .onChange(of: selectedNote) { oldValue, newValue in
-                    if let oldValue {
-                        Task { await oldValue.generateSummary() }
+                Section(
+                    header: Text("Notes").font(.headline)
+                ) {
+                    ForEach(filteredNotes, id: \.self) { note in
+                        if !note.starred {
+                            NoteListEntry(
+                                note: note,
+                                selectedFolder: selectedFolder,
+                                onTrash: onTrash
+                            )
+                        }
+
                     }
                 }
-
-
-            } else {
-                Text("No folder selected")
             }
+            .searchable(text: $noteSearchText, prompt: "Search")
+            .onChange(of: selectedNote) { oldValue, newValue in
+                if let oldValue {
+                    Task { await oldValue.generateSummary() }
+                    if oldValue.contentHasChanged() {
+                        search.reindex(note: oldValue)
+                    }
+                }
+            }
+
+
+
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             var noteImported = false
@@ -84,10 +95,16 @@ struct NoteList: View {
             for url in items {
                 if url.pathExtension != "md" && url.pathExtension != "txt" {
                     errorEncountered = true
-                    fileImportErrorMessage = "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
+                    fileImportErrorMessage =
+                        "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
                     continue
                 }
-                guard let fileContents = try? String(contentsOf: url, encoding: .utf8) else {
+                guard
+                    let fileContents = try? String(
+                        contentsOf: url,
+                        encoding: .utf8
+                    )
+                else {
                     fileImportErrorMessage = "Failed to read file contents"
                     errorEncountered = true
                     continue
@@ -102,10 +119,12 @@ struct NoteList: View {
                 newNote.content = fileContents
                 modelContext.insert(newNote)
                 Task { await newNote.generateSummary() }
+                search.reindex(note: newNote)
                 noteImported = true
             }
             if !noteImported {
-                fileImportErrorMessage = "No valid notes imported: \(fileImportErrorMessage)"
+                fileImportErrorMessage =
+                    "No valid notes imported: \(fileImportErrorMessage)"
                 showFileImportError = true
                 return
             }
@@ -122,16 +141,6 @@ struct NoteList: View {
                 showFileImportError = false
             }
         }
-        .toolbar {
-            ToolbarItem {
-                if selectedFolder?.isTrash == false
-                    && selectedFolder?.isTag == false
-                {
-                    Button(action: addNote) {
-                        Image(systemName: "note.text.badge.plus")
-                    }
-                }
-            }
-        }
+
     }
 }

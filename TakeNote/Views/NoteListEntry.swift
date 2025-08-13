@@ -19,11 +19,10 @@ struct NoteListEntry: View {
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
-    @State private var showExportDialog : Bool = false
+    @State private var showExportDialog: Bool = false
     @State private var exportError: String? = nil
-    @State private var showExportError : Bool = false
+    @State private var showExportError: Bool = false
     @FocusState private var nameInputFocused: Bool
-    
 
     private let verticalPadding: CGFloat = 8
     private let horizontalPadding: CGFloat = 12
@@ -117,50 +116,51 @@ struct NoteListEntry: View {
                 }
             }
 
-            if !note.aiSummary.isEmpty {
-                Label {
-                    Text(note.aiSummary)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                } icon: {
-                    Image(systemName: "apple.intelligence")
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundStyle(
-                            .linearGradient(
-                                colors: [.blue, .orange, .purple],
-                                startPoint: .top,
-                                endPoint: .bottomTrailing
-                            ),
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
 
-                        )
+                if note.aiSummaryIsGenerating {
+                    AIMessage(message: "AI Summary Generating...", font: .callout)
+
+                } else {
+                    if !note.aiSummary.isEmpty {
+                        Label {
+                            Text(note.aiSummary)
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                                .truncationMode(.tail)
+                        } icon: {
+                            Image(systemName: "apple.intelligence")
+                                .symbolRenderingMode(.hierarchical)
+                                .foregroundStyle(
+                                    .linearGradient(
+                                        colors: [
+                                            .orange, .pink, .blue, .purple,
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
+
+                                )
+                        }
+                    } else {
+                        Label {
+                            Text(
+                                note.content.replacingOccurrences(
+                                    of: "\n",
+                                    with: " "
+                                )
+                            )
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .truncationMode(.tail)
+                        } icon: {
+                            Image(systemName: "text.magnifyingglass")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
-            }
-
-            if note.aiSummaryIsGenerating {
-                Label {
-                    Text("AI Summary Generating...")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                } icon: {
-                    Image(systemName: "apple.intelligence")
-                        .symbolRenderingMode(.hierarchical)
-
-                }
-                .symbolEffect(.bounce.down)
-                .symbolEffect(.rotate)
-                .foregroundStyle(
-                    .linearGradient(
-                        colors: [.blue, .orange, .purple],
-                        startPoint: .top,
-                        endPoint: .bottomTrailing
-                    ),
-
-                )
-
             }
         }
         .draggable(NoteIDWrapper(id: note.persistentModelID))
@@ -200,7 +200,7 @@ struct NoteListEntry: View {
                     action: {
                         showExportDialog = true
                     }
-                ){
+                ) {
                     Label("Export", systemImage: "square.and.arrow.down")
                 }
             }

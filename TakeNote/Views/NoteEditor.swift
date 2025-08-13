@@ -28,15 +28,15 @@ struct NoteEditor: View {
         if let note = selectedNote {
             VStack {
                 GeometryReader { geometry in
-                        CodeEditor(
-                            text: Binding(
-                                get: { note.content },
-                                set: { selectedNote?.content = $0 }
-                            ),
-                            position: $position,
-                            messages: $messages,
-                            language: .markdown()
-                        )
+                    CodeEditor(
+                        text: Binding(
+                            get: { note.content },
+                            set: { selectedNote?.content = $0 }
+                        ),
+                        position: $position,
+                        messages: $messages,
+                        language: .markdown()
+                    )
 
                     .frame(height: geometry.size.height)
                     .environment(
@@ -73,7 +73,7 @@ struct NoteEditor: View {
 
             }
             .toolbar {
-                ToolbarItem {
+                ToolbarItem(placement: .secondaryAction) {
                     Button(action: {
                         showPreview.toggle()
                     }) {
@@ -86,11 +86,16 @@ struct NoteEditor: View {
 
                 }
 
-
             }
         } else {
-            Text("Select a Note")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            VStack {
+                Spacer()
+                Text("No Note Selected")
+                    .font(.title)
+                    .padding()
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
         }
     }
 }

@@ -11,6 +11,7 @@ import SwiftUI
 @main
 struct TakeNoteApp: App {
     let container: ModelContainer
+    @StateObject private var search = SearchIndexService()
 
     init() {
         do {
@@ -28,20 +29,29 @@ struct TakeNoteApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        Window("", id: "main-window") {
             ContentView()
-            .handlesExternalEvents(
-                preferring: ["takenote://"],
-                allowing: ["*"]
-            )
+                .environmentObject(search)
+                .handlesExternalEvents(
+                    preferring: ["takenote://"],
+                    allowing: ["*"]
+                )
         }
         .modelContainer(container)
+        .windowToolbarStyle(.expanded)
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
             NoteEditorWindow(noteID: noteID)
         }
         .modelContainer(container)
+
+        Window("TakeNote - AI Chat", id: "chat-window") {
+            ChatWindow()
+                .environmentObject(search)
+        }
+        .modelContainer(container)
+        
 
     }
 }
