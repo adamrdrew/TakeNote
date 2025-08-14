@@ -26,7 +26,7 @@ extension MainWindow {
     }
 
     var canEmptyTrash: Bool {
-        return trashFolderSelected && !selectedFolderEmpty
+        return trashFolderSelected && !selectedContainerIsEmpty
     }
 
     var inboxFolderExists: Bool {
@@ -37,7 +37,7 @@ extension MainWindow {
         return selectedContainer?.name ?? "TakeNote"
     }
 
-    var selectedFolderEmpty: Bool {
+    var selectedContainerIsEmpty: Bool {
         return selectedContainer?.notes.isEmpty ?? true
     }
 

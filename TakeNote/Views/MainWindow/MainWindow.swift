@@ -50,7 +50,7 @@ struct MainWindow: View {
                     isExpanded: $folderSectionExpanded,
                     content: {
                         FolderList(
-                            selectedFolder: $selectedContainer,
+                            selectedContainer: $selectedContainer,
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
@@ -65,7 +65,6 @@ struct MainWindow: View {
                     isExpanded: $tagSectionExpanded,
                     content: {
                         TagList(
-                            selectedFolder: $selectedContainer,
                             onDelete: onTagDelete
                         )
                     },
