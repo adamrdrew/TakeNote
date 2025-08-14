@@ -111,6 +111,14 @@ class MagicFormatter: ObservableObject {
 
     init() {
     }
+    
+    private func removeMarkdownClosures(_ input: String) -> String {
+        //If the first line of the input is ```markdown remove the first and last lines and return
+        if input.hasPrefix("```markdown") && input.hasSuffix("```") {
+            return String(input.split(separator: "\n").dropFirst().dropLast().joined(separator: "\n"))
+        }
+        return input
+    }
 
     func magicFormat(_ text: String) async -> MagicFormatterResult {
         if languageModel.isAvailable == false {
@@ -138,7 +146,7 @@ class MagicFormatter: ObservableObject {
         } catch {
             formatterIsBusy = false
             return MagicFormatterResult(
-                formattedText: "An error ocurred: \(error.localizedDescription)",
+                formattedText: "MagicFormatter Error:\n \(error.localizedDescription)",
                 didSucceed: false,
                 error: error
             )
@@ -154,7 +162,7 @@ class MagicFormatter: ObservableObject {
             )
         }
         return MagicFormatterResult(
-            formattedText: formattedDocument,
+            formattedText: removeMarkdownClosures(formattedDocument),
             didSucceed: true,
             error: nil
         )
