@@ -70,7 +70,7 @@ extension MainWindow {
         addTag(name: "New Tag", color: Color(.blue))
     }
 
-    func addTag(name: String = "New Folder", color: Color = Color(.blue)) {
+    func addTag(name: String, color: Color) {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
