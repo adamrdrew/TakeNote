@@ -21,12 +21,12 @@ extension MainWindow {
     }
 
     var canAddNote: Bool {
-        return selectedFolder?.isTrash == false
-            && selectedFolder?.isTag == false
+        return selectedContainer?.isTrash == false
+            && selectedContainer?.isTag == false
     }
 
     var canEmptyTrash: Bool {
-        return trashFolderSelected && !selectedFolderEmpty
+        return trashFolderSelected && !selectedContainerIsEmpty
     }
 
     var inboxFolderExists: Bool {
@@ -34,15 +34,15 @@ extension MainWindow {
     }
 
     var navigationTitle: String {
-        return selectedFolder?.name ?? "TakeNote"
+        return selectedContainer?.name ?? "TakeNote"
     }
 
-    var selectedFolderEmpty: Bool {
-        return selectedFolder?.notes.isEmpty ?? true
+    var selectedContainerIsEmpty: Bool {
+        return selectedContainer?.notes.isEmpty ?? true
     }
 
     var trashFolderSelected: Bool {
-        return selectedFolder?.isTrash ?? false
+        return selectedContainer?.isTrash ?? false
     }
 
     // MARK: Methods
@@ -55,15 +55,26 @@ extension MainWindow {
             name: "New Folder"
         )
         modelContext.insert(newFolder)
-        try? modelContext.save()
-        self.selectedFolder = newFolder
+        do {
+            try modelContext.save()
+            self.selectedContainer = newFolder
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
     }
 
     func addNote() {
-        guard let folder = selectedFolder else { return }
+        guard let folder = selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            selectedNote = note
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
     }
 
     func addTag() {
@@ -79,7 +90,13 @@ extension MainWindow {
         )
         newTag.setColor(color)
         modelContext.insert(newTag)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+            selectedContainer = newTag
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
     }
 
     private func createInboxFolder() {
@@ -92,8 +109,13 @@ extension MainWindow {
             isTag: false,
         )
         modelContext.insert(inboxFolder)
-        try? modelContext.save()
-        self.selectedFolder = inboxFolder
+        do {
+            try modelContext.save()
+            self.selectedContainer = inboxFolder
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
     }
 
     private func createTrashFolder() {
@@ -106,12 +128,17 @@ extension MainWindow {
             isTag: false,
         )
         modelContext.insert(trashFolder)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
     }
 
     func dataInit() {
-        folderInit()
         tagsInit()
+        folderInit()
     }
 
     func emptyTrash() {
@@ -128,12 +155,18 @@ extension MainWindow {
             for note in deletedFolder.notes {
                 note.folder = trashFolder
             }
-            try? modelContext.save()
         }
-        if deletedFolder != selectedFolder {
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
             return
         }
-        selectedFolder = folders.first(where: {
+        if deletedFolder != selectedContainer {
+            return
+        }
+        selectedContainer = folders.first(where: {
             $0.name == MainWindow.inboxFolderName
         })
         selectedNote = nil
@@ -152,8 +185,13 @@ extension MainWindow {
             return
         }
         noteToTrash.folder = trashFolder
-        try? modelContext.save()
-
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+            return
+        }
         if selectedNote != noteToTrash {
             return
         }
@@ -189,7 +227,7 @@ extension MainWindow {
 
         if let note = notes.first {
             self.selectedNote = note
-            self.selectedFolder = note.folder
+            self.selectedContainer = note.folder
             return
         }
 
@@ -207,8 +245,8 @@ extension MainWindow {
     }
 
     func onTagDelete(_ deletedTag: NoteContainer) {
-        if deletedTag == selectedFolder {
-            selectedFolder = inboxFolders.first
+        if deletedTag == selectedContainer {
+            selectedContainer = inboxFolders.first
             selectedNote = nil
         }
     }

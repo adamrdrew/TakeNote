@@ -32,24 +32,25 @@ struct MainWindow: View {
         }
     ) var tags: [NoteContainer]
 
-    @State var selectedFolder: NoteContainer?
+    @State var selectedContainer: NoteContainer?
     @State var selectedNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
-
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
-
     @State var folderSectionExpanded: Bool = true
     @State var tagSectionExpanded: Bool = true
+    @State var errorAlertMessage: String = ""
+    @State var errorAlertIsVisible: Bool = false
+    
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedFolder) {
+            List(selection: $selectedContainer) {
                 Section(
                     isExpanded: $folderSectionExpanded,
                     content: {
                         FolderList(
-                            selectedFolder: $selectedFolder,
+                            selectedContainer: $selectedContainer,
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
@@ -64,7 +65,6 @@ struct MainWindow: View {
                     isExpanded: $tagSectionExpanded,
                     content: {
                         TagList(
-                            selectedFolder: $selectedFolder,
                             onDelete: onTagDelete
                         )
                     },
@@ -83,7 +83,7 @@ struct MainWindow: View {
 
         } content: {
             NoteList(
-                selectedFolder: $selectedFolder,
+                selectedContainer: $selectedContainer,
                 selectedNote: $selectedNote,
                 onTrash: moveNoteToTrash
             ).toolbar {
@@ -120,6 +120,12 @@ struct MainWindow: View {
             isPresented: $emptyTrashAlertIsPresented
         ) {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
+        }
+        .alert(
+            "Something went wrong: \(errorAlertMessage)",
+            isPresented: $errorAlertIsVisible
+        ){
+            Button("OK", action: { errorAlertIsVisible = false })
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)

@@ -14,7 +14,7 @@ struct NoteListEntry: View {
     @Environment(\.openWindow) private var openWindow
 
     var note: Note
-    var selectedFolder: NoteContainer?
+    var selectedContainer: NoteContainer?
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
@@ -102,7 +102,7 @@ struct NoteListEntry: View {
 
                 Spacer(minLength: 0)
 
-                if selectedFolder?.isTag == true {
+                if selectedContainer?.isTag == true {
                     Label {
                         Text(note.folder.name)
                             .lineLimit(1)
@@ -173,7 +173,7 @@ struct NoteListEntry: View {
         )
         .contextMenu {
 
-            if selectedFolder?.isTrash == false {
+            if selectedContainer?.isTrash == false {
                 Button(
                     role: .destructive,
                     action: {

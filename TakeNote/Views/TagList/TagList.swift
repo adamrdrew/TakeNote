@@ -16,7 +16,6 @@ public struct TagList: View {
         }
     ) var tags: [NoteContainer]
 
-    @Binding var selectedFolder: NoteContainer?
     var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
         deletedFolder in
     }
