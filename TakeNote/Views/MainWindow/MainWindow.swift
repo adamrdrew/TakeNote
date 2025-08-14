@@ -23,6 +23,8 @@ struct MainWindow: View {
         filter: #Predicate<NoteContainer> { folder in folder.isTag
         }
     ) var tags: [NoteContainer]
+    
+    @Query var notes: [Note]
 
     var inboxFolder: NoteContainer? {
         folders.first { $0.isInbox }
@@ -88,7 +90,7 @@ struct MainWindow: View {
                 selectedNote: $selectedNote,
                 onTrash: moveNoteToTrash
             ).toolbar {
-                if aiIsAvailable {
+                if aiIsAvailable && notes.count > 0 {
                     Button(action: openChatWindow) {
                         Label("Chat", systemImage: "message")
                     }
