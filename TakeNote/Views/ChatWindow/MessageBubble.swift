@@ -15,31 +15,35 @@ struct MessageBubble: View {
     var body: some View {
         HStack {
             if isHuman { Spacer(minLength: 40) }
-            VStack {
+
+            // Constrain the whole message column
+            VStack(alignment: isHuman ? .trailing : .leading, spacing: 6) {
                 bubble
                     .frame(
-                        maxWidth: 520,
+                        maxWidth: .infinity,
                         alignment: isHuman ? .trailing : .leading
                     )
-                if !isHuman {
-                    if let handler = onBotMessageClick {
-                        Button(
-                            action: {
-                                handler(entry.text)
-                            },
-                            label: { Label("Accept", systemImage: "checkmark") }
-                        )
-                        .frame(
-                            alignment: .leading
-                        )
+
+                if !isHuman, let handler = onBotMessageClick {
+                    // Button hugs content and stays left under the 520px column
+                    HStack(spacing: 0) {
+                        Button {
+                            handler(entry.text)
+                        } label: {
+                            Label("Accept", systemImage: "checkmark")
+                                .symbolRenderingMode(.monochrome)
+                        }
                         .glassEffect(.regular.tint(.green).interactive())
+                        .foregroundStyle(.white)
+                        .fixedSize(horizontal: true, vertical: false)
 
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 40)
                 }
-
-                
             }
+            .frame(maxWidth: 520, alignment: isHuman ? .trailing : .leading)
+
+            if !isHuman { Spacer(minLength: 40) }
         }
     }
 
