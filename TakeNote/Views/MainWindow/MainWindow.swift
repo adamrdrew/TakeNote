@@ -83,7 +83,7 @@ struct MainWindow: View {
 
         } content: {
             NoteList(
-                selectedFolder: $selectedContainer,
+                selectedContainer: $selectedContainer,
                 selectedNote: $selectedNote,
                 onTrash: moveNoteToTrash
             ).toolbar {

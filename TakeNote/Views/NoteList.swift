@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedFolder: NoteContainer?
+    @Binding var selectedContainer: NoteContainer?
     @Binding var selectedNote: Note?
     @Environment(\.modelContext) private var modelContext
     @State var showFileImportError: Bool = false
@@ -18,9 +18,9 @@ struct NoteList: View {
 
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
-            selectedFolder?.notes ?? []
+            selectedContainer?.notes ?? []
         } else {
-            selectedFolder?.notes.filter {
+            selectedContainer?.notes.filter {
                 $0.title.localizedStandardContains(noteSearchText)
                     || $0.content.localizedStandardContains(noteSearchText)
             } ?? []
@@ -32,14 +32,14 @@ struct NoteList: View {
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
 
     func addNote() {
-        guard let folder = selectedFolder else { return }
+        guard let folder = selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
         try? modelContext.save()
     }
 
     func folderHasStarredNotes() -> Bool {
-        return selectedFolder?.notes.contains { $0.starred } ?? false
+        return selectedContainer?.notes.contains { $0.starred } ?? false
     }
 
     var body: some View {
@@ -52,7 +52,7 @@ struct NoteList: View {
                             if note.starred {
                                 NoteListEntry(
                                     note: note,
-                                    selectedFolder: selectedFolder,
+                                    selectedContainer: selectedContainer,
                                     onTrash: onTrash
                                 )
 
@@ -68,7 +68,7 @@ struct NoteList: View {
                         if !note.starred {
                             NoteListEntry(
                                 note: note,
-                                selectedFolder: selectedFolder,
+                                selectedContainer: selectedContainer,
                                 onTrash: onTrash
                             )
                         }
@@ -109,7 +109,7 @@ struct NoteList: View {
                     errorEncountered = true
                     continue
                 }
-                guard let folder = selectedFolder else {
+                guard let folder = selectedContainer else {
                     fileImportErrorMessage = "No folder selected"
                     errorEncountered = true
                     continue
