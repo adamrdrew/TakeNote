@@ -10,11 +10,14 @@ import SwiftData
 import SwiftUI
 
 extension MainWindow {
-
+    static let inboxFolderName = "Inbox"
+    static let trashFolderName = "Trash"
+    
+    
     // MARK: Computed Properties
 
     var aiIsAvailable: Bool {
-        return model.availability == .available
+        return languageModel.availability == .available
     }
 
     var canAddNote: Bool {

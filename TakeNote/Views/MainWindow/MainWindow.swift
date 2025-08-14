@@ -10,9 +10,8 @@ import SwiftData
 import SwiftUI
 
 struct MainWindow: View {
-    static let inboxFolderName = "Inbox"
-    static let trashFolderName = "Trash"
-    let model = SystemLanguageModel.default
+    let languageModel = SystemLanguageModel.default
+    
     @Environment(\.modelContext) internal var modelContext
     @Environment(\.openWindow) internal var openWindow
     @Query(
