@@ -32,7 +32,7 @@ struct MainWindow: View {
         }
     ) var tags: [NoteContainer]
 
-    @State var selectedFolder: NoteContainer?
+    @State var selectedContainer: NoteContainer?
     @State var selectedNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
@@ -45,12 +45,12 @@ struct MainWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedFolder) {
+            List(selection: $selectedContainer) {
                 Section(
                     isExpanded: $folderSectionExpanded,
                     content: {
                         FolderList(
-                            selectedFolder: $selectedFolder,
+                            selectedFolder: $selectedContainer,
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
@@ -65,7 +65,7 @@ struct MainWindow: View {
                     isExpanded: $tagSectionExpanded,
                     content: {
                         TagList(
-                            selectedFolder: $selectedFolder,
+                            selectedFolder: $selectedContainer,
                             onDelete: onTagDelete
                         )
                     },
@@ -84,7 +84,7 @@ struct MainWindow: View {
 
         } content: {
             NoteList(
-                selectedFolder: $selectedFolder,
+                selectedFolder: $selectedContainer,
                 selectedNote: $selectedNote,
                 onTrash: moveNoteToTrash
             ).toolbar {
