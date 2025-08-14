@@ -77,7 +77,6 @@ struct ChatWindow: View {
     }
 
     private func makePrompt() -> String {
-
         var llmPrompt =
             prompt ?? "Provide an answer to the following question:\n\n"
         llmPrompt += "\(conversation.last?.text ?? "")\n\n"
@@ -132,8 +131,8 @@ struct ChatWindow: View {
         let session = LanguageModelSession(instructions: modelInstructions)
         if session.isResponding { return }
 
-        let prompt = makePrompt()
-        let response = try? await session.respond(to: prompt)
+        let assembledPrompt = makePrompt()
+        let response = try? await session.respond(to: assembledPrompt)
         let aiSummary = response?.content ?? "—"
 
         responseIsGenerating = false

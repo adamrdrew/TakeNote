@@ -26,7 +26,10 @@ struct ContextBubble: View {
             .border(Color.primary.opacity(0.25), width: 2)
             .textSelection(.enabled)
             .font(.body)
-            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(.primary.opacity(0.25), lineWidth: 2)
+            )
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .foregroundColor(.primary)

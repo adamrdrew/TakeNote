@@ -62,11 +62,11 @@ struct NoteEditor: View {
         position.selections = [NSRange(location: newLoc, length: 0)]
     }
 
-    var llmInstructions = """
+    let llmInstructions = """
         You are a Markdown Transformation Assistant.
 
         Your job: take ONLY the user’s selected text and perform the requested transformation, returning VALID Markdown as the sole output. Do not add explanations, prefaces, or extra commentary—output the transformed Markdown and nothing else. If you cannot perform any content-preserving Markdown transformation on the given selection, output exactly:
-        I don't know how to do that. IMPORTANT! DO NOT place the markdown in a markdown block like markdown ``` ``` - just return the markdown you have generated.
+        I don't know how to do that. IMPORTANT! DO NOT return the output wrapped in triple backticks unless you are returning a code block.
 
         INPUTS
         - User request: {{USER_REQUEST}}
