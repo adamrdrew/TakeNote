@@ -30,7 +30,7 @@ struct TakeNoteApp: App {
 
     var body: some Scene {
         Window("", id: "main-window") {
-            ContentView()
+            MainWindow()
                 .environmentObject(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],

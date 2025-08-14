@@ -1,5 +1,5 @@
 //
-//  ContentView.swift
+//  MainWindow.swift
 //  TakeNote
 //
 //  Created by Adam Drew on 8/3/25.
@@ -9,7 +9,7 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 
-struct ContentView: View {
+struct MainWindow: View {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     let model = SystemLanguageModel.default
@@ -54,7 +54,7 @@ struct ContentView: View {
             return
         }
         selectedFolder = folders.first(where: {
-            $0.name == ContentView.inboxFolderName
+            $0.name == MainWindow.inboxFolderName
         })
         selectedNote = nil
     }
@@ -135,7 +135,7 @@ struct ContentView: View {
             canBeDeleted: false,
             isTrash: false,
             isInbox: true,
-            name: ContentView.inboxFolderName,
+            name: MainWindow.inboxFolderName,
             symbol: "tray",
             isTag: false,
         )
@@ -149,7 +149,7 @@ struct ContentView: View {
             canBeDeleted: false,
             isTrash: true,
             isInbox: false,
-            name: ContentView.trashFolderName,
+            name: MainWindow.trashFolderName,
             symbol: "trash",
             isTag: false,
         )
@@ -335,5 +335,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    MainWindow()
 }
