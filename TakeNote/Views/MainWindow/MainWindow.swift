@@ -12,8 +12,8 @@ import SwiftUI
 struct MainWindow: View {
     let languageModel = SystemLanguageModel.default
     
-    @Environment(\.modelContext) internal var modelContext
-    @Environment(\.openWindow) internal var openWindow
+    @Environment(\.modelContext) var modelContext
+    @Environment(\.openWindow) var openWindow
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isInbox
         }
@@ -32,12 +32,12 @@ struct MainWindow: View {
         }
     ) var tags: [NoteContainer]
 
-    @State internal var selectedFolder: NoteContainer?
-    @State internal var selectedNote: Note?
-    @State internal var emptyTrashAlertIsVisible: Bool = false
+    @State var selectedFolder: NoteContainer?
+    @State var selectedNote: Note?
+    @State var emptyTrashAlertIsVisible: Bool = false
 
-    @State internal var linkToNoteErrorIsVisible: Bool = false
-    @State internal var linkToNoteErrorMessage: String = ""
+    @State var linkToNoteErrorIsVisible: Bool = false
+    @State var linkToNoteErrorMessage: String = ""
 
     @State var folderSectionExpanded: Bool = true
     @State var tagSectionExpanded: Bool = true

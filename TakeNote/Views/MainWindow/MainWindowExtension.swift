@@ -13,7 +13,6 @@ extension MainWindow {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     
-    
     // MARK: Computed Properties
 
     var aiIsAvailable: Bool {
@@ -26,7 +25,7 @@ extension MainWindow {
     }
 
     var canEmptyTrash: Bool {
-        return trashFolderSelected && selectedNotFolderEmpty
+        return trashFolderSelected && !selectedFolderEmpty
     }
 
     var inboxFolderExists: Bool {
@@ -37,8 +36,8 @@ extension MainWindow {
         return selectedFolder?.name ?? "TakeNote"
     }
 
-    var selectedNotFolderEmpty: Bool {
-        return selectedFolder?.notes.isEmpty == false
+    var selectedFolderEmpty: Bool {
+        return selectedFolder?.notes.isEmpty == true
     }
 
     var trashFolderSelected: Bool {
