@@ -38,7 +38,7 @@ extension MainWindow {
     }
 
     var selectedFolderEmpty: Bool {
-        return selectedFolder?.notes.isEmpty == true
+        return selectedFolder?.notes.isEmpty ?? true
     }
 
     var trashFolderSelected: Bool {
