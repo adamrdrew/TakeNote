@@ -35,12 +35,13 @@ struct MainWindow: View {
     @State var selectedFolder: NoteContainer?
     @State var selectedNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
-
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
-
     @State var folderSectionExpanded: Bool = true
     @State var tagSectionExpanded: Bool = true
+    @State var errorAlertMessage: String = ""
+    @State var errorAlertIsVisible: Bool = false
+    
 
     var body: some View {
         NavigationSplitView {
@@ -120,6 +121,12 @@ struct MainWindow: View {
             isPresented: $emptyTrashAlertIsPresented
         ) {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
+        }
+        .alert(
+            "Something went wrong: \(errorAlertMessage)",
+            isPresented: $errorAlertIsVisible
+        ){
+            Button("OK", action: { errorAlertIsVisible = false })
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)
