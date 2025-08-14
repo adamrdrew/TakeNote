@@ -9,6 +9,7 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 
+@MainActor
 extension MainWindow {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"

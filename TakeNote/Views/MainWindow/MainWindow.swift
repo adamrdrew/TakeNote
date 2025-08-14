@@ -120,7 +120,6 @@ struct MainWindow: View {
             isPresented: $emptyTrashAlertIsVisible
         ) {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
-            Button("Cancel", action: { emptyTrashAlertIsVisible = false })
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)
