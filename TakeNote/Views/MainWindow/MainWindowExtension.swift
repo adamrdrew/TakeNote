@@ -33,6 +33,10 @@ extension MainWindow {
         return folders.contains(where: { $0.isInbox })
     }
 
+    var tagsExist: Bool {
+        return tags.isEmpty == false
+    }
+
     var navigationTitle: String {
         return selectedContainer?.name ?? "TakeNote"
     }
@@ -252,10 +256,6 @@ extension MainWindow {
             selectedContainer = inboxFolder
             selectedNote = nil
         }
-    }
-
-    var tagsExist: Bool {
-        return tags.isEmpty == false
     }
 
     func tagsInit() {
