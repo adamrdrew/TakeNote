@@ -15,14 +15,6 @@ struct MainWindow: View {
     @Environment(\.modelContext) var modelContext
     @Environment(\.openWindow) var openWindow
     @Query(
-        filter: #Predicate<NoteContainer> { folder in folder.isInbox
-        }
-    ) var inboxFolders: [NoteContainer]
-    @Query(
-        filter: #Predicate<NoteContainer> { folder in folder.isTrash
-        }
-    ) var trashFolders: [NoteContainer]
-    @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
     ) var folders: [NoteContainer]
@@ -32,6 +24,13 @@ struct MainWindow: View {
         }
     ) var tags: [NoteContainer]
 
+    var inboxFolder: NoteContainer? {
+        folders.first { $0.isInbox }
+    }
+    var trashFolder: NoteContainer? {
+        folders.first { $0.isTrash }
+    }
+    
     @State var selectedContainer: NoteContainer?
     @State var selectedNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
