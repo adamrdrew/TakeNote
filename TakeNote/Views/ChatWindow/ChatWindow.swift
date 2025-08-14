@@ -35,7 +35,20 @@ struct ChatWindow: View {
     @State private var searchResults: [SearchIndex.SearchHit] = []
     @State private var responseIsGenerating: Bool = false
 
+    var context: String?
+    var instructions: String?
+    var prompt: String?
+    var searchEnabled: Bool = true
+    var onBotMessageClick: ((String) -> Void)?
+    var toolbarVisible: Bool = true
+    var useHistory: Bool = true
+
     @FocusState private var textFieldFocused: Bool
+
+    var hasContext: Bool {
+        guard let context else { return false }
+        return context.isEmpty
+    }
 
     // MARK: - Actions
 
@@ -49,7 +62,9 @@ struct ChatWindow: View {
         conversation.append(conversationEntry)
 
         // Prepare retrieval
-        self.searchResults = search.index.searchNatural(trimmed)
+        if searchEnabled {
+            self.searchResults = search.index.searchNatural(trimmed)
+        }
 
         // Clear the field & keep focus
         self.userQuery = ""
@@ -66,18 +81,27 @@ struct ChatWindow: View {
     }
 
     private func makePrompt() -> String {
-        var prompt = "Provide an answer to the following question:\n\n"
-        prompt += "\(conversation.last?.text ?? "")\n\n"
-        prompt += "SOURCE EXCERPTS:\n\n"
-        for (index, result) in searchResults.enumerated() {
-            prompt += "SOURCE EXCERPT \(index):\n \(result.chunk)\n\n"
+
+        var llmPrompt =
+            prompt ?? "Provide an answer to the following question:\n\n"
+        llmPrompt += "\(conversation.last?.text ?? "")\n\n"
+        if context != nil {
+            llmPrompt += "CONTEXT: \n\(context ?? "")\n\n"
         }
-        prompt += "CHAT HISTORY:\n\n\(makeConversationString())\n\n"
-        return prompt
+        if searchEnabled {
+            llmPrompt += "SOURCE EXCERPTS:\n\n"
+            for (index, result) in searchResults.enumerated() {
+                llmPrompt += "SOURCE EXCERPT \(index):\n \(result.chunk)\n\n"
+            }
+        }
+        if useHistory {
+            llmPrompt += "CHAT HISTORY:\n\n\(makeConversationString())\n\n"
+        }
+        return llmPrompt
     }
 
     private func generateResponse() async {
-        let instructions =
+        let defaultInstructions =
             """
             You are a helpful notes assistant for a retrieval system.
 
@@ -107,7 +131,9 @@ struct ChatWindow: View {
 
             """
 
-        let session = LanguageModelSession(instructions: instructions)
+        let modelInstructions = instructions ?? defaultInstructions
+
+        let session = LanguageModelSession(instructions: modelInstructions)
         if session.isResponding { return }
 
         let prompt = makePrompt()
@@ -134,9 +160,13 @@ struct ChatWindow: View {
             // Messages
             ScrollViewReader { proxy in
                 ScrollView {
+
                     LazyVStack(spacing: 8) {
+                        if context != nil {
+                            ContextBubble(text: context ?? "")
+                        }
                         ForEach(conversation) { entry in
-                            MessageBubble(entry: entry)
+                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick)
                                 .id(entry.id)
                                 .padding(.horizontal, 12)
                                 .padding(.top, 2)
@@ -191,14 +221,17 @@ struct ChatWindow: View {
             .background(.bar)  // blends like a toolbar at the bottom
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    newChat()
-                } label: {
-                    Label("New Chat", systemImage: "plus.message")
+            if toolbarVisible {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        newChat()
+                    } label: {
+                        Label("New Chat", systemImage: "plus.message")
+                    }
+                    .glassEffect()
                 }
-                .glassEffect()
             }
+
         }
         .onAppear { textFieldFocused = true }
     }

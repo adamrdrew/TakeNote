@@ -8,15 +8,37 @@ import SwiftUI
 
 struct MessageBubble: View {
     let entry: ConversationEntry
+    var onBotMessageClick: ((String) -> Void)?
 
     var isHuman: Bool { entry.sender == .human }
 
     var body: some View {
         HStack {
             if isHuman { Spacer(minLength: 40) }
-            bubble
-                .frame(maxWidth: 520, alignment: isHuman ? .trailing : .leading)
-            if !isHuman { Spacer(minLength: 40) }
+            VStack {
+                bubble
+                    .frame(
+                        maxWidth: 520,
+                        alignment: isHuman ? .trailing : .leading
+                    )
+                if !isHuman {
+                    if let handler = onBotMessageClick {
+                        Button(
+                            action: {
+                                handler(entry.text)
+                            },
+                            label: { Label("Accept", systemImage: "checkmark") }
+                        )
+                        .frame(
+                            alignment: .leading
+                        )
+                        .glassEffect(.regular.tint(.green).interactive())
+
+                    }
+                }
+
+                Spacer(minLength: 40)
+            }
         }
     }
 
