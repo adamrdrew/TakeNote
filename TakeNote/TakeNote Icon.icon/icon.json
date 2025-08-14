@@ -6,21 +6,36 @@
     {
       "layers" : [
         {
+          "fill" : {
+            "solid" : "srgb:0.00000,0.00000,0.00000,1.00000"
+          },
           "image-name" : "4 – Layer.svg",
           "name" : "4 – Layer"
         },
         {
+          "fill" : {
+            "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+          },
           "image-name" : "3 – Layer.svg",
           "name" : "3 – Layer"
         },
         {
           "blend-mode" : "normal",
+          "fill" : {
+            "solid" : "srgb:1.00000,0.97572,0.99284,1.00000"
+          },
           "glass" : true,
           "image-name" : "2 – Layer.svg",
           "name" : "2 – Layer"
         },
         {
           "blend-mode" : "normal",
+          "fill" : {
+            "linear-gradient" : [
+              "srgb:0.27794,1.00000,0.82071,1.00000",
+              "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+            ]
+          },
           "image-name" : "1 – Layer.svg",
           "name" : "1 – Layer"
         }
