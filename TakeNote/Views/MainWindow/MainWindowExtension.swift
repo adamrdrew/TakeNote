@@ -147,7 +147,12 @@ extension MainWindow {
 
     func emptyTrash() {
         emptyTrashAlertIsPresented = false
-        for note in trashFolder?.notes ?? [] {
+        guard let trash = trashFolder else {
+            errorAlertMessage = "Could not find trash folder"
+            errorAlertIsVisible = true
+            return
+        }
+        for note in trash.notes {
             modelContext.delete(note)
         }
     }
