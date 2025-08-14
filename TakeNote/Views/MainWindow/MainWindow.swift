@@ -66,7 +66,7 @@ struct MainWindow: View {
                     content: {
                         TagList(
                             selectedFolder: $selectedFolder,
-                            onDelete: tagDelete
+                            onDelete: onTagDelete
                         )
                     },
                     header: {
@@ -79,7 +79,6 @@ struct MainWindow: View {
                 Button(action: addFolder) {
                     Label("Add Folder", systemImage: "folder.badge.plus")
                 }
-
                 AddTagButton(action: addTag)
             }
 
