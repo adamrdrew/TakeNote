@@ -16,6 +16,8 @@ struct NoteEditor: View {
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
+    @State private var magicFormatterErrorMessage: String = ""
+    @State var magicFormatterErrorIsPresented: Bool = false
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
@@ -39,6 +41,8 @@ struct NoteEditor: View {
                 selectedNote!.content = result.formattedText
                 return
             }
+            magicFormatterErrorIsPresented = true
+            magicFormatterErrorMessage = result.formattedText
 
         }
 
@@ -209,6 +213,15 @@ struct NoteEditor: View {
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 AIMessage(message: "Magic Formatting...", font: .headline)
                     .padding()
+            }
+            .alert(
+                magicFormatterErrorMessage,
+                isPresented: $magicFormatterErrorIsPresented
+            ) {
+
+                Button("OK") {
+                    magicFormatterErrorIsPresented = false
+                }
             }
             .toolbar {
                 ToolbarItem(placement: .secondaryAction) {

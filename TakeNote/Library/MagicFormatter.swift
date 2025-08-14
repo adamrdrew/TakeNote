@@ -138,7 +138,7 @@ class MagicFormatter: ObservableObject {
         } catch {
             formatterIsBusy = false
             return MagicFormatterResult(
-                formattedText: "An error ocurred.",
+                formattedText: "An error ocurred: \(error.localizedDescription)",
                 didSucceed: false,
                 error: error
             )
