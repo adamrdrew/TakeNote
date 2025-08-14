@@ -80,15 +80,7 @@ struct MainWindow: View {
                     Label("Add Folder", systemImage: "folder.badge.plus")
                 }
 
-                Button(action: addTag) {
-                    ZStack(alignment: .bottomTrailing) {
-                        Image(systemName: "tag")
-                            .scaleEffect(x: -1, y: 1)
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 7))
-                            .offset(x: 2, y: -10)
-                    }
-                }
+                AddTagButton(action: addTag)
             }
 
         } content: {
