@@ -11,17 +11,9 @@ import SwiftUI
 
 struct MainWindow: View {
     let languageModel = SystemLanguageModel.default
-    
+
     @Environment(\.modelContext) var modelContext
     @Environment(\.openWindow) var openWindow
-    @Query(
-        filter: #Predicate<NoteContainer> { folder in folder.isInbox
-        }
-    ) var inboxFolders: [NoteContainer]
-    @Query(
-        filter: #Predicate<NoteContainer> { folder in folder.isTrash
-        }
-    ) var trashFolders: [NoteContainer]
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
@@ -32,6 +24,13 @@ struct MainWindow: View {
         }
     ) var tags: [NoteContainer]
 
+    var inboxFolder: NoteContainer? {
+        folders.first { $0.isInbox }
+    }
+    var trashFolder: NoteContainer? {
+        folders.first { $0.isTrash }
+    }
+
     @State var selectedContainer: NoteContainer?
     @State var selectedNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
@@ -41,7 +40,6 @@ struct MainWindow: View {
     @State var tagSectionExpanded: Bool = true
     @State var errorAlertMessage: String = ""
     @State var errorAlertIsVisible: Bool = false
-    
 
     var body: some View {
         NavigationSplitView {
@@ -61,17 +59,20 @@ struct MainWindow: View {
                 )
                 .headerProminence(.increased)
 
-                Section(
-                    isExpanded: $tagSectionExpanded,
-                    content: {
-                        TagList(
-                            onDelete: onTagDelete
-                        )
-                    },
-                    header: {
-                        Text("Tags")
-                    }
-                ).headerProminence(.increased)
+                if tagsExist {
+                    Section(
+                        isExpanded: $tagSectionExpanded,
+                        content: {
+                            TagList(
+                                onDelete: onTagDelete
+                            )
+                        },
+                        header: {
+                            Text("Tags")
+                        }
+                    ).headerProminence(.increased)
+
+                }
             }
             .listStyle(.sidebar)
             .toolbar {
@@ -124,7 +125,7 @@ struct MainWindow: View {
         .alert(
             "Something went wrong: \(errorAlertMessage)",
             isPresented: $errorAlertIsVisible
-        ){
+        ) {
             Button("OK", action: { errorAlertIsVisible = false })
         }
         .onAppear(perform: dataInit)

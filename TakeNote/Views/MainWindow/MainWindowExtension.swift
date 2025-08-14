@@ -13,7 +13,7 @@ import SwiftUI
 extension MainWindow {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
-    
+
     // MARK: Computed Properties
 
     var aiIsAvailable: Bool {
@@ -30,7 +30,11 @@ extension MainWindow {
     }
 
     var inboxFolderExists: Bool {
-        return !inboxFolders.isEmpty
+        return inboxFolder != nil
+    }
+
+    var tagsExist: Bool {
+        return tags.isEmpty == false
     }
 
     var navigationTitle: String {
@@ -143,18 +147,24 @@ extension MainWindow {
 
     func emptyTrash() {
         emptyTrashAlertIsPresented = false
-        if let trashFolder = trashFolders.first {
-            for note in trashFolder.notes {
-                modelContext.delete(note)
-            }
+        guard let trash = trashFolder else {
+            errorAlertMessage = "Could not find trash folder"
+            errorAlertIsVisible = true
+            return
+        }
+        for note in trash.notes {
+            modelContext.delete(note)
         }
     }
 
     func folderDelete(_ deletedFolder: NoteContainer) {
-        if let trashFolder = trashFolders.first {
-            for note in deletedFolder.notes {
-                note.folder = trashFolder
-            }
+        guard let trash = trashFolder else {
+            errorAlertMessage = "Could not find trash folder"
+            errorAlertIsVisible = true
+            return
+        }
+        for note in deletedFolder.notes {
+            note.folder = trash
         }
         do {
             try modelContext.save()
@@ -181,10 +191,12 @@ extension MainWindow {
     }
 
     func moveNoteToTrash(_ noteToTrash: Note) {
-        guard let trashFolder = trashFolders.first else {
+        guard let trash = trashFolder else {
+            errorAlertMessage = "Could not find trash folder"
+            errorAlertIsVisible = true
             return
         }
-        noteToTrash.folder = trashFolder
+        noteToTrash.folder = trash
         do {
             try modelContext.save()
         } catch {
@@ -246,13 +258,9 @@ extension MainWindow {
 
     func onTagDelete(_ deletedTag: NoteContainer) {
         if deletedTag == selectedContainer {
-            selectedContainer = inboxFolders.first
+            selectedContainer = inboxFolder
             selectedNote = nil
         }
-    }
-
-    var tagsExist: Bool {
-        return tags.isEmpty == false
     }
 
     func tagsInit() {
