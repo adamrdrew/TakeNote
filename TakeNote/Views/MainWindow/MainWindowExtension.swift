@@ -30,7 +30,7 @@ extension MainWindow {
     }
 
     var inboxFolderExists: Bool {
-        return folders.contains(where: { $0.isInbox })
+        return inboxFolder != nil
     }
 
     var tagsExist: Bool {
