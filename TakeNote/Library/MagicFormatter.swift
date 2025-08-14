@@ -18,7 +18,7 @@ struct MagicFormatterResult {
 class MagicFormatter: ObservableObject {
     static let failureToken = "FORMATFAILED"
     let languageModel = SystemLanguageModel.default
-    
+
     var isAvailable: Bool {
         return languageModel.isAvailable
     }
@@ -48,6 +48,19 @@ class MagicFormatter: ObservableObject {
         - Don’t summarize or shorten unless the text explicitly asks you to.
         - Don’t add metadata, front-matter, or footers.
         - Don’t wrap the entire output in a single code fence.
+
+          ABSOLUTE OUTPUT RULES
+            - Do **NOT** wrap the entire output in code fences of any kind (no ```markdown, ```md, ```, or ~~~).
+            - Do **NOT** add any lead-in text or commentary.
+            - Do **NOT** include a final code fence line.
+
+         WRONG (do not do this):
+            ```markdown
+            # Title
+            ```
+            RIGHT (do this instead):
+            # Title
+            
 
         MINI CHEAT-SHEET
         # Title
@@ -134,7 +147,8 @@ class MagicFormatter: ObservableObject {
         formatterIsBusy = false
         if formattedDocument == MagicFormatter.failureToken {
             return MagicFormatterResult(
-                formattedText: "Your input does not seem to be a valid document to format. Please try again.",
+                formattedText:
+                    "Your input does not seem to be a valid document to format. Please try again.",
                 didSucceed: false,
                 error: nil
             )

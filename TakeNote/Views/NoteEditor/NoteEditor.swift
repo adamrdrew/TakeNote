@@ -171,6 +171,7 @@ struct NoteEditor: View {
                         messages: $messages,
                         language: .markdown()
                     )
+                    .disabled(magicFormatter.formatterIsBusy)
 
                     .frame(height: geometry.size.height)
                     .environment(
@@ -205,8 +206,8 @@ struct NoteEditor: View {
                 }
 
             }
-            .popover(isPresented: $magicFormatter.formatterIsBusy) {
-                AIMessage(message: "Formatting...", font: .headline)
+            .sheet(isPresented: $magicFormatter.formatterIsBusy) {
+                AIMessage(message: "Magic Formatting...", font: .headline)
                     .padding()
             }
             .toolbar {
