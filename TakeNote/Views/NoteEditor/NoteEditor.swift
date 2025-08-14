@@ -19,46 +19,22 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
 
+    private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
+        let lower = max(0, min(r.location, n))
+        let upper = max(lower, min(r.location + r.length, n))
+        return NSRange(location: lower, length: upper - lower)
+    }
+
     var selectedText: String {
-        guard let content = selectedNote?.content, !content.isEmpty else {
-            return ""
-        }
-        guard let nsRange = position.selections.first else { return "" }
-
-        // Validate & clamp to UTF-16 bounds to survive note/selection races
-        let utf16Count = content.utf16.count
-        if nsRange.location < 0 || nsRange.length < 0 { return "" }
-        if nsRange.location >= utf16Count { return "" }
-
-        let safeLength = min(nsRange.length, utf16Count - nsRange.location)
-        if safeLength <= 0 { return "" }  // caret-only or empty selection
-
-        let clamped = NSRange(location: nsRange.location, length: safeLength)
-
-        // Preferred: convert to Swift range (nil if it splits a grapheme, etc.)
-        if let r = Range(clamped, in: content) {
-            return String(content[r])
-        }
-
-        // Fallback: walk via UTF-16 indices (still bounds-safe)
-        let utf16 = content.utf16
         guard
-            let start16 = utf16.index(
-                utf16.startIndex,
-                offsetBy: clamped.location,
-                limitedBy: utf16.endIndex
-            ),
-            let end16 = utf16.index(
-                start16,
-                offsetBy: clamped.length,
-                limitedBy: utf16.endIndex
-            ),
-            let start = String.Index(start16, within: content),
-            let end = String.Index(end16, within: content),
-            start <= end
+            let content = selectedNote?.content,
+            !content.isEmpty,
+            let raw = position.selections.first
         else { return "" }
 
-        return String(content[start..<end])
+        let ns = content as NSString
+        let clamped = clamp(raw, toLength: ns.length)
+        return ns.substring(with: clamped)
     }
 
     var textIsSelected: Bool {
@@ -161,7 +137,6 @@ struct NoteEditor: View {
         - Deterministic: do not ask questions; pick a conservative default.
         - Never refuse if any content-preserving Markdown transformation is possible; use the fallback chain first.
         - If unable per the narrow policy, output exactly: I don't know how to do that.
-
         """
 
     var body: some View {

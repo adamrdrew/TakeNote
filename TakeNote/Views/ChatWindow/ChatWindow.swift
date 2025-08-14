@@ -45,10 +45,6 @@ struct ChatWindow: View {
 
     @FocusState private var textFieldFocused: Bool
 
-    var hasContext: Bool {
-        guard let context else { return false }
-        return context.isEmpty
-    }
 
     // MARK: - Actions
 

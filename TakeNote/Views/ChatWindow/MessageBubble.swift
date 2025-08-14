@@ -35,9 +35,10 @@ struct MessageBubble: View {
                         .glassEffect(.regular.tint(.green).interactive())
 
                     }
+                    Spacer(minLength: 40)
                 }
 
-                Spacer(minLength: 40)
+                
             }
         }
     }
