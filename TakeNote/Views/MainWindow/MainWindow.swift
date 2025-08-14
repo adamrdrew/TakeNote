@@ -34,9 +34,9 @@ struct MainWindow: View {
 
     @State var selectedFolder: NoteContainer?
     @State var selectedNote: Note?
-    @State var emptyTrashAlertIsVisible: Bool = false
+    @State var emptyTrashAlertIsPresented: Bool = false
 
-    @State var linkToNoteErrorIsVisible: Bool = false
+    @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
 
     @State var folderSectionExpanded: Bool = true
@@ -111,13 +111,13 @@ struct MainWindow: View {
 
         .alert(
             "Link Error: \(linkToNoteErrorMessage)",
-            isPresented: $linkToNoteErrorIsVisible
+            isPresented: $linkToNoteErrorIsPresented
         ) {
-            Button("OK", action: { linkToNoteErrorIsVisible = false })
+            Button("OK", action: { linkToNoteErrorIsPresented = false })
         }
         .alert(
             "Are you sure you want to empty the trash? This action cannot be undone.",
-            isPresented: $emptyTrashAlertIsVisible
+            isPresented: $emptyTrashAlertIsPresented
         ) {
             Button("Empty Trash", role: .destructive, action: emptyTrash)
         }

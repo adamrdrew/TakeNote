@@ -115,7 +115,7 @@ extension MainWindow {
     }
 
     func emptyTrash() {
-        emptyTrashAlertIsVisible = false
+        emptyTrashAlertIsPresented = false
         if let trashFolder = trashFolders.first {
             for note in trashFolder.notes {
                 modelContext.delete(note)
@@ -165,7 +165,7 @@ extension MainWindow {
 
         guard let uuid = UUID(uuidString: url.lastPathComponent) else {
             linkToNoteErrorMessage = "Invalid note link"
-            linkToNoteErrorIsVisible = true
+            linkToNoteErrorIsPresented = true
             return
         }
 
@@ -177,13 +177,13 @@ extension MainWindow {
             )
         } catch {
             linkToNoteErrorMessage = "Error querying notes."
-            linkToNoteErrorIsVisible = true
+            linkToNoteErrorIsPresented = true
             return
         }
 
         if notes.isEmpty {
             linkToNoteErrorMessage = "No notes matching link found"
-            linkToNoteErrorIsVisible = true
+            linkToNoteErrorIsPresented = true
             return
         }
 
@@ -195,7 +195,7 @@ extension MainWindow {
 
         linkToNoteErrorMessage =
             "Something went wrong setting note from link"
-        linkToNoteErrorIsVisible = true
+        linkToNoteErrorIsPresented = true
     }
 
     func openChatWindow() {
@@ -203,7 +203,7 @@ extension MainWindow {
     }
 
     func showEmptyTrashAlert() {
-        emptyTrashAlertIsVisible = true
+        emptyTrashAlertIsPresented = true
     }
 
     func onTagDelete(_ deletedTag: NoteContainer) {
