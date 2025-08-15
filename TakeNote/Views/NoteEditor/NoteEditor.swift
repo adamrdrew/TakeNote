@@ -32,9 +32,8 @@ struct NoteEditor: View {
         if magicFormatter.formatterIsBusy { return }
         if selectedNote == nil { return }
         if selectedNote!.content.isEmpty { return }
-        var result: MagicFormatterResult!
         Task {
-            result = await magicFormatter.magicFormat(
+            let result = await magicFormatter.magicFormat(
                 selectedNote!.content
             )
             if result.didSucceed {
