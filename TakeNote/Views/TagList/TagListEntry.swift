@@ -11,6 +11,7 @@ import SwiftUI
 struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) var colorScheme
     @State var inDeleteMode: Bool = false
     var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
         deletedFolder in
@@ -73,14 +74,15 @@ struct TagListEntry: View {
             } else {
                 NoteLabelBadge(noteLabel: tag)
                 Text(tag.name)
-                    .font(.headline)
                     .lineLimit(1)
                     .truncationMode(.tail)
-
+                    .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                 Spacer()
                 HStack {
                     Text("\(tag.notes.count)")
+                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                     Image(systemName: "note.text")
+                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                 }
             }
         }

@@ -10,6 +10,7 @@ import SwiftUI
 
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) var colorScheme
     var folder: NoteContainer
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
@@ -72,11 +73,13 @@ struct FolderListEntry: View {
             } else {
                 HStack {
                     Label(folder.name, systemImage: folder.getSystemImageName())
-                        .font(.headline)
+                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                     Spacer()
                     HStack {
                         Text("\(folder.notes.count)")
+                            .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                         Image(systemName: "note.text")
+                            .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                     }
                 }
             }

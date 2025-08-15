@@ -63,6 +63,7 @@ struct MainWindow: View {
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
+                        
                     },
                     header: {
                         Text("Folders")
@@ -126,7 +127,6 @@ struct MainWindow: View {
                 NoteEditor(openNote: $openNote)
             }
         }
-
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(navigationTitle)
 

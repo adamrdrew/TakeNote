@@ -26,7 +26,8 @@ struct FolderList: View {
                 folder: folder,
                 onDelete: onDelete,
                 onEmptyTrash: onEmptyTrash
-            )
+                    
+            )            
         }
     }
 }
