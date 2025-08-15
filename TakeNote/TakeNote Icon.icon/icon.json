@@ -10,17 +10,25 @@
             "solid" : "srgb:0.00000,0.00000,0.00000,1.00000"
           },
           "image-name" : "4 – Layer.svg",
-          "name" : "4 – Layer"
+          "name" : "4 – Layer",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -4.4609375,
+              -0.9453125
+            ]
+          }
         },
         {
           "fill" : {
             "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
           },
+          "hidden" : true,
           "image-name" : "3 – Layer.svg",
           "name" : "3 – Layer"
         },
         {
-          "blend-mode" : "normal",
+          "blend-mode" : "plus-lighter",
           "fill" : {
             "solid" : "srgb:1.00000,0.97572,0.99284,1.00000"
           },
@@ -32,10 +40,11 @@
           "blend-mode" : "normal",
           "fill" : {
             "linear-gradient" : [
-              "srgb:0.27794,1.00000,0.82071,1.00000",
-              "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+              "srgb:1.00000,0.26881,0.76037,1.00000",
+              "srgb:0.66285,0.17820,0.52898,1.00000"
             ]
           },
+          "hidden" : false,
           "image-name" : "1 – Layer.svg",
           "name" : "1 – Layer"
         }
