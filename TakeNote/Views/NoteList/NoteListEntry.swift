@@ -62,6 +62,11 @@ struct NoteListEntry: View {
                         .font(.headline.weight(.semibold))
                         .textFieldStyle(.roundedBorder)
                         .onSubmit { finishRename() }
+                        .onChange(of: nameInputFocused) { _, focused in
+                            if !focused {
+                                finishRename()
+                            }
+                        }
                 } else {
                     Label {
                         Text(note.title)

@@ -64,6 +64,11 @@ struct FolderListEntry: View {
                     .onSubmit {
                         finishRename()
                     }
+                    .onChange(of: nameInputFocused) { _, focused in
+                        if !focused {
+                            finishRename()
+                        }
+                    }
             } else {
                 HStack {
                     Label(folder.name, systemImage: folder.getSystemImageName())

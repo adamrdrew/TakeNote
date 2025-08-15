@@ -65,6 +65,11 @@ struct TagListEntry: View {
                     .onSubmit {
                         finishRename()
                     }
+                    .onChange(of: nameInputFocused) { _, focused in
+                        if !focused {
+                            finishRename()
+                        }
+                    }
             } else {
                 NoteLabelBadge(noteLabel: tag)
                 Text(tag.name)
