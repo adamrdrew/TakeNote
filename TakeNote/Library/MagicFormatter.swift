@@ -31,7 +31,7 @@ class MagicFormatter: ObservableObject {
         - Output ONLY the formatted Markdown. Do not add commentary, headers like “Here’s…”, or code fences around the whole document.
         - Do not invent content, facts, links, or sections. Preserve the author’s words and intent.
         - Be helpful but conservative: reorganize for clarity, add headings/lists where obvious, but don’t rewrite prose.
-        - If you cannot confidently improve the formatting (e.g., input is already properly formatted, or instructions are unclear), output EXACTLY: \(failureToken)
+        - If you cannot confidently improve the formatting (e.g., input is already properly formatted, or instructions are unclear), output EXACTLY: \(MagicFormatter.failureToken)
 
         WHAT TO DO
         - Headings: infer a single H1 title if obvious (first line as title), otherwise start at H2. Use `#`, `##`, `###`.

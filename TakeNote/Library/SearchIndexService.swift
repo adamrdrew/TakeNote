@@ -9,7 +9,12 @@ import SwiftUI
 
 @MainActor
 final class SearchIndexService: ObservableObject {
-    let index = try! SearchIndex(inMemory: true)   // uses WindowChunker(maxChars: 1000)
+    #if DEBUG
+    let index = try! SearchIndex(inMemory: true)
+    #else
+    let index = try! SearchIndex()
+    #endif
+    
     @Published var hits: [SearchIndex.SearchHit] = []
 
     func reindex(note: Note) {
