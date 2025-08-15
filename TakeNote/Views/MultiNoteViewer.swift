@@ -4,6 +4,9 @@
 //
 //  Created by Adam Drew on 8/15/25.
 //
+// This View was almost entirely written by ChatGPT
+// I wrote the initial implementation that was very simple
+// But ChatGPT re-wrote it to be more robust
 
 import MarkdownUI
 import SwiftData

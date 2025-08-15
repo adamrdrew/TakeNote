@@ -1,3 +1,8 @@
+// ChatGPT wrote this
+// I wrote the initial implementation which was very simple and bare bones
+// ChatGPT re-wrote it
+// I have made changes and improvements manually over time
+
 import Foundation
 import SQLite  // SQLite.swift
 import os

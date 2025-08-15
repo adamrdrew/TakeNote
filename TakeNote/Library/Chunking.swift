@@ -1,3 +1,5 @@
+// ChatGPT Wrote This
+
 import Foundation
 
 public struct NoteChunk {
