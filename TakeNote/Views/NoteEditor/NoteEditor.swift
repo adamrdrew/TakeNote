@@ -33,6 +33,7 @@ struct NoteEditor: View {
         if selectedNote == nil { return }
         if selectedNote!.content.isEmpty { return }
         Task {
+            
             let result = await magicFormatter.magicFormat(
                 selectedNote!.content
             )
@@ -42,9 +43,7 @@ struct NoteEditor: View {
             }
             magicFormatterErrorIsPresented = true
             magicFormatterErrorMessage = result.formattedText
-
         }
-
     }
 
     var selectedText: String {
