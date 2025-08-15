@@ -7,11 +7,13 @@
 
 import SwiftData
 import SwiftUI
+import os
 
 @main
 struct TakeNoteApp: App {
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
 
     init() {
         do {
@@ -43,6 +45,28 @@ struct TakeNoteApp: App {
         }
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button("Rebuild Search Index") {
+                    do {
+                        let notes = try ModelContext(container).fetch(FetchDescriptor<Note>())
+                        if notes.isEmpty {
+                            logger.debug("No notes to reindex.")
+                            return
+                        }
+                        search.dropAll()
+                        search.reindexAll(notes)
+                        logger.debug("Rebuilt search index")
+                    } catch {
+                        logger.error("Search index rebuild failed: \(error.localizedDescription)")
+                    }
+
+                    
+                }
+                .disabled(search.isIndexing)
+            }
+        }
+
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in

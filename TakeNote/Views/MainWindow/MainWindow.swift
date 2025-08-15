@@ -132,7 +132,9 @@ struct MainWindow: View {
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)
+        
     }
+
 }
 
 #Preview {

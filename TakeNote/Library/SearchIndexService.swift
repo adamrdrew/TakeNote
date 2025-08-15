@@ -16,13 +16,22 @@ final class SearchIndexService: ObservableObject {
     #endif
     
     @Published var hits: [SearchIndex.SearchHit] = []
+    @Published var isIndexing: Bool = false
 
     func reindex(note: Note) {
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
     func reindexAll(_ notes: [Note]) {
-        Task { index.reindex(notes.map { ($0.uuid, $0.content) }) }
+        isIndexing = true
+        Task {
+            index.reindex(notes.map { ($0.uuid, $0.content) })
+            isIndexing = false
+        }
+    }
+    
+    func dropAll() {
+        Task { index.dropAll() }
     }
 
     func search(_ q: String) {
