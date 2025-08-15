@@ -115,7 +115,7 @@ class MagicFormatter: ObservableObject {
     private func removeMarkdownClosures(_ input: String) -> String {
         //If the first line of the input is ```markdown remove the first and last lines and return
         if input.hasPrefix("```markdown") && input.hasSuffix("```") {
-            return String(input.split(separator: "\n").dropFirst().dropLast().joined(separator: "\n"))
+            return String(input.split(separator: "\n", omittingEmptySubsequences: false).dropFirst().dropLast().joined(separator: "\n"))
         }
         return input
     }
