@@ -43,6 +43,17 @@ struct TakeNoteApp: App {
         }
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button("Rebuild Search Index") {
+                    search.dropAll()
+                    var notes = try? ModelContext(container).fetch(FetchDescriptor<Note>())
+                    search.reindexAll(notes ?? [])
+                    
+                }
+            }
+        }
+
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in

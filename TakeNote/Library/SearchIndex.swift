@@ -1,9 +1,12 @@
 import Foundation
 import SQLite  // SQLite.swift
+import os
 
 /// Minimal full-text index for your notes.
 /// FTS5 table with two columns: note_id (UNINDEXED), chunk (searchable).
 public final class SearchIndex {
+    
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "Database")
 
     // MARK: Result type
     public struct SearchHit: Identifiable {
@@ -45,6 +48,7 @@ public final class SearchIndex {
                 filename: "search.sqlite"
             )
             db = try Connection(url.path)
+            logger.info("Search index database connected")
         }
 
         // Single Connection is already thread-safe (SQLite.swift serializes ops).
@@ -74,10 +78,44 @@ public final class SearchIndex {
                 }
             }
         } catch {
-            print("SearchIndex reindex error:", error)
+            logger.error("SearchIndex reindex error: \(error.localizedDescription)")
         }
     }
 
+    public func dropAll() {
+        do {
+            // Fast path: wipe all rows from the FTS table.
+            // (This preserves the schema and is safe for both in-memory & on-disk.)
+            try db.run(fts.delete())
+
+            // FTS5 maintenance: compact internal index structures.
+            // This is optional; ignore if it ever errors on older SQLite builds.
+            try? db.run("INSERT INTO fts(fts) VALUES('optimize')")
+
+            // Reclaim disk space (if on-disk). These are no-ops for in-memory.
+            // Must be outside a transaction.
+            try? db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+            try? db.run("VACUUM")
+        } catch {
+            // If the table doesn't exist or something went sideways, drop & recreate.
+            do {
+                try db.transaction {
+                    try db.run("DROP TABLE IF EXISTS fts")
+
+                    let cfg = FTS5Config()
+                        .column(note_id, [.unindexed])
+                        .column(chunk)
+
+                    try db.run(fts.create(.FTS5(cfg), ifNotExists: true))
+                }
+                // After a hard reset, also trim the file.
+                try? db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+                try? db.run("VACUUM")
+            } catch {
+                logger.error("SearchIndex dropAll error: \(error.localizedDescription)")
+            }
+        }
+    }
     /// Bulk (re)index many notes efficiently.
     public func reindex(_ notes: [(UUID, String)]) {
         do {
@@ -95,7 +133,7 @@ public final class SearchIndex {
                 }
             }
         } catch {
-            print("SearchIndex bulk reindex error:", error)
+            logger.error("SearchIndex bulk reindex error: \(error.localizedDescription)")
         }
     }
 
@@ -103,7 +141,7 @@ public final class SearchIndex {
     public func delete(noteID: UUID) {
         do {
             try db.run(fts.filter(note_id == noteID.uuidString).delete())
-        } catch { print("SearchIndex delete error:", error) }
+        } catch { logger.error("SearchIndex delete error: \(error.localizedDescription)") }
     }
 
     // MARK: Search
@@ -160,7 +198,7 @@ public final class SearchIndex {
             }
             return out
         } catch {
-            print("SearchIndex search error:", error)
+            logger.error("SearchIndex search error: \(error.localizedDescription)")
             return []
         }
     }
@@ -203,13 +241,14 @@ public final class SearchIndex {
                     of: "\n",
                     with: "⏎"
                 )
-                print(
+                logger.debug(
                     "fts row \(row[rowid])  note_id=\(row[note_id])  chunk=\"\(preview)…\""
                 )
             }
-            print("fts total rows:", debugCount())
+            let dc = debugCount()
+            logger.debug("fts total rows: \(dc)")
         } catch {
-            print("debugDump error:", error)
+            logger.debug("debugDump error: \(error.localizedDescription)")
         }
     }
 
