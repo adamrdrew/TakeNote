@@ -163,7 +163,26 @@ struct NoteListEntry: View {
                 }
             }
         }
-        .draggable(NoteIDWrapper(id: note.persistentModelID))
+        .draggable(NoteIDWrapper(id: note.persistentModelID)) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 1.0, style: .continuous)
+                    .frame(width: 24, height: 32)
+                    .foregroundColor(.white)
+                    .border(.gray, width: 1)
+                VStack {
+                    Rectangle()
+                        .frame(width: 12, height: 2)
+                        .foregroundColor(.gray)
+                    Rectangle()
+                        .frame(width: 12, height: 2)
+                        .foregroundColor(.gray)
+                    Rectangle()
+                        .frame(width: 12, height: 2)
+                        .foregroundColor(.gray)
+                }
+            }
+                
+        }
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, horizontalPadding)
         .frame(maxWidth: .infinity, alignment: .leading)

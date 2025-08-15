@@ -23,7 +23,7 @@ struct MainWindow: View {
         filter: #Predicate<NoteContainer> { folder in folder.isTag
         }
     ) var tags: [NoteContainer]
-    
+
     @Query var notes: [Note]
 
     var inboxFolder: NoteContainer? {
@@ -34,7 +34,8 @@ struct MainWindow: View {
     }
 
     @State var selectedContainer: NoteContainer?
-    @State var selectedNote: Note?
+    @State var selectedNotes = Set<Note>()
+    @State var openNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
@@ -42,6 +43,14 @@ struct MainWindow: View {
     @State var tagSectionExpanded: Bool = true
     @State var errorAlertMessage: String = ""
     @State var errorAlertIsVisible: Bool = false
+
+    var multipleNotesSelected: Bool {
+        return selectedNotes.count > 1
+    }
+    
+    func onNoteSelect(_ note : Note) {
+        openNote = note
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -76,6 +85,7 @@ struct MainWindow: View {
 
                 }
             }
+
             .listStyle(.sidebar)
             .toolbar {
                 Button(action: addFolder) {
@@ -87,9 +97,15 @@ struct MainWindow: View {
         } content: {
             NoteList(
                 selectedContainer: $selectedContainer,
-                selectedNote: $selectedNote,
-                onTrash: moveNoteToTrash
+                selectedNotes: $selectedNotes,
+                onTrash: moveNoteToTrash,
+                onSelect: onNoteSelect
             ).toolbar {
+                if canAddNote {
+                    Button(action: addNote) {
+                        Image(systemName: "note.text.badge.plus")
+                    }
+                }
                 if aiIsAvailable && notes.count > 0 {
                     Button(action: openChatWindow) {
                         Label("Chat", systemImage: "message")
@@ -100,15 +116,17 @@ struct MainWindow: View {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
                 }
-                if canAddNote {
-                    Button(action: addNote) {
-                        Image(systemName: "note.text.badge.plus")
-                    }
-                }
+
             }
+
         } detail: {
-            NoteEditor(selectedNote: $selectedNote)
+            if multipleNotesSelected {
+                MultiNoteViewer(notes: $selectedNotes)
+            } else {
+                NoteEditor(openNote: $openNote)
+            }
         }
+
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(navigationTitle)
 
@@ -132,7 +150,7 @@ struct MainWindow: View {
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)
-        
+
     }
 
 }

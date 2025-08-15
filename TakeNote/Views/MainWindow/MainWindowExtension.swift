@@ -74,7 +74,7 @@ extension MainWindow {
         modelContext.insert(note)
         do {
             try modelContext.save()
-            selectedNote = note
+            //selectedNotes = [note]
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
@@ -179,7 +179,7 @@ extension MainWindow {
         selectedContainer = folders.first(where: {
             $0.name == MainWindow.inboxFolderName
         })
-        selectedNote = nil
+        selectedNotes = []
     }
 
     func folderInit() {
@@ -204,10 +204,10 @@ extension MainWindow {
             errorAlertIsVisible = true
             return
         }
-        if selectedNote != noteToTrash {
+        if selectedNotes.first != noteToTrash {
             return
         }
-        selectedNote = nil
+        selectedNotes = []
     }
 
     func loadNoteFromURL(_ url: URL) {
@@ -238,7 +238,7 @@ extension MainWindow {
         }
 
         if let note = notes.first {
-            self.selectedNote = note
+            self.selectedNotes = [note]
             self.selectedContainer = note.folder
             return
         }
@@ -259,7 +259,7 @@ extension MainWindow {
     func onTagDelete(_ deletedTag: NoteContainer) {
         if deletedTag == selectedContainer {
             selectedContainer = inboxFolder
-            selectedNote = nil
+            selectedNotes = []
         }
     }
 
