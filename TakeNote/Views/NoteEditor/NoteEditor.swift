@@ -33,7 +33,7 @@ struct NoteEditor: View {
         if openNote == nil { return }
         if openNote!.content.isEmpty { return }
         Task {
-            
+
             let result = await magicFormatter.magicFormat(
                 openNote!.content
             )
@@ -162,28 +162,37 @@ struct NoteEditor: View {
 
     var body: some View {
         if let note = openNote {
-            VStack {
-                GeometryReader { geometry in
-                    CodeEditor(
-                        text: Binding(
-                            get: { note.content },
-                            set: { openNote?.content = $0 }
-                        ),
-                        position: $position,
-                        messages: $messages,
-                        language: .markdown()
-                    )
-                    .disabled(magicFormatter.formatterIsBusy)
+            ZStack {
+                if !showPreview {
+                    GeometryReader { geometry in
 
-                    .frame(height: geometry.size.height)
-                    .environment(
-                        \.codeEditorTheme,
-                        colorScheme == .dark
-                            ? Theme.defaultDark : Theme.defaultLight
-                    )
+                        CodeEditor(
+                            text: Binding(
+                                get: { note.content },
+                                set: { openNote?.content = $0 }
+                            ),
+                            position: $position,
+                            messages: $messages,
+                            language: .markdown(),
+                            layout: CodeEditor.LayoutConfiguration(
+                                showMinimap: false,
+                                wrapText: true
+                            )
+                        )
+
+                        .onExitCommand(perform: {
+                            showPreview.toggle()
+                        })
+                        .disabled(magicFormatter.formatterIsBusy)
+                        .frame(height: geometry.size.height)
+                        .environment(
+                            \.codeEditorTheme,
+                            colorScheme == .dark
+                                ? Theme.defaultDark : Theme.defaultLight
+                        )
+                    }
                 }
                 if showPreview {
-                    Divider()
                     GeometryReader { geometry in
 
                         ScrollView {
@@ -194,7 +203,7 @@ struct NoteEditor: View {
                                         maxWidth: .infinity,
                                         alignment: .leading
                                     )
-                                    .padding()
+                                    .padding(24)
 
                             }
                             .frame(
@@ -204,9 +213,18 @@ struct NoteEditor: View {
                             )
 
                         }
+                        .onExitCommand(perform: {
+                            showPreview.toggle()
+                        })
+                        .onTapGesture {
+                            showPreview.toggle()
+                        }
                     }
                 }
 
+            }
+            .onChange(of: openNote?.id) { _, _ in
+                showPreview = true
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 AIMessage(message: "Magic Formatting...", font: .headline)
@@ -228,8 +246,8 @@ struct NoteEditor: View {
                     }) {
                         Image(
                             systemName: showPreview
-                                ? "eyeglasses.slash"
-                                : "eyeglasses"
+                                ? "eye.slash"
+                                : "eye"
                         )
                     }
 
@@ -282,6 +300,7 @@ struct NoteEditor: View {
                 }
 
             }
+
         } else {
             VStack {
                 Spacer()

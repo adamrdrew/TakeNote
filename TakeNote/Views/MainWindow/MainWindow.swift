@@ -127,9 +127,9 @@ struct MainWindow: View {
                 NoteEditor(openNote: $openNote)
             }
         }
+        .background(Color(NSColor.textBackgroundColor))
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(navigationTitle)
-
         .alert(
             "Link Error: \(linkToNoteErrorMessage)",
             isPresented: $linkToNoteErrorIsPresented
@@ -158,3 +158,4 @@ struct MainWindow: View {
 #Preview {
     MainWindow()
 }
+
