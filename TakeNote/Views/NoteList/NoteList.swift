@@ -10,7 +10,7 @@ import SwiftUI
 
 struct NoteList: View {
     @Binding var selectedContainer: NoteContainer?
-    @Binding var selectedNote: Note?
+    @Binding var selectedNotes: Set<Note>
     @Environment(\.modelContext) private var modelContext
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
@@ -45,7 +45,7 @@ struct NoteList: View {
     var body: some View {
         VStack {
 
-            List(selection: $selectedNote) {
+            List(selection: $selectedNotes) {
                 if folderHasStarredNotes() {
                     Section(header: Text("Favorites").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
@@ -77,17 +77,16 @@ struct NoteList: View {
                 }
             }
             .searchable(text: $noteSearchText, prompt: "Search")
-            .onChange(of: selectedNote) { oldValue, newValue in
-                if let oldValue {
-                    Task { await oldValue.generateSummary() }
-                    if oldValue.contentHasChanged() {
-                        search.reindex(note: oldValue)
+            .onChange(of: selectedNotes) { oldValue, newValue in
+                for note in oldValue {
+                    print("Selected notes changed: \(note.title)")
+                    Task { await note.generateSummary() }
+                    if note.contentHasChanged() {
+                        search.reindex(note: note)
                     }
                 }
+
             }
-
-
-
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             var noteImported = false
