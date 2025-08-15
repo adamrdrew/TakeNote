@@ -23,6 +23,7 @@ class MagicFormatter: ObservableObject {
         return languageModel.isAvailable
     }
 
+    // ChatGPT wrote this prompt. I told it what I wanted it to do and it built this out
     var instructions: String = """
         ROLE
         You are a Markdown formatting assistant. You receive an unformatted plain-text document and return only a well-structured Markdown version.
