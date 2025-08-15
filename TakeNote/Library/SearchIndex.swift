@@ -76,6 +76,7 @@ public final class SearchIndex {
                         )
                     )
                 }
+                logger.debug("Indexed note \(noteID)")
             }
         } catch {
             logger.error("SearchIndex reindex error: \(error.localizedDescription)")

@@ -26,7 +26,7 @@ final class SearchIndexService: ObservableObject {
         isIndexing = true
         Task {
             index.reindex(notes.map { ($0.uuid, $0.content) })
-            isIndexing = true
+            isIndexing = false
         }
     }
     
