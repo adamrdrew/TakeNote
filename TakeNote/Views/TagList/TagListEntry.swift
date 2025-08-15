@@ -80,9 +80,9 @@ struct TagListEntry: View {
                 Spacer()
                 HStack {
                     Text("\(tag.notes.count)")
-                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
+                        .foregroundStyle(.secondary)
                     Image(systemName: "note.text")
-                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
