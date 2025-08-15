@@ -19,7 +19,11 @@ struct TakeNoteApp: App {
                 for: Note.self,
                 NoteContainer.self,
                 configurations: {
+                    #if DEBUG
                     let config = ModelConfiguration(isStoredInMemoryOnly: true)
+                    #else
+                    let config = ModelConfiguration()
+                    #endif
                     return config
                 }()
             )

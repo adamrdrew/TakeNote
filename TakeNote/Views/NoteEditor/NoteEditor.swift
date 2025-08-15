@@ -16,13 +16,34 @@ struct NoteEditor: View {
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
+    @State private var magicFormatterErrorMessage: String = ""
+    @State var magicFormatterErrorIsPresented: Bool = false
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
+    @StateObject private var magicFormatter = MagicFormatter()
 
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
         let upper = max(lower, min(r.location + r.length, n))
         return NSRange(location: lower, length: upper - lower)
+    }
+
+    func doMagicFormat() {
+        if magicFormatter.formatterIsBusy { return }
+        if selectedNote == nil { return }
+        if selectedNote!.content.isEmpty { return }
+        Task {
+            
+            let result = await magicFormatter.magicFormat(
+                selectedNote!.content
+            )
+            if result.didSucceed {
+                selectedNote!.content = result.formattedText
+                return
+            }
+            magicFormatterErrorIsPresented = true
+            magicFormatterErrorMessage = result.formattedText
+        }
     }
 
     var selectedText: String {
@@ -152,6 +173,7 @@ struct NoteEditor: View {
                         messages: $messages,
                         language: .markdown()
                     )
+                    .disabled(magicFormatter.formatterIsBusy)
 
                     .frame(height: geometry.size.height)
                     .environment(
@@ -186,6 +208,19 @@ struct NoteEditor: View {
                 }
 
             }
+            .sheet(isPresented: $magicFormatter.formatterIsBusy) {
+                AIMessage(message: "Magic Formatting...", font: .headline)
+                    .padding()
+            }
+            .alert(
+                magicFormatterErrorMessage,
+                isPresented: $magicFormatterErrorIsPresented
+            ) {
+
+                Button("OK") {
+                    magicFormatterErrorIsPresented = false
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .secondaryAction) {
                     Button(action: {
@@ -199,7 +234,22 @@ struct NoteEditor: View {
                     }
 
                 }
+                if magicFormatter.isAvailable {
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button(action: {
+                            doMagicFormat()
+                        }) {
+                            Image(
+                                systemName: "wand.and.sparkles"
+                            )
+                        }
+                        .disabled(magicFormatter.formatterIsBusy)
+                    }
+
+                }
+
                 if textIsSelected {
+
                     ToolbarItem(placement: .secondaryAction) {
                         Button(action: {
                             isAssistantPopoverPresented.toggle()
@@ -208,14 +258,19 @@ struct NoteEditor: View {
                                 systemName: "apple.intelligence"
                             )
                         }
-                        .popover(isPresented: $isAssistantPopoverPresented, attachmentAnchor: .point(.center), arrowEdge: .bottom) {
+                        .popover(
+                            isPresented: $isAssistantPopoverPresented,
+                            attachmentAnchor: .point(.center),
+                            arrowEdge: .bottom
+                        ) {
                             ChatWindow(
                                 context: selectedText,
                                 instructions: llmInstructions,
                                 prompt:
                                     "Perform the instructions in the {{USER_REQUEST}} based on the {{CONTEXT}}:\n\nUSER_REQUEST:\n",
                                 searchEnabled: false,
-                                onBotMessageClick: assistantSelectionReplacement,
+                                onBotMessageClick:
+                                    assistantSelectionReplacement,
                                 toolbarVisible: false,
                                 useHistory: false
 
