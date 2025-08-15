@@ -142,6 +142,7 @@ public final class SearchIndex {
     public func delete(noteID: UUID) {
         do {
             try db.run(fts.filter(note_id == noteID.uuidString).delete())
+            logger.debug("Note \(noteID) deleted from search index")
         } catch { logger.error("SearchIndex delete error: \(error.localizedDescription)") }
     }
 
@@ -169,9 +170,13 @@ public final class SearchIndex {
         // 3) Be forgiving: join with OR so any token can match
         //    (FTS5 will still rank results; you're already ordering by bm25)
         let safeQuery = starred.joined(separator: " OR ")
+        
+        let results = search(safeQuery, limit: limit)
+        
+        logger.debug("\(results.count) search hits found.")
 
         // 4) Delegate to your existing FTS search
-        return search(safeQuery, limit: limit)
+        return results
     }
 
     /// Simple FTS5 search. Supports plain words or FTS syntax (phrases, prefix*).

@@ -10,7 +10,7 @@ import SwiftUI
 @MainActor
 final class SearchIndexService: ObservableObject {
     #if DEBUG
-    let index = try! SearchIndex(inMemory: false)
+    let index = try! SearchIndex(inMemory: true)
     #else
     let index = try! SearchIndex()
     #endif
