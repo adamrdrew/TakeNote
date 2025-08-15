@@ -55,7 +55,7 @@ struct MessageBubble: View {
             .padding(.horizontal, 12)
             .foregroundColor(isHuman ? .white : .primary)
             .glassEffect(
-                .regular.tint(isHuman ? .blue : .secondary.opacity(0.2))
+                .regular.tint(isHuman ? .takeNotePink : .secondary.opacity(0.2))
                     .interactive(),
                 in: .rect(cornerRadius: 16.0)
             )
