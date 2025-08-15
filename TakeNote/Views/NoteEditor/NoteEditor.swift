@@ -12,7 +12,7 @@ import SwiftData
 import SwiftUI
 
 struct NoteEditor: View {
-    @Binding var selectedNote: Note?
+    @Binding var openNote: Note?
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
@@ -30,15 +30,15 @@ struct NoteEditor: View {
 
     func doMagicFormat() {
         if magicFormatter.formatterIsBusy { return }
-        if selectedNote == nil { return }
-        if selectedNote!.content.isEmpty { return }
+        if openNote == nil { return }
+        if openNote!.content.isEmpty { return }
         Task {
             
             let result = await magicFormatter.magicFormat(
-                selectedNote!.content
+                openNote!.content
             )
             if result.didSucceed {
-                selectedNote!.content = result.formattedText
+                openNote!.content = result.formattedText
                 return
             }
             magicFormatterErrorIsPresented = true
@@ -48,7 +48,7 @@ struct NoteEditor: View {
 
     var selectedText: String {
         guard
-            let content = selectedNote?.content,
+            let content = openNote?.content,
             !content.isEmpty,
             let raw = position.selections.first
         else { return "" }
@@ -63,14 +63,14 @@ struct NoteEditor: View {
     }
 
     func generateSummary() async {
-        if selectedNote != nil {
-            await selectedNote?.generateSummary()
+        if openNote != nil {
+            await openNote?.generateSummary()
         }
     }
 
     @MainActor
     func assistantSelectionReplacement(_ replacement: String) {
-        guard let note = selectedNote else { return }
+        guard let note = openNote else { return }
         guard let nsRange = position.selections.first else { return }
         guard let swiftRange = Range(nsRange, in: note.content) else { return }
 
@@ -161,13 +161,13 @@ struct NoteEditor: View {
         """
 
     var body: some View {
-        if let note = selectedNote {
+        if let note = openNote {
             VStack {
                 GeometryReader { geometry in
                     CodeEditor(
                         text: Binding(
                             get: { note.content },
-                            set: { selectedNote?.content = $0 }
+                            set: { openNote?.content = $0 }
                         ),
                         position: $position,
                         messages: $messages,

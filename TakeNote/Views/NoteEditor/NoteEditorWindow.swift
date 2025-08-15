@@ -45,7 +45,7 @@ struct NoteEditorWindow: View {
 
     var body: some View {
 
-        NoteEditor(selectedNote: $note)
+        NoteEditor(openNote: $note)
             .onAppear {
                 getNote()
             }

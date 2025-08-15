@@ -35,7 +35,7 @@ struct MainWindow: View {
 
     @State var selectedContainer: NoteContainer?
     @State var selectedNotes = Set<Note>()
-    @State var focusedNote: Note?
+    @State var openNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
@@ -46,6 +46,10 @@ struct MainWindow: View {
 
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
+    }
+    
+    func onNoteSelect(_ note : Note) {
+        openNote = note
     }
 
     var body: some View {
@@ -94,7 +98,8 @@ struct MainWindow: View {
             NoteList(
                 selectedContainer: $selectedContainer,
                 selectedNotes: $selectedNotes,
-                onTrash: moveNoteToTrash
+                onTrash: moveNoteToTrash,
+                onSelect: onNoteSelect
             ).toolbar {
                 if canAddNote {
                     Button(action: addNote) {
@@ -116,10 +121,9 @@ struct MainWindow: View {
 
         } detail: {
             if multipleNotesSelected {
-                Text("Multiple Notes Selected")
-                    .font(.headline)
+                MultiNoteViewer(notes: $selectedNotes)
             } else {
-                NoteEditor(selectedNote: $focusedNote)
+                NoteEditor(openNote: $openNote)
             }
         }
 

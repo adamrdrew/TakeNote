@@ -15,7 +15,8 @@ struct NoteList: View {
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
-
+    
+    
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
             selectedContainer?.notes ?? []
@@ -30,6 +31,7 @@ struct NoteList: View {
     @EnvironmentObject private var search: SearchIndexService
 
     var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
+    var onSelect: ((Note) -> Void) = { Note in }
 
     func addNote() {
         guard let folder = selectedContainer else { return }
@@ -78,8 +80,14 @@ struct NoteList: View {
             }
             .searchable(text: $noteSearchText, prompt: "Search")
             .onChange(of: selectedNotes) { oldValue, newValue in
+                // We look in the new selected notes array so we can run the callback on the selected notes
+                if newValue.count == 1 {
+                    if let note = newValue.first {
+                        onSelect(note)
+                    }
+                }
+                // We look in the previously selected notes so we can generate summaries and reindex
                 for note in oldValue {
-                    print("Selected notes changed: \(note.title)")
                     Task { await note.generateSummary() }
                     if note.contentHasChanged() {
                         search.reindex(note: note)
