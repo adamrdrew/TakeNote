@@ -29,7 +29,6 @@ struct MultiNoteViewer: View {
         GeometryReader { geo in
             ZStack {
 
-
                 // Cards
                 ZStack {
                     ForEach(Array(notesArray.enumerated()), id: \.element.id) {
@@ -139,11 +138,14 @@ private struct PaperCard: View {
                         in: .whitespacesAndNewlines
                     ).isEmpty {
                         Markdown(note.content)
+                            .markdownTextStyle {
+                                ForegroundColor(.black)
+                                BackgroundColor(.white)
+                            }
                             .textSelection(.enabled)
-                            .foregroundStyle(.black)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
-                        Text("—")
+                        Text("")
                             .foregroundStyle(.black.opacity(0.3))
                     }
                 }
