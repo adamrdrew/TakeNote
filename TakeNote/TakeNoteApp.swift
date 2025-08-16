@@ -9,8 +9,14 @@ import SwiftData
 import SwiftUI
 import os
 
+private let onboardingVersionCurrent = 1
+private let onboardingVersionKey = "onboarding.version.seen"
+
 @main
 struct TakeNoteApp: App {
+    @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
+    @State private var showOnboarding = false
+
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
@@ -22,9 +28,11 @@ struct TakeNoteApp: App {
                 NoteContainer.self,
                 configurations: {
                     #if DEBUG
-                    let config = ModelConfiguration(isStoredInMemoryOnly: true)
+                        let config = ModelConfiguration(
+                            isStoredInMemoryOnly: true
+                        )
                     #else
-                    let config = ModelConfiguration()
+                        let config = ModelConfiguration()
                     #endif
                     return config
                 }()
@@ -37,6 +45,19 @@ struct TakeNoteApp: App {
     var body: some Scene {
         Window("", id: "main-window") {
             MainWindow()
+                .sheet(isPresented: $showOnboarding) {
+                    WelcomeView {
+                        onboardingVersionSeen = onboardingVersionCurrent
+                        #if DEBUG
+                            onboardingVersionSeen = 0
+                        #endif
+                        showOnboarding = false
+                    }
+                }
+                .task {
+                    showOnboarding =
+                        onboardingVersionSeen < onboardingVersionCurrent
+                }
                 .environmentObject(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],
@@ -49,7 +70,9 @@ struct TakeNoteApp: App {
             CommandGroup(after: .newItem) {
                 Button("Rebuild Search Index") {
                     do {
-                        let notes = try ModelContext(container).fetch(FetchDescriptor<Note>())
+                        let notes = try ModelContext(container).fetch(
+                            FetchDescriptor<Note>()
+                        )
                         if notes.isEmpty {
                             logger.debug("No notes to reindex.")
                             return
@@ -58,15 +81,15 @@ struct TakeNoteApp: App {
                         search.reindexAll(notes)
                         logger.debug("Rebuilt search index")
                     } catch {
-                        logger.error("Search index rebuild failed: \(error.localizedDescription)")
+                        logger.error(
+                            "Search index rebuild failed: \(error.localizedDescription)"
+                        )
                     }
 
-                    
                 }
                 .disabled(search.isIndexing)
             }
         }
-
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
@@ -79,7 +102,6 @@ struct TakeNoteApp: App {
                 .environmentObject(search)
         }
         .modelContainer(container)
-        
 
     }
 }
