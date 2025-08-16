@@ -21,5 +21,6 @@ struct AddTagButton: View {
                     .offset(x: 2, y: -10)
             }
         }
+        .help("Add Tag")
     }
 }

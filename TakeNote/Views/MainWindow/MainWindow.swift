@@ -92,6 +92,7 @@ struct MainWindow: View {
                 Button(action: addFolder) {
                     Label("Add Folder", systemImage: "folder.badge.plus")
                 }
+                .help("Add Folder")
                 AddTagButton(action: addTag)
             }
 
@@ -106,16 +107,19 @@ struct MainWindow: View {
                     Button(action: addNote) {
                         Image(systemName: "note.text.badge.plus")
                     }
+                    .help("Add Note")
                 }
                 if aiIsAvailable && notes.count > 0 {
                     Button(action: openChatWindow) {
                         Label("Chat", systemImage: "message")
                     }
+                    .help("AI Chat")
                 }
                 if canEmptyTrash {
                     Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
+                    .help("Empty Trash")
                 }
 
             }

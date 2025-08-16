@@ -250,6 +250,7 @@ struct NoteEditor: View {
                                 : "eye"
                         )
                     }
+                    .help(showPreview ? "Hide Preview" : "Show Preview")
 
                 }
                 if magicFormatter.isAvailable {
@@ -262,6 +263,7 @@ struct NoteEditor: View {
                             )
                         }
                         .disabled(magicFormatter.formatterIsBusy)
+                        .help("Magic Format")
                     }
 
                 }
@@ -276,6 +278,7 @@ struct NoteEditor: View {
                                 systemName: "apple.intelligence"
                             )
                         }
+                        .help("AI Markdown Assistant")
                         .popover(
                             isPresented: $isAssistantPopoverPresented,
                             attachmentAnchor: .point(.center),
