@@ -17,7 +17,7 @@ struct MagicFormatterResult {
 
 @MainActor
 class MagicFormatter: ObservableObject {
-    static let failureToken = "FORMATFAILED"
+    static let failureToken = "TAKENOTE_MAGICFORMAT_FORMATFAILED"
     
     var session : LanguageModelSession
     let languageModel = SystemLanguageModel.default
@@ -162,7 +162,7 @@ class MagicFormatter: ObservableObject {
         if session.isResponding {
             return MagicFormatterResult(
                 formattedText:
-                    "Model is busy formatting your text. Please try again later.",
+                    "The Language Model is busy. Please try again later.",
                 didSucceed: false,
                 wasCancelled: false,
                 error: nil
@@ -189,10 +189,10 @@ class MagicFormatter: ObservableObject {
         let formattedDocument = response.content
         formatterIsBusy = false
         sessionCancelled = false
-        if formattedDocument == MagicFormatter.failureToken {
+        if formattedDocument.contains(MagicFormatter.failureToken){
             return MagicFormatterResult(
                 formattedText:
-                    "Your input does not seem to be a valid document to format. Please try again.",
+                    "MagicFormat couldn't figure out how to format your document.",
                 didSucceed: false,
                 wasCancelled: false,
                 error: nil
