@@ -130,9 +130,9 @@ class MagicFormatter: ObservableObject {
 
     /// AFAICT there is no way to cancel a LanguageModelSession once it is off to the races
     /// So to support "cancelling" a MagicFormatter session we sort of fake it
-    /// We set formatterIsBusy to false which the magicFormat method will interpret as an inconsistent state
-    /// We throw an error if that happens with a magic code of 999 which our View code interprets as shrug and silently fail
-    /// From the user's perspective this is a cancel operation as no error is presented and
+    /// We set sessionCancelled. The magicFormat method will see this after the response comes back and
+    /// Throw an error. We plop sessionCancelled onto the MagicFormatterResponse struct as wasCancelled
+    /// Our view code handles this by failing silently and doing nothing.
     func cancel() {
         if !session.isResponding {
             return
@@ -141,6 +141,8 @@ class MagicFormatter: ObservableObject {
             return
         }
         self.sessionCancelled = true
+        /// We need this for the View to hide the MagicFormatter popover
+        self.formatterIsBusy = false
     }
     
     func magicFormat(_ text: String) async -> MagicFormatterResult {
@@ -177,7 +179,6 @@ class MagicFormatter: ObservableObject {
             }
         } catch {
             formatterIsBusy = false
-            sessionCancelled = false
             return MagicFormatterResult(
                 formattedText: "MagicFormatter Error:\n \(error.localizedDescription)",
                 didSucceed: false,
