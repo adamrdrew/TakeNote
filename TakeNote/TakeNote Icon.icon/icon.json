@@ -1,52 +1,51 @@
 {
   "fill" : {
-    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+    "automatic-gradient" : "display-p3:0.66435,0.03912,0.96783,1.00000"
   },
   "groups" : [
     {
       "layers" : [
         {
-          "fill" : {
-            "solid" : "srgb:0.00000,0.00000,0.00000,1.00000"
-          },
-          "image-name" : "4 – Layer.svg",
-          "name" : "4 – Layer",
+          "fill" : "none",
+          "glass" : true,
+          "image-name" : "Main Paper-2.svg",
+          "name" : "Main Paper-2",
+          "opacity" : 0.97,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              -4.4609375,
-              -0.9453125
+              3.4921875,
+              58.0859375
             ]
           }
         },
         {
-          "fill" : {
-            "solid" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
-          },
-          "hidden" : true,
-          "image-name" : "3 – Layer.svg",
-          "name" : "3 – Layer"
-        },
-        {
-          "blend-mode" : "plus-lighter",
-          "fill" : {
-            "solid" : "srgb:1.00000,0.97572,0.99284,1.00000"
-          },
-          "glass" : true,
-          "image-name" : "2 – Layer.svg",
-          "name" : "2 – Layer"
-        },
-        {
-          "blend-mode" : "normal",
-          "fill" : {
-            "linear-gradient" : [
-              "srgb:1.00000,0.26881,0.76037,1.00000",
-              "srgb:0.66285,0.17820,0.52898,1.00000"
+          "image-name" : "Main Paper.svg",
+          "name" : "Main Paper",
+          "opacity" : 0.64,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -83.84375,
+              64.03125
             ]
-          },
-          "hidden" : false,
-          "image-name" : "1 – Layer.svg",
-          "name" : "1 – Layer"
+          }
+        },
+        {
+          "image-name" : "Main Paper-1.svg",
+          "name" : "Main Paper-1",
+          "opacity" : 0.69,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              52.953125,
+              37.109375
+            ]
+          }
+        },
+        {
+          "image-name" : "Pink BG.svg",
+          "name" : "Pink BG"
         }
       ],
       "shadow" : {
