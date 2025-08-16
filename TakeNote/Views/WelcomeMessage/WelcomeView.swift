@@ -9,7 +9,7 @@ struct WelcomeView: View {
                 .font(.largeTitle)
                 .bold()
 
-            // Center the rows as a block, keep text inside left aligned
+            // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
 
             WelcomeRow(
                 title: "Magic Format",
