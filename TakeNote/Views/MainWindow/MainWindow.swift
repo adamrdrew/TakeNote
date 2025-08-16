@@ -136,9 +136,9 @@ struct MainWindow: View {
             }
 
         }
-        .onChange(of: multipleNotesSelected) { _, _ in
+        .onChange(of: multipleNotesSelected) { _, newValue in
             withAnimation {
-                showMultiNoteView.toggle()
+                showMultiNoteView = newValue
             }
         }
         .background(Color(NSColor.textBackgroundColor))
