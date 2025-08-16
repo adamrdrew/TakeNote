@@ -141,7 +141,6 @@ extension MainWindow {
     }
 
     func dataInit() {
-        tagsInit()
         folderInit()
     }
 
@@ -261,16 +260,6 @@ extension MainWindow {
             selectedContainer = inboxFolder
             selectedNotes = []
         }
-    }
-
-    func tagsInit() {
-        if tagsExist {
-            return
-        }
-        addTag(name: "🏠 Home", color: Color(.blue))
-        addTag(name: "🏢 Work", color: Color(.green))
-        addTag(name: "🛒 Shopping", color: Color(.purple))
-        addTag(name: "❤️ Personal", color: Color(.orange))
     }
 
 }
