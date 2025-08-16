@@ -154,11 +154,6 @@ class MagicFormatter: ObservableObject {
                 error: nil
             )
         }
-        formatterIsBusy = true
-        sessionCancelled = false
-        let prompt = defaultPrompt + text
-        var response: LanguageModelSession.Response<String>
-        
         if session.isResponding {
             return MagicFormatterResult(
                 formattedText:
@@ -168,6 +163,11 @@ class MagicFormatter: ObservableObject {
                 error: nil
             )
         }
+        formatterIsBusy = true
+        sessionCancelled = false
+        let prompt = defaultPrompt + text
+        var response: LanguageModelSession.Response<String>
+
         /// If the session is not respnding and we are all good to do some formatting we create a new session
         /// We do this because there's something cumulative about the session context windows. If we keep re-using
         /// the same session then eventually we get context window size errors even on small documents
