@@ -53,6 +53,11 @@ struct MainWindow: View {
         openNote = note
     }
 
+    func onMoveToFolder() {
+        selectedNotes.removeAll()
+        openNote = nil
+    }
+    
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedContainer) {
@@ -61,6 +66,7 @@ struct MainWindow: View {
                     content: {
                         FolderList(
                             selectedContainer: $selectedContainer,
+                            onMoveToFolder: onMoveToFolder,
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
