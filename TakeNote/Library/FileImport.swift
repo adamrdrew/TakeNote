@@ -28,7 +28,7 @@ struct ImportResult {
     func toString() -> String {
         var resultReport = ""
         if noteImportCount > 0 {
-            resultReport.append("Succesfully imported \(noteImportCount) notes.\n")
+            resultReport.append("Successfully imported \(noteImportCount) notes.\n")
         }
         if errorMessages.count > 0  {
             resultReport.append("Error\(uniqueErrorMessages.count == 1 ? "" : "s") Encountered:\n")
