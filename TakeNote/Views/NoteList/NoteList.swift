@@ -97,51 +97,14 @@ struct NoteList: View {
             }
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            var noteImported = false
-            var errorEncountered = false
-            for url in items {
-                if url.pathExtension != "md" && url.pathExtension != "txt" {
-                    errorEncountered = true
-                    fileImportErrorMessage =
-                        "Unsupported file: \(url.lastPathComponent). Only .md and .txt files are supported."
-                    continue
-                }
-                guard
-                    let fileContents = try? String(
-                        contentsOf: url,
-                        encoding: .utf8
-                    )
-                else {
-                    fileImportErrorMessage = "Failed to read file contents"
-                    errorEncountered = true
-                    continue
-                }
-                guard let folder = selectedContainer else {
-                    fileImportErrorMessage = "No folder selected"
-                    errorEncountered = true
-                    continue
-                }
-                let newNote = Note(folder: folder)
-                newNote.title = url.lastPathComponent
-                newNote.content = fileContents
-                modelContext.insert(newNote)
-                Task { await newNote.generateSummary() }
-                search.reindex(note: newNote)
-                noteImported = true
-            }
-            if !noteImported {
-                fileImportErrorMessage =
-                    "No valid notes imported: \(fileImportErrorMessage)"
-                showFileImportError = true
-                return
-            }
-            showFileImportError = errorEncountered
-            do {
-                try modelContext.save()
-            } catch {
-                fileImportErrorMessage = "Failed to save new note: \(error)"
-                showFileImportError = true
-            }
+            let result = fileImport(
+                items: items,
+                modelContext: modelContext,
+                searchIndex: search,
+                folder: selectedContainer!,
+            )
+            showFileImportError = result.errorsEncountered
+            fileImportErrorMessage = result.toString()
         }
         .alert(fileImportErrorMessage, isPresented: $showFileImportError) {
             Button("OK") {
