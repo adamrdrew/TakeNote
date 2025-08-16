@@ -43,12 +43,13 @@ struct MainWindow: View {
     @State var tagSectionExpanded: Bool = true
     @State var errorAlertMessage: String = ""
     @State var errorAlertIsVisible: Bool = false
+    @State var showMultiNoteView: Bool = false
 
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
     }
-    
-    func onNoteSelect(_ note : Note) {
+
+    func onNoteSelect(_ note: Note) {
         openNote = note
     }
 
@@ -63,7 +64,7 @@ struct MainWindow: View {
                             onDelete: folderDelete,
                             onEmptyTrash: emptyTrash
                         )
-                        
+
                     },
                     header: {
                         Text("Folders")
@@ -125,10 +126,19 @@ struct MainWindow: View {
             }
 
         } detail: {
-            if multipleNotesSelected {
+            if showMultiNoteView {
                 MultiNoteViewer(notes: $selectedNotes)
+                    .transition(.opacity)
+
             } else {
                 NoteEditor(openNote: $openNote)
+                    .transition(.opacity)
+            }
+
+        }
+        .onChange(of: multipleNotesSelected) { _, _ in
+            withAnimation {
+                showMultiNoteView.toggle()
             }
         }
         .background(Color(NSColor.textBackgroundColor))
@@ -162,4 +172,3 @@ struct MainWindow: View {
 #Preview {
     MainWindow()
 }
-

@@ -33,12 +33,14 @@ struct NoteEditor: View {
         if openNote == nil { return }
         if openNote!.content.isEmpty { return }
         Task {
-
             let result = await magicFormatter.magicFormat(
                 openNote!.content
             )
             if result.didSucceed {
                 openNote!.content = result.formattedText
+                return
+            }
+            if result.wasCancelled {
                 return
             }
             magicFormatterErrorIsPresented = true
@@ -179,9 +181,10 @@ struct NoteEditor: View {
                                 wrapText: true
                             )
                         )
-
                         .onExitCommand(perform: {
-                            showPreview.toggle()
+                            withAnimation {
+                                showPreview.toggle()
+                            }
                         })
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
@@ -217,7 +220,9 @@ struct NoteEditor: View {
                             showPreview.toggle()
                         })
                         .onTapGesture {
-                            showPreview.toggle()
+                            withAnimation {
+                                showPreview.toggle()
+                            }
                         }
                     }
                 }
@@ -227,8 +232,14 @@ struct NoteEditor: View {
                 showPreview = true
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
-                AIMessage(message: "Magic Formatting...", font: .headline)
+                VStack {
+                    AIMessage(message: "Magic Formatting...", font: .headline)
+                        .padding()
+                    Button("Cancel", role: .cancel) {
+                        magicFormatter.cancel()
+                    }
                     .padding()
+                }
             }
             .alert(
                 magicFormatterErrorMessage,
@@ -242,7 +253,9 @@ struct NoteEditor: View {
             .toolbar {
                 ToolbarItem(placement: .secondaryAction) {
                     Button(action: {
-                        showPreview.toggle()
+                        withAnimation {
+                            showPreview.toggle()
+                        }
                     }) {
                         Image(
                             systemName: showPreview

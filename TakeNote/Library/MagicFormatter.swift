@@ -11,12 +11,15 @@ import SwiftUI
 struct MagicFormatterResult {
     let formattedText: String
     let didSucceed: Bool
+    let wasCancelled: Bool
     let error: Error?
 }
 
 @MainActor
 class MagicFormatter: ObservableObject {
     static let failureToken = "FORMATFAILED"
+    
+    var session : LanguageModelSession
     let languageModel = SystemLanguageModel.default
 
     var isAvailable: Bool {
@@ -109,8 +112,11 @@ class MagicFormatter: ObservableObject {
     var defaultPrompt: String = "Document to format in markdown:\n\n"
 
     @Published var formatterIsBusy: Bool = false
+    @Published var sessionCancelled: Bool = false
 
     init() {
+        self.session = LanguageModelSession(instructions: instructions)
+        self.session.prewarm()
     }
     
     private func removeMarkdownClosures(_ input: String) -> String {
@@ -122,50 +128,79 @@ class MagicFormatter: ObservableObject {
         return input
     }
 
+    /// AFAICT there is no way to cancel a LanguageModelSession once it is off to the races
+    /// So to support "cancelling" a MagicFormatter session we sort of fake it
+    /// We set formatterIsBusy to false which the magicFormat method will interpret as an inconsistent state
+    /// We throw an error if that happens with a magic code of 999 which our View code interprets as shrug and silently fail
+    /// From the user's perspective this is a cancel operation as no error is presented and
+    func cancel() {
+        if !session.isResponding {
+            return
+        }
+        if !self.formatterIsBusy {
+            return
+        }
+        self.sessionCancelled = true
+    }
+    
     func magicFormat(_ text: String) async -> MagicFormatterResult {
         if languageModel.isAvailable == false {
             return MagicFormatterResult(
                 formattedText: "Language model is not available.",
                 didSucceed: false,
+                wasCancelled: false,
                 error: nil
             )
         }
         formatterIsBusy = true
+        sessionCancelled = false
         let prompt = defaultPrompt + text
         var response: LanguageModelSession.Response<String>
-        let session = LanguageModelSession(instructions: instructions)
+        
         if session.isResponding {
-            formatterIsBusy = false
             return MagicFormatterResult(
                 formattedText:
                     "Model is busy formatting your text. Please try again later.",
                 didSucceed: false,
+                wasCancelled: false,
                 error: nil
             )
         }
         do {
             response = try await session.respond(to: prompt)
+            if sessionCancelled {
+                /// The user has cancelled the MagicFormatter session
+                /// There's no real way to cancel a session so we throw an error
+                /// sessionCancelled will be plopped onto the MagicFormatterResult as wasCancelled
+                /// Which our view will use to fail silently
+                throw NSError(domain: "MagicFormatter", code: 999, userInfo: nil)
+            }
         } catch {
             formatterIsBusy = false
+            sessionCancelled = false
             return MagicFormatterResult(
                 formattedText: "MagicFormatter Error:\n \(error.localizedDescription)",
                 didSucceed: false,
+                wasCancelled: sessionCancelled,
                 error: error
             )
         }
         let formattedDocument = response.content
         formatterIsBusy = false
+        sessionCancelled = false
         if formattedDocument == MagicFormatter.failureToken {
             return MagicFormatterResult(
                 formattedText:
                     "Your input does not seem to be a valid document to format. Please try again.",
                 didSucceed: false,
+                wasCancelled: false,
                 error: nil
             )
         }
         return MagicFormatterResult(
             formattedText: removeMarkdownClosures(formattedDocument),
             didSucceed: true,
+            wasCancelled: false,
             error: nil
         )
     }
