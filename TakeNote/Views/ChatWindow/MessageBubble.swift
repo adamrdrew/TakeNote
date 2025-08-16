@@ -36,7 +36,7 @@ struct MessageBubble: View {
                         .glassEffect(.regular.tint(.green).interactive())
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: true, vertical: false)
-                        .help("Accept AI changes.")
+                        .help("Accept AI changes")
 
                         Spacer(minLength: 0)
                     }
