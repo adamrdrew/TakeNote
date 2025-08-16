@@ -10,6 +10,7 @@ import LanguageSupport
 import MarkdownUI
 import SwiftData
 import SwiftUI
+import os
 
 struct NoteEditor: View {
     @Binding var openNote: Note?
@@ -21,6 +22,8 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
+    
+    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "NoteEditor")
 
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
@@ -36,16 +39,25 @@ struct NoteEditor: View {
             let result = await magicFormatter.magicFormat(
                 openNote!.content
             )
-            if result.didSucceed {
-                openNote!.content = result.formattedText
-                return
-            }
             if result.wasCancelled {
                 return
             }
-            magicFormatterErrorIsPresented = true
-            magicFormatterErrorMessage = result.formattedText
+            if !result.didSucceed {
+                magicFormatterErrorIsPresented = true
+                magicFormatterErrorMessage = result.formattedText
+                return
+            }
+            let currentContentHash = magicFormatter.hashFor(openNote!.content)
+            if currentContentHash != result.inputHash {
+                logger.critical("Mismatch between MagicFormat input and current note content.")
+                magicFormatterErrorIsPresented = true
+                magicFormatterErrorMessage = "Mismatch between MagicFormat input and current note content."
+                return
+            }
+            openNote!.content = result.formattedText
+            return
         }
+
     }
 
     var selectedText: String {

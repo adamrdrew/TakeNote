@@ -5,10 +5,13 @@
 //  Created by Adam Drew on 8/14/25.
 //
 
+import CryptoKit
 import FoundationModels
 import SwiftUI
+import os
 
 struct MagicFormatterResult {
+    let inputHash: String
     let formattedText: String
     let didSucceed: Bool
     let wasCancelled: Bool
@@ -18,9 +21,10 @@ struct MagicFormatterResult {
 @MainActor
 class MagicFormatter: ObservableObject {
     static let failureToken = "TAKENOTE_MAGICFORMAT_FORMATFAILED"
-    
-    var session : LanguageModelSession
+
+    var session: LanguageModelSession
     let languageModel = SystemLanguageModel.default
+    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "MagicFormatter")
 
     var isAvailable: Bool {
         return languageModel.isAvailable
@@ -118,14 +122,19 @@ class MagicFormatter: ObservableObject {
         self.session = LanguageModelSession(instructions: instructions)
         self.session.prewarm()
     }
-    
-    private func removeMarkdownClosures(_ input: String) -> String {
-        //If the first line of the input is ```markdown and the last line is ```
-        // remove the first and last lines and return
-        if input.hasPrefix("```markdown") && input.hasSuffix("```") {
-            return String(input.split(separator: "\n", omittingEmptySubsequences: false).dropFirst().dropLast().joined(separator: "\n"))
-        }
-        return input
+
+    private func removeMarkdownClosures(_ s: String) -> String {
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.hasPrefix("```"), trimmed.hasSuffix("```"),
+              let firstNL = trimmed.firstIndex(of: "\n") else { return s }
+        let body = trimmed[trimmed.index(after: firstNL)..<trimmed.index(trimmed.endIndex, offsetBy: -3)]
+        return String(body).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func hashFor(_ input: String) -> String {
+        let data = Data(input.utf8)
+        let digest = SHA256.hash(data: data)
+        return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 
     /// AFAICT there is no way to cancel a LanguageModelSession once it is off to the races
@@ -143,11 +152,15 @@ class MagicFormatter: ObservableObject {
         self.sessionCancelled = true
         /// We need this for the View to hide the MagicFormatter popover
         self.formatterIsBusy = false
+        logger.debug("Cancelling MagicFormatter session")
     }
-    
+
     func magicFormat(_ text: String) async -> MagicFormatterResult {
+        let inputHash = hashFor(text)
         if languageModel.isAvailable == false {
+            logger.debug("Attempted to use MagicFormat without Apple Intelligence support.")
             return MagicFormatterResult(
+                inputHash: inputHash,
                 formattedText: "Language model is not available.",
                 didSucceed: false,
                 wasCancelled: false,
@@ -155,7 +168,9 @@ class MagicFormatter: ObservableObject {
             )
         }
         if session.isResponding {
+            logger.debug("Attempted to use MagicFormat while session was busy.")
             return MagicFormatterResult(
+                inputHash: inputHash,
                 formattedText:
                     "The Language Model is busy. Please try again later.",
                 didSucceed: false,
@@ -179,12 +194,20 @@ class MagicFormatter: ObservableObject {
                 /// There's no real way to cancel a session so we throw an error
                 /// sessionCancelled will be plopped onto the MagicFormatterResult as wasCancelled
                 /// Which our view will use to fail silently
-                throw NSError(domain: "MagicFormatter", code: 999, userInfo: nil)
+                logger.debug("A cancelled session resolved.")
+                throw NSError(
+                    domain: "MagicFormatter",
+                    code: 999,
+                    userInfo: ["description": "A cancelled session resolved."]
+                )
             }
         } catch {
+            logger.warning("MagicFormatter Error:\n \(error.localizedDescription)")
             formatterIsBusy = false
             return MagicFormatterResult(
-                formattedText: "MagicFormatter Error:\n \(error.localizedDescription)",
+                inputHash: inputHash,
+                formattedText:
+                    "MagicFormatter Error:\n \(error.localizedDescription)",
                 didSucceed: false,
                 wasCancelled: sessionCancelled,
                 error: error
@@ -193,8 +216,10 @@ class MagicFormatter: ObservableObject {
         let formattedDocument = response.content
         formatterIsBusy = false
         sessionCancelled = false
-        if formattedDocument.contains(MagicFormatter.failureToken){
+        if formattedDocument.contains(MagicFormatter.failureToken) {
+            logger.warning("MagicFormat error token found in generated response")
             return MagicFormatterResult(
+                inputHash: inputHash,
                 formattedText:
                     "MagicFormat couldn't figure out how to format your document.",
                 didSucceed: false,
@@ -203,6 +228,7 @@ class MagicFormatter: ObservableObject {
             )
         }
         return MagicFormatterResult(
+            inputHash: inputHash,
             formattedText: removeMarkdownClosures(formattedDocument),
             didSucceed: true,
             wasCancelled: false,
