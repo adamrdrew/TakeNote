@@ -48,48 +48,18 @@ struct MainWindow: View {
 
     var body: some View {
         NavigationSplitView {
-            List(selection: $selectedContainer) {
-                Section(
-                    isExpanded: $folderSectionExpanded,
-                    content: {
-                        FolderList(
-                            selectedContainer: $selectedContainer,
-                            onMoveToFolder: onMoveToFolder,
-                            onDelete: folderDelete,
-                            onEmptyTrash: emptyTrash
-                        )
-
-                    },
-                    header: {
-                        Text("Folders")
-                    }
-                )
-                .headerProminence(.increased)
-
-                if tagsExist {
-                    Section(
-                        isExpanded: $tagSectionExpanded,
-                        content: {
-                            TagList(
-                                onDelete: onTagDelete
-                            )
-                        },
-                        header: {
-                            Text("Tags")
-                        }
-                    ).headerProminence(.increased)
-
-                }
-            }
-
-            .listStyle(.sidebar)
-            .toolbar {
-                Button(action: addFolder) {
-                    Label("Add Folder", systemImage: "folder.badge.plus")
-                }
-                .help("Add Folder")
-                AddTagButton(action: addTag)
-            }
+            // TODO: Figure out what we can pull out of MainWindow and push into Sidebar so we aren't
+            // passing so much shit into it
+            Sidebar(
+                selectedContainer: $selectedContainer,
+                tagsExist: tagsExist,
+                onMoveToFolder: onMoveToFolder,
+                onFolderDelete: folderDelete,
+                onTagDelete: onTagDelete,
+                onEmptyTrash: emptyTrash,
+                onAddFolder: addFolder,
+                onAddTag: addTag
+            )
 
         } content: {
             NoteList(

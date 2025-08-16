@@ -16,7 +16,7 @@ struct FolderList: View {
         }
     ) var folders: [NoteContainer]
     var onMoveToFolder: () -> Void = {}
-    
+
     var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
         deletedFolder in
     }
@@ -29,7 +29,9 @@ struct FolderList: View {
                 onMoveToFolder: onMoveToFolder,
                 onDelete: onDelete,
                 onEmptyTrash: onEmptyTrash
-            )            
+            )
         }
+
     }
+
 }
