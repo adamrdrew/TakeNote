@@ -45,19 +45,7 @@ struct MainWindow: View {
     @State var errorAlertIsVisible: Bool = false
     @State var showMultiNoteView: Bool = false
 
-    var multipleNotesSelected: Bool {
-        return selectedNotes.count > 1
-    }
 
-    func onNoteSelect(_ note: Note) {
-        openNote = note
-    }
-
-    func onMoveToFolder() {
-        selectedNotes.removeAll()
-        openNote = nil
-    }
-    
     var body: some View {
         NavigationSplitView {
             List(selection: $selectedContainer) {

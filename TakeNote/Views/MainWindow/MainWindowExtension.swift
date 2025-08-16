@@ -33,6 +33,10 @@ extension MainWindow {
         return inboxFolder != nil
     }
 
+    var multipleNotesSelected: Bool {
+        return selectedNotes.count > 1
+    }
+    
     var tagsExist: Bool {
         return tags.isEmpty == false
     }
@@ -247,6 +251,15 @@ extension MainWindow {
         linkToNoteErrorIsPresented = true
     }
 
+    func onMoveToFolder() {
+        selectedNotes.removeAll()
+        openNote = nil
+    }
+    
+    func onNoteSelect(_ note: Note) {
+        openNote = note
+    }
+    
     func openChatWindow() {
         openWindow(id: "chat-window")
     }
