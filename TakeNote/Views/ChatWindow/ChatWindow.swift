@@ -224,6 +224,7 @@ struct ChatWindow: View {
                         Label("New Chat", systemImage: "plus.message")
                     }
                     .glassEffect()
+                    .help("New Chat")
                 }
             }
 
