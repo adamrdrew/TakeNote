@@ -10,6 +10,7 @@ import LanguageSupport
 import MarkdownUI
 import SwiftData
 import SwiftUI
+import os
 
 struct NoteEditor: View {
     @Binding var openNote: Note?
@@ -21,6 +22,8 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
+    
+    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "NoteEditor")
 
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
@@ -33,17 +36,28 @@ struct NoteEditor: View {
         if openNote == nil { return }
         if openNote!.content.isEmpty { return }
         Task {
-
             let result = await magicFormatter.magicFormat(
                 openNote!.content
             )
-            if result.didSucceed {
-                openNote!.content = result.formattedText
+            if result.wasCancelled {
                 return
             }
-            magicFormatterErrorIsPresented = true
-            magicFormatterErrorMessage = result.formattedText
+            if !result.didSucceed {
+                magicFormatterErrorIsPresented = true
+                magicFormatterErrorMessage = result.formattedText
+                return
+            }
+            let currentContentHash = magicFormatter.hashFor(openNote!.content)
+            if currentContentHash != result.inputHash {
+                logger.critical("Mismatch between MagicFormat input and current note content.")
+                magicFormatterErrorIsPresented = true
+                magicFormatterErrorMessage = "Mismatch between MagicFormat input and current note content."
+                return
+            }
+            openNote!.content = result.formattedText
+            return
         }
+
     }
 
     var selectedText: String {
@@ -179,9 +193,10 @@ struct NoteEditor: View {
                                 wrapText: true
                             )
                         )
-
                         .onExitCommand(perform: {
-                            showPreview.toggle()
+                            withAnimation {
+                                showPreview.toggle()
+                            }
                         })
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
@@ -217,7 +232,9 @@ struct NoteEditor: View {
                             showPreview.toggle()
                         })
                         .onTapGesture {
-                            showPreview.toggle()
+                            withAnimation {
+                                showPreview.toggle()
+                            }
                         }
                     }
                 }
@@ -227,8 +244,14 @@ struct NoteEditor: View {
                 showPreview = true
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
-                AIMessage(message: "Magic Formatting...", font: .headline)
+                VStack {
+                    AIMessage(message: "Magic Formatting...", font: .headline)
+                        .padding()
+                    Button("Cancel", role: .cancel) {
+                        magicFormatter.cancel()
+                    }
                     .padding()
+                }
             }
             .alert(
                 magicFormatterErrorMessage,
@@ -242,7 +265,9 @@ struct NoteEditor: View {
             .toolbar {
                 ToolbarItem(placement: .secondaryAction) {
                     Button(action: {
-                        showPreview.toggle()
+                        withAnimation {
+                            showPreview.toggle()
+                        }
                     }) {
                         Image(
                             systemName: showPreview
