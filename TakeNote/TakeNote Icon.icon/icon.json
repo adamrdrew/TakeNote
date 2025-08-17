@@ -1,7 +1,14 @@
 {
-  "fill" : "automatic",
+  "fill" : {
+    "linear-gradient" : [
+      "display-p3:1.00000,0.22547,0.35191,1.00000",
+      "display-p3:0.56760,0.19162,0.33507,1.00000"
+    ]
+  },
   "groups" : [
     {
+      "blend-mode" : "screen",
+      "blur-material" : null,
       "layers" : [
         {
           "blend-mode" : "normal",
@@ -59,10 +66,12 @@
           }
         }
       ],
+      "lighting" : "combined",
       "shadow" : {
-        "kind" : "neutral",
-        "opacity" : 0.5
+        "kind" : "layer-color",
+        "opacity" : 0.88
       },
+      "specular" : true,
       "translucency" : {
         "enabled" : true,
         "value" : 0.5
