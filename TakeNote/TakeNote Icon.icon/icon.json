@@ -6,46 +6,57 @@
     {
       "layers" : [
         {
-          "fill" : "none",
+          "blend-mode" : "normal",
+          "fill" : "automatic",
           "glass" : true,
           "image-name" : "Main Paper-2.svg",
           "name" : "Main Paper-2",
-          "opacity" : 0.97,
+          "opacity" : 1,
           "position" : {
-            "scale" : 1,
+            "scale" : 1.7,
             "translation-in-points" : [
-              3.4921875,
-              58.0859375
+              -4.125,
+              261.7734375
             ]
           }
         },
         {
+          "hidden" : true,
           "image-name" : "Main Paper.svg",
           "name" : "Main Paper",
           "opacity" : 0.64,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              -83.84375,
-              64.03125
+              -103.21875,
+              65.171875
             ]
           }
         },
         {
+          "hidden" : true,
           "image-name" : "Main Paper-1.svg",
           "name" : "Main Paper-1",
           "opacity" : 0.69,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
-              52.953125,
-              37.109375
+              95.6953125,
+              11.3046875
             ]
           }
         },
         {
+          "glass" : true,
           "image-name" : "Pink BG.svg",
-          "name" : "Pink BG"
+          "name" : "Pink BG",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              0,
+              0
+            ]
+          }
         }
       ],
       "shadow" : {
