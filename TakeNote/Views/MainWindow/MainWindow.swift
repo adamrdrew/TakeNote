@@ -45,7 +45,6 @@ struct MainWindow: View {
     @State var errorAlertIsVisible: Bool = false
     @State var showMultiNoteView: Bool = false
 
-
     var body: some View {
         NavigationSplitView {
             // TODO: Figure out what we can pull out of MainWindow and push into Sidebar so we aren't
@@ -95,8 +94,20 @@ struct MainWindow: View {
                     .transition(.opacity)
 
             } else {
-                NoteEditor(openNote: $openNote)
-                    .transition(.opacity)
+                if let note = Binding($openNote) {
+                    NoteEditor(openNote: note)
+                        .transition(.opacity)
+                } else {
+                    VStack {
+                        Spacer()
+                        Text("No Note Selected")
+                            .font(.title)
+                            .padding()
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                    }
+                }
+
             }
 
         }

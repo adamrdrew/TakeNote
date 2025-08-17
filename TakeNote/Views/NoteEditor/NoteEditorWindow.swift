@@ -14,19 +14,16 @@ struct NoteEditorWindow: View {
     @State var note: Note?
 
     @Environment(\.modelContext) private var modelContext
+    
 
     private func makeWindowTitle() -> String {
         var noteTitle: String = ""
         var folderName: String = ""
         let appName = "TakeNote"
 
-        guard let note = note else {
-            return appName
-        }
+        folderName = note!.folder.name
 
-        folderName = note.folder.name
-
-        noteTitle = note.title
+        noteTitle = note!.title
         return "\(appName) - \(folderName)/\(noteTitle)"
     }
 
@@ -44,12 +41,14 @@ struct NoteEditorWindow: View {
     }
 
     var body: some View {
+        if let noteBinding = Binding($note) {
+            NoteEditor(openNote: noteBinding)
+                .navigationTitle(makeWindowTitle())
+        } else {
+            Text("Loading Note...")
+                .onAppear(perform: getNote)
+        }
 
-        NoteEditor(openNote: $note)
-            .onAppear {
-                getNote()
-            }
-            .navigationTitle(makeWindowTitle())
 
     }
 
