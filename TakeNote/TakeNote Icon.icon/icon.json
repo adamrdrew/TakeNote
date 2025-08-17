@@ -1,7 +1,5 @@
 {
-  "fill" : {
-    "automatic-gradient" : "display-p3:0.66435,0.03912,0.96783,1.00000"
-  },
+  "fill" : "automatic",
   "groups" : [
     {
       "layers" : [
@@ -9,6 +7,7 @@
           "blend-mode" : "normal",
           "fill" : "automatic",
           "glass" : true,
+          "hidden" : false,
           "image-name" : "Main Paper-2.svg",
           "name" : "Main Paper-2",
           "opacity" : 1,
@@ -50,6 +49,7 @@
           "glass" : true,
           "image-name" : "Pink BG.svg",
           "name" : "Pink BG",
+          "opacity" : 1,
           "position" : {
             "scale" : 1,
             "translation-in-points" : [
