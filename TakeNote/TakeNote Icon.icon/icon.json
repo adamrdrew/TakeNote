@@ -13,10 +13,10 @@
           "name" : "Main Paper-2",
           "opacity" : 1,
           "position" : {
-            "scale" : 1.7,
+            "scale" : 1.24,
             "translation-in-points" : [
-              -4.125,
-              261.7734375
+              -1.0234375,
+              74.984375
             ]
           }
         },
