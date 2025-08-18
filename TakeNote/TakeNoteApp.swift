@@ -20,7 +20,6 @@ struct TakeNoteApp: App {
     @FocusedValue(\.sidebarCommands) var sidebarCommands
     @FocusedValue(\.editorCommands) var editorCommands
 
-    
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
@@ -71,7 +70,7 @@ struct TakeNoteApp: App {
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
         .commands {
-            CommandMenu("Magic") {
+            CommandMenu("Editor") {
                 Button("Magic Format") {
                     editorCommands?.magicFormat()
                 }.disabled(editorCommands?.magicFormatAvailable() != true)
@@ -80,14 +79,23 @@ struct TakeNoteApp: App {
                     editorCommands?.markdownAssist()
                 }.disabled(editorCommands?.markdownAssistAvailable() != true)
                     .keyboardShortcut("a", modifiers: [.command, .option])
+                Button("Toggle Preview") {
+                    editorCommands?.togglePreview()
+                }.disabled(editorCommands?.togglePreviewAvailable() != true)
+                    .keyboardShortcut("p", modifiers: [.command])
             }
             CommandGroup(after: .newItem) {
-                Button("Add Folder"){
+                Button("New Note") {
+
+                }
+                .keyboardShortcut("n", modifiers: [.command])
+                .disabled(sidebarCommands == nil)
+                Button("New Folder") {
                     sidebarCommands?.addFolder()
                 }
                 .keyboardShortcut("f", modifiers: [.command])
                 .disabled(sidebarCommands == nil)
-                Button("Add Tag"){
+                Button("New Tag") {
                     sidebarCommands?.addTag()
                 }
                 .disabled(sidebarCommands == nil)

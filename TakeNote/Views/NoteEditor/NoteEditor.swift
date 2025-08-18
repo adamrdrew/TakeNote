@@ -17,6 +17,8 @@ struct EditorCommands {
     var magicFormatAvailable: () -> Bool
     var markdownAssist: () -> Void
     var markdownAssistAvailable: () -> Bool
+    var togglePreview: () -> Void
+    var togglePreviewAvailable: () -> Bool
 }
 
 struct EditorCommandsFocusedKey: FocusedValueKey {
@@ -303,7 +305,9 @@ struct NoteEditor: View {
                     magicFormat: doMagicFormat,
                     magicFormatAvailable: magicFormatAvailable,
                     markdownAssist: { isAssistantPopoverPresented.toggle() },
-                    markdownAssistAvailable: markdownAssistAvailable
+                    markdownAssistAvailable: markdownAssistAvailable,
+                    togglePreview: { showPreview.toggle() },
+                    togglePreviewAvailable: { openNote != nil }
                 )
             )
             .toolbar {
