@@ -78,7 +78,24 @@ struct NoteList: View {
                     }
                 }
             }
-
+            .focusedValue(
+                \.deleteCommand,
+                .init(
+                    canBeDeleted: {
+                        return !selectedNotes.isEmpty
+                    },
+                    delete: {
+                        /// I hate this. But After hours of trying I see no other way
+                        /// SwiftUI wont let me place this code at the right level of abstraction: the FolderListEntry
+                        /// It only allows it here, on the List, not the ListItems
+                        /// So even though we have delete code elsewhere I had to do this insane bullshit
+                        /// Patches Welcome...
+                        for note in selectedNotes {
+                            onTrash(note)
+                        }
+                    }
+                )
+            )
             .searchable(text: $noteSearchText, prompt: "Search")
             .onChange(of: selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
