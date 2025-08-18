@@ -19,7 +19,9 @@ struct TakeNoteApp: App {
 
     @FocusedValue(\.sidebarCommands) var sidebarCommands
     @FocusedValue(\.editorCommands) var editorCommands
-
+    @FocusedValue(\.mainWindowCommands) var mainWindowCommands
+    @FocusedValue(\.deleteCommand) var deleteCommand
+    
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
@@ -84,12 +86,19 @@ struct TakeNoteApp: App {
                 }.disabled(editorCommands?.togglePreviewAvailable() != true)
                     .keyboardShortcut("p", modifiers: [.command])
             }
+            CommandGroup(replacing: .pasteboard) {
+                Button("Delete", systemImage: "trash") {
+                    deleteCommand?.delete()
+                }
+                .disabled(deleteCommand == nil || deleteCommand?.canBeDeleted()  != true)
+                .keyboardShortcut(.delete, modifiers: [.command])
+            }
             CommandGroup(after: .newItem) {
                 Button("New Note") {
-
+                    mainWindowCommands?.addNote()
                 }
                 .keyboardShortcut("n", modifiers: [.command])
-                .disabled(sidebarCommands == nil)
+                .disabled(mainWindowCommands?.addNoteAvailable() != true)
                 Button("New Folder") {
                     sidebarCommands?.addFolder()
                 }

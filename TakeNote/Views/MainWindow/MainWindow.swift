@@ -9,6 +9,22 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 
+struct MainWindowCommands {
+    var addNote: () -> Void
+    var addNoteAvailable: () -> Bool
+}
+
+struct MainWindowCommandsFocusedKey: FocusedValueKey {
+    typealias Value = MainWindowCommands
+}
+
+extension FocusedValues {
+    var mainWindowCommands: MainWindowCommandsFocusedKey.Value? {
+        get { self[MainWindowCommandsFocusedKey.self] }
+        set { self[MainWindowCommandsFocusedKey.self] = newValue }
+    }
+}
+
 struct MainWindow: View {
     let languageModel = SystemLanguageModel.default
 
@@ -128,6 +144,13 @@ struct MainWindow: View {
         }
         .onAppear(perform: dataInit)
         .onOpenURL(perform: loadNoteFromURL)
+        .focusedSceneValue(
+            \.mainWindowCommands,
+            .init(
+                addNote: addNote,
+                addNoteAvailable: { canAddNote }
+            )
+        )
 
     }
 
