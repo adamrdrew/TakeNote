@@ -12,6 +12,26 @@ import SwiftData
 import SwiftUI
 import os
 
+struct EditorCommands {
+    var magicFormat: () -> Void
+    var magicFormatAvailable: () -> Bool
+    var markdownAssist: () -> Void
+    var markdownAssistAvailable: () -> Bool
+    var togglePreview: () -> Void
+    var togglePreviewAvailable: () -> Bool
+}
+
+struct EditorCommandsFocusedKey: FocusedValueKey {
+    typealias Value = EditorCommands
+}
+
+extension FocusedValues {
+    var editorCommands: EditorCommandsFocusedKey.Value? {
+        get { self[EditorCommandsFocusedKey.self] }
+        set { self[EditorCommandsFocusedKey.self] = newValue }
+    }
+}
+
 struct NoteEditor: View {
     @Binding var openNote: Note?
     @State private var position: CodeEditor.Position = CodeEditor.Position()
@@ -22,13 +42,27 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
-    
-    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "NoteEditor")
+
+    let logger = Logger(
+        subsystem: "com.adammdrew.takenote",
+        category: "NoteEditor"
+    )
 
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
         let upper = max(lower, min(r.location + r.length, n))
         return NSRange(location: lower, length: upper - lower)
+    }
+
+    func magicFormatAvailable() -> Bool {
+        if magicFormatter.formatterIsBusy { return false }
+        if openNote == nil { return false }
+        if openNote!.content.isEmpty { return false }
+        return true
+    }
+
+    func markdownAssistAvailable() -> Bool {
+        return textIsSelected
     }
 
     func doMagicFormat() {
@@ -49,9 +83,12 @@ struct NoteEditor: View {
             }
             let currentContentHash = magicFormatter.hashFor(openNote!.content)
             if currentContentHash != result.inputHash {
-                logger.critical("Mismatch between MagicFormat input and current note content.")
+                logger.critical(
+                    "Mismatch between MagicFormat input and current note content."
+                )
                 magicFormatterErrorIsPresented = true
-                magicFormatterErrorMessage = "Mismatch between MagicFormat input and current note content."
+                magicFormatterErrorMessage =
+                    "Mismatch between MagicFormat input and current note content."
                 return
             }
             openNote!.content = result.formattedText
@@ -262,6 +299,17 @@ struct NoteEditor: View {
                     magicFormatterErrorIsPresented = false
                 }
             }
+            .focusedSceneValue(
+                \.editorCommands,
+                .init(
+                    magicFormat: doMagicFormat,
+                    magicFormatAvailable: magicFormatAvailable,
+                    markdownAssist: { isAssistantPopoverPresented.toggle() },
+                    markdownAssistAvailable: markdownAssistAvailable,
+                    togglePreview: { showPreview.toggle() },
+                    togglePreviewAvailable: { openNote != nil }
+                )
+            )
             .toolbar {
                 ToolbarItem(placement: .secondaryAction) {
                     Button(action: {
