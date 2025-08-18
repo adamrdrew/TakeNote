@@ -133,13 +133,13 @@ struct ChatWindow: View {
 
         let assembledPrompt = makePrompt()
         let response = try? await session.respond(to: assembledPrompt)
-        let aiSummary = response?.content ?? "—"
+        let aiSummary = response?.content ?? "Something went wrong. Sorry."
 
         responseIsGenerating = false
-        let conversationEntry = ConversationEntry(sender: .bot, text: aiSummary)
+        let conversationEntry = ConversationEntry(sender: .bot, text: unwrapMarkdownFence(aiSummary))
         conversation.append(conversationEntry)
     }
-
+    
     private func newChat() {
         conversation.removeAll()
         userQuery = ""

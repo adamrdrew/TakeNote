@@ -123,14 +123,6 @@ class MagicFormatter: ObservableObject {
         self.session.prewarm()
     }
 
-    private func removeMarkdownClosures(_ s: String) -> String {
-        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.hasPrefix("```"), trimmed.hasSuffix("```"),
-              let firstNL = trimmed.firstIndex(of: "\n") else { return s }
-        let body = trimmed[trimmed.index(after: firstNL)..<trimmed.index(trimmed.endIndex, offsetBy: -3)]
-        return String(body).trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
     func hashFor(_ input: String) -> String {
         let data = Data(input.utf8)
         let digest = SHA256.hash(data: data)
@@ -229,7 +221,7 @@ class MagicFormatter: ObservableObject {
         }
         return MagicFormatterResult(
             inputHash: inputHash,
-            formattedText: removeMarkdownClosures(formattedDocument),
+            formattedText: unwrapMarkdownFence(formattedDocument),
             didSucceed: true,
             wasCancelled: false,
             error: nil
