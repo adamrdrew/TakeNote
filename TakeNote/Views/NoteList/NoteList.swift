@@ -78,6 +78,7 @@ struct NoteList: View {
                     }
                 }
             }
+
             .searchable(text: $noteSearchText, prompt: "Search")
             .onChange(of: selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes

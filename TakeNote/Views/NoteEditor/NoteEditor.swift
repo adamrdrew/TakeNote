@@ -276,6 +276,7 @@ struct NoteEditor: View {
                         )
                     }
                     .help(showPreview ? "Hide Preview" : "Show Preview")
+                    .keyboardShortcut("e", modifiers: [.command])
 
                 }
                 if magicFormatter.isAvailable {
@@ -289,6 +290,7 @@ struct NoteEditor: View {
                         }
                         .disabled(magicFormatter.formatterIsBusy)
                         .help("Magic Format")
+                        .keyboardShortcut("f", modifiers: [.command])
                     }
 
                 }
@@ -303,6 +305,7 @@ struct NoteEditor: View {
                                 systemName: "apple.intelligence"
                             )
                         }
+                        .keyboardShortcut("a", modifiers: [.command])
                         .help("AI Markdown Assistant")
                         .popover(
                             isPresented: $isAssistantPopoverPresented,

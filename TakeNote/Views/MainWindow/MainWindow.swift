@@ -73,18 +73,21 @@ struct MainWindow: View {
                         Image(systemName: "note.text.badge.plus")
                     }
                     .help("Add Note")
+                    .keyboardShortcut("n", modifiers: [.command])
                 }
                 if aiIsAvailable && notes.count > 0 {
                     Button(action: openChatWindow) {
                         Label("Chat", systemImage: "message")
                     }
                     .help("AI Chat")
+                    .keyboardShortcut("c", modifiers: [.command, .shift])
                 }
                 if canEmptyTrash {
                     Button(action: showEmptyTrashAlert) {
                         Label("Empty Trash", systemImage: "trash.slash")
                     }
                     .help("Empty Trash")
+                    .keyboardShortcut("t", modifiers: [.command])
                 }
 
             }

@@ -17,6 +17,9 @@ struct TakeNoteApp: App {
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
 
+    @FocusedValue(\.sidebarCommands) var sidebarCommands
+
+    
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
@@ -68,6 +71,14 @@ struct TakeNoteApp: App {
         .windowToolbarStyle(.expanded)
         .commands {
             CommandGroup(after: .newItem) {
+                Button("Add Folder"){
+                    sidebarCommands?.addFolder()
+                }
+                .disabled(sidebarCommands == nil)
+                Button("Add Tag"){
+                    sidebarCommands?.addTag()
+                }
+                .disabled(sidebarCommands == nil)
                 Button("Rebuild Search Index") {
                     do {
                         let notes = try ModelContext(container).fetch(

@@ -21,6 +21,7 @@ struct AddTagButton: View {
                     .offset(x: 2, y: -10)
             }
         }
+        .keyboardShortcut("t", modifiers: [.command, .option])
         .help("Add Tag")
     }
 }
