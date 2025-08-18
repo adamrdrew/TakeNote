@@ -11,9 +11,8 @@ import SwiftUI
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
-
     var folder: NoteContainer
-    var onMoveToFolder: () -> Void = {}
+    var onMoveToFolder: () -> Void = { }
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
@@ -76,9 +75,7 @@ struct FolderListEntry: View {
             } else {
                 HStack {
                     Label(folder.name, systemImage: folder.getSystemImageName())
-                        .foregroundStyle(
-                            colorScheme == .light ? Color.primary : Color.white
-                        )
+                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
                     Spacer()
                     HStack {
                         Text("\(folder.notes.count)")
@@ -87,7 +84,6 @@ struct FolderListEntry: View {
                             .foregroundStyle(.secondary)
                     }
                 }
-
             }
         }
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {

@@ -81,7 +81,5 @@ class NoteContainer: Identifiable {
         let A = UInt32(clamping: Int(a * 255.0))
         colorRGBA = (R << 24) | (G << 16) | (B << 8) | A
     }
-    
-
 
 }
