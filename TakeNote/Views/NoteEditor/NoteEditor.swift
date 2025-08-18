@@ -131,6 +131,7 @@ struct NoteEditor: View {
         2) Preserve original meaning and data; make structural/formatting changes only.
         3) Escape characters when needed for validity (e.g., `|` → `\\|`, `` ` `` → `` \\` ``).
         4) If you must choose alignment, default to left alignment.
+        5. Return Markdown, never HTML. If the user requests a link, or a table, or anything else the user wants a Markdown formatted version, not HTML.
 
         COMMON TRANSFORMATIONS
         - CSV/TSV/Delimited → Table:

@@ -5,19 +5,28 @@
 //  Created by Adam Drew on 8/18/25.
 //
 
-import AppKit
 
 func unwrapMarkdownFence(_ input: String) -> String {
+    // Trim off surrounding whitespace/newlines first
     let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
 
-    // Regex: triple backticks + optional language + newline … newline + triple backticks
-    let pattern = #"^\s*```(?:[a-zA-Z0-9_-]+)?\s*\n([\s\S]*?)\n```s*\z"#
+    // Must start with ```
+    guard trimmed.hasPrefix("```") else { return input }
+    // Find the first newline after the opening fence
+    guard let firstNewline = trimmed.firstIndex(of: "\n") else { return input }
 
-    guard let regex = try? NSRegularExpression(pattern: pattern, options: []),
-          let match = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
-          let bodyRange = Range(match.range(at: 1), in: trimmed) else {
-        return input // not a fully wrapped fence → return untouched
-    }
+    // Opening fence line (could be ```markdown, ```bash, or just ```)
+    let openingFence = String(trimmed[..<firstNewline])
+    guard openingFence.starts(with: "```") else { return input }
 
-    return String(trimmed[bodyRange])
+    // Must end with ```
+    guard trimmed.hasSuffix("```") else { return input }
+
+    // Slice off the top and bottom lines
+    let startOfBody = trimmed.index(after: firstNewline)
+    let endOfBody = trimmed.index(trimmed.endIndex, offsetBy: -3) // chop off ```
+    let body = trimmed[startOfBody..<endOfBody]
+
+    // Return body, trimmed of one trailing newline (since fences usually add one)
+    return body.trimmingCharacters(in: .newlines)
 }
