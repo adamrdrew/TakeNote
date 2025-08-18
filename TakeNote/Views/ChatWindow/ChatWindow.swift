@@ -225,7 +225,6 @@ struct ChatWindow: View {
                     }
                     .glassEffect()
                     .help("New Chat")
-                    .keyboardShortcut("c", modifiers: [.command, .option])
                 }
             }
 

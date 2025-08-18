@@ -100,7 +100,6 @@ struct Sidebar: View {
             Button(action: onAddFolder) {
                 Label("Add Folder", systemImage: "folder.badge.plus")
             }
-            .keyboardShortcut("f", modifiers: [.command, .option])
             .help("Add Folder")
             AddTagButton(action: onAddTag)
 

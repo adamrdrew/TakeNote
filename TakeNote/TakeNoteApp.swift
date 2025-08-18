@@ -75,19 +75,23 @@ struct TakeNoteApp: App {
                 Button("Magic Format") {
                     editorCommands?.magicFormat()
                 }.disabled(editorCommands?.magicFormatAvailable() != true)
+                    .keyboardShortcut("f", modifiers: [.command, .option])
                 Button("Markdown Assist") {
                     editorCommands?.markdownAssist()
                 }.disabled(editorCommands?.markdownAssistAvailable() != true)
+                    .keyboardShortcut("a", modifiers: [.command, .option])
             }
             CommandGroup(after: .newItem) {
                 Button("Add Folder"){
                     sidebarCommands?.addFolder()
                 }
+                .keyboardShortcut("f", modifiers: [.command])
                 .disabled(sidebarCommands == nil)
                 Button("Add Tag"){
                     sidebarCommands?.addTag()
                 }
                 .disabled(sidebarCommands == nil)
+                .keyboardShortcut("t", modifiers: [.command])
                 Button("Rebuild Search Index") {
                     do {
                         let notes = try ModelContext(container).fetch(
@@ -108,6 +112,7 @@ struct TakeNoteApp: App {
 
                 }
                 .disabled(search.isIndexing)
+                .keyboardShortcut("r", modifiers: [.command, .option])
             }
         }
 
