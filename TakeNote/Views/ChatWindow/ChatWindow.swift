@@ -133,13 +133,27 @@ struct ChatWindow: View {
 
         let assembledPrompt = makePrompt()
         let response = try? await session.respond(to: assembledPrompt)
-        let aiSummary = response?.content ?? "—"
+        let aiSummary = response?.content ?? "Something went wrong. Sorry."
 
         responseIsGenerating = false
-        let conversationEntry = ConversationEntry(sender: .bot, text: aiSummary)
+        let conversationEntry = ConversationEntry(sender: .bot, text: unwrapMarkdownFence(aiSummary))
         conversation.append(conversationEntry)
     }
+    
+    private func unwrapMarkdownFence(_ input: String) -> String {
+        let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
 
+        // Regex: triple backticks + optional language + newline … newline + triple backticks
+        let pattern = #"^\s*```(?:[a-zA-Z0-9_-]+)?\s*\n([\s\S]*?)\n```s*\z"#
+
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: []),
+              let match = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)),
+              let bodyRange = Range(match.range(at: 1), in: trimmed) else {
+            return input // not a fully wrapped fence → return untouched
+        }
+
+        return String(trimmed[bodyRange])
+    }
     private func newChat() {
         conversation.removeAll()
         userQuery = ""
