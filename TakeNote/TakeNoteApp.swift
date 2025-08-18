@@ -17,11 +17,6 @@ struct TakeNoteApp: App {
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
 
-    @FocusedValue(\.sidebarCommands) var sidebarCommands
-    @FocusedValue(\.editorCommands) var editorCommands
-    @FocusedValue(\.mainWindowCommands) var mainWindowCommands
-    @FocusedValue(\.deleteCommand) var deleteCommand
-    
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
@@ -72,43 +67,7 @@ struct TakeNoteApp: App {
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
         .commands {
-            CommandMenu("Editor") {
-                Button("Magic Format") {
-                    editorCommands?.magicFormat()
-                }.disabled(editorCommands?.magicFormatAvailable() != true)
-                    .keyboardShortcut("f", modifiers: [.command, .option])
-                Button("Markdown Assist") {
-                    editorCommands?.markdownAssist()
-                }.disabled(editorCommands?.markdownAssistAvailable() != true)
-                    .keyboardShortcut("a", modifiers: [.command, .option])
-                Button("Toggle Preview") {
-                    editorCommands?.togglePreview()
-                }.disabled(editorCommands?.togglePreviewAvailable() != true)
-                    .keyboardShortcut("p", modifiers: [.command])
-            }
-            CommandGroup(replacing: .pasteboard) {
-                Button("Delete", systemImage: "trash") {
-                    deleteCommand?.delete()
-                }
-                .disabled(deleteCommand == nil || deleteCommand?.canBeDeleted()  != true)
-                .keyboardShortcut(.delete, modifiers: [.command])
-            }
             CommandGroup(after: .newItem) {
-                Button("New Note") {
-                    mainWindowCommands?.addNote()
-                }
-                .keyboardShortcut("n", modifiers: [.command])
-                .disabled(mainWindowCommands?.addNoteAvailable() != true)
-                Button("New Folder") {
-                    sidebarCommands?.addFolder()
-                }
-                .keyboardShortcut("f", modifiers: [.command])
-                .disabled(sidebarCommands == nil)
-                Button("New Tag") {
-                    sidebarCommands?.addTag()
-                }
-                .disabled(sidebarCommands == nil)
-                .keyboardShortcut("t", modifiers: [.command])
                 Button("Rebuild Search Index") {
                     do {
                         let notes = try ModelContext(container).fetch(
@@ -129,7 +88,6 @@ struct TakeNoteApp: App {
 
                 }
                 .disabled(search.isIndexing)
-                .keyboardShortcut("r", modifiers: [.command, .option])
             }
         }
 

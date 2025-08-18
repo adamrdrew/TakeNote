@@ -30,12 +30,7 @@ struct FolderList: View {
                 onDelete: onDelete,
                 onEmptyTrash: onEmptyTrash
             )
-
-            
-
-
         }
-        
 
     }
 
