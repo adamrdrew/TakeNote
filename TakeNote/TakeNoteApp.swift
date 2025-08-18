@@ -18,6 +18,7 @@ struct TakeNoteApp: App {
     @State private var showOnboarding = false
 
     @FocusedValue(\.sidebarCommands) var sidebarCommands
+    @FocusedValue(\.editorCommands) var editorCommands
 
     
     let container: ModelContainer
@@ -70,6 +71,14 @@ struct TakeNoteApp: App {
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
         .commands {
+            CommandMenu("Magic") {
+                Button("Magic Format") {
+                    editorCommands?.magicFormat()
+                }.disabled(editorCommands?.magicFormatAvailable() != true)
+                Button("Markdown Assist") {
+                    editorCommands?.markdownAssist()
+                }.disabled(editorCommands?.markdownAssistAvailable() != true)
+            }
             CommandGroup(after: .newItem) {
                 Button("Add Folder"){
                     sidebarCommands?.addFolder()

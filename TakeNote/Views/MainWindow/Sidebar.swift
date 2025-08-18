@@ -22,7 +22,6 @@ extension FocusedValues {
         get { self[SidebarCommandsFocusedKey.self] }
         set { self[SidebarCommandsFocusedKey.self] = newValue }
     }
-
 }
 
 struct Sidebar: View {
