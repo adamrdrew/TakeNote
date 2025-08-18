@@ -11,7 +11,6 @@ import SwiftUI
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
-    @FocusState private var isFocused: Bool
 
     var folder: NoteContainer
     var onMoveToFolder: () -> Void = {}
