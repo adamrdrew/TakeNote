@@ -6,12 +6,29 @@
 import Foundation
 import SQLite  // SQLite.swift
 import os
+import NaturalLanguage
 
 /// Minimal full-text index for your notes.
 /// FTS5 table with two columns: note_id (UNINDEXED), chunk (searchable).
 public final class SearchIndex {
     
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "Database")
+    
+    
+    let stopWords: [String] = ["i", "me", "my", "myself", "we", "our", "ours",
+    "ourselves", "you", "your", "yours", "yourself", "yourselves", "he", "him",
+    "his", "himself", "she", "her", "hers", "herself", "it", "its", "itself",
+    "they", "them", "their", "theirs", "themselves", "what", "which", "who",
+    "whom", "this", "that", "these", "those", "am", "is", "are", "was", "were",
+    "be", "been", "being", "have", "has", "had", "having", "do", "does", "did",
+    "doing", "a", "an", "the", "and", "but", "if", "or", "because", "as", "until",
+    "while", "of", "at", "by", "for", "with", "about", "against", "between",
+    "into", "through", "during", "before", "after", "above", "below", "to",
+    "from", "up", "down", "in", "out", "on", "off", "over", "under", "again",
+    "further", "then", "once", "here", "there", "when", "where", "why", "how",
+    "all", "any", "both", "each", "few", "more", "most", "other", "some", "such",
+    "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s",
+    "t", "can", "will", "just", "don", "should", "now"]
 
     // MARK: Result type
     public struct SearchHit: Identifiable {
@@ -96,12 +113,12 @@ public final class SearchIndex {
 
             // FTS5 maintenance: compact internal index structures.
             // This is optional; ignore if it ever errors on older SQLite builds.
-            try? db.run("INSERT INTO fts(fts) VALUES('optimize')")
+            try db.run("INSERT INTO fts(fts) VALUES('optimize')")
 
             // Reclaim disk space (if on-disk). These are no-ops for in-memory.
             // Must be outside a transaction.
-            try? db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            try? db.run("VACUUM")
+            try db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+            try db.run("VACUUM")
         } catch {
             // If the table doesn't exist or something went sideways, drop & recreate.
             do {
@@ -115,8 +132,8 @@ public final class SearchIndex {
                     try db.run(fts.create(.FTS5(cfg), ifNotExists: true))
                 }
                 // After a hard reset, also trim the file.
-                try? db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-                try? db.run("VACUUM")
+                try db.run("PRAGMA wal_checkpoint(TRUNCATE)")
+                try db.run("VACUUM")
             } catch {
                 logger.error("SearchIndex dropAll error: \(error.localizedDescription)")
             }
@@ -155,28 +172,60 @@ public final class SearchIndex {
 
     // Add alongside your SearchHit and other methods
 
+    
+    func normalizeQuery(_ text: String, locale: Locale = .init(identifier: "en")) -> [String] {
+        // Normalize apostrophes/diacritics for consistency
+        let pre = text.replacingOccurrences(of: "’", with: "'")
+                      .folding(options: .diacriticInsensitive, locale: locale)
+
+        let tagger = NLTagger(tagSchemes: [.tokenType, .lemma, .language])
+        tagger.string = pre
+        tagger.setLanguage(.english, range: pre.startIndex..<pre.endIndex)
+
+        var terms: [String] = []
+        tagger.enumerateTags(
+            in: pre.startIndex..<pre.endIndex,
+            unit: .word,
+            scheme: .tokenType,
+            options: [.omitPunctuation, .omitWhitespace]
+        ) { _, range in
+            // Get lemma if available; else the raw token
+            let (lemmaTag, _) = tagger.tag(at: range.lowerBound, unit: .word, scheme: .lemma)
+            let raw = pre[range].lowercased()
+            let lemma = (lemmaTag?.rawValue ?? raw).lowercased()
+
+            // Strip possessive/apostrophes inside words
+            var cleaned = lemma.replacingOccurrences(of: "'s", with: "")
+                               .replacingOccurrences(of: "'", with: "")
+
+            // Drop stopwords & empties
+            if !cleaned.isEmpty, !stopWords.contains(cleaned) {
+                terms.append(cleaned)
+            }
+            return true
+        }
+        return terms
+    }
+    
     /// Natural-language search:
     /// - splits on non-alphanumerics (so punctuation can't break MATCH),
     /// - ORs the tokens (forgiving),
     /// - adds "*" to tokens >= 3 chars (prefix match).
     public func searchNatural(_ text: String, limit: Int = 5) -> [SearchHit] {
-        // 1) Tokenize by removing punctuation
-        let tokens =
-            text
-            .lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { !$0.isEmpty }
-
-        guard !tokens.isEmpty else { return [] }
-
+        
+        let tokens = normalizeQuery(text)
+        
         // 2) Add prefix wildcard to longer tokens (keeps small ones as-is)
         let starred = tokens.map { $0.count >= 3 ? "\($0)*" : $0 }
 
         // 3) Be forgiving: join with OR so any token can match
         //    (FTS5 will still rank results; you're already ordering by bm25)
-        let safeQuery = starred.joined(separator: " OR ")
+        let safeQuery = starred.joined(separator: " AND ")
+        
         
         let results = search(safeQuery, limit: limit)
+        
+        
         
         logger.debug("\(results.count) search hits found.")
 

@@ -37,11 +37,9 @@ final class SearchIndexService: ObservableObject {
     func search(_ q: String) {
         Task { [weak self] in
             guard let self else { return }
-            let r = self.index.search(q, limit: 50)
+            let r = self.index.searchNatural(q, limit: 3)
             self.hits = r     // already explicit
         }
     }
     
-    
-
 }
