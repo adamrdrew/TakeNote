@@ -17,6 +17,7 @@ struct TakeNoteApp: App {
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
     @State private var takeNoteVM = TakeNoteVM()
+    @State private var editorWindowVM = TakeNoteVM()
 
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
@@ -98,6 +99,7 @@ struct TakeNoteApp: App {
             NoteEditorWindow(noteID: noteID)
         }
         .modelContainer(container)
+        .environment(editorWindowVM)
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()

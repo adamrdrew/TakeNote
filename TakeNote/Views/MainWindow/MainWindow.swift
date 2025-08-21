@@ -12,7 +12,7 @@ import SwiftUI
 struct MainWindow: View {
     let languageModel = SystemLanguageModel.default
     
-    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(TakeNoteVM.self) var takeNoteVM
     @Environment(\.modelContext) var modelContext
     @Environment(\.openWindow) var openWindow
     @Query(
@@ -36,7 +36,6 @@ struct MainWindow: View {
 
     @State var selectedContainer: NoteContainer?
     @State var selectedNotes = Set<Note>()
-    @State var openNote: Note?
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
@@ -48,6 +47,7 @@ struct MainWindow: View {
 
 
     var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
         NavigationSplitView {
             // TODO: Figure out what we can pull out of MainWindow and push into Sidebar so we aren't
             // passing so much shit into it
@@ -96,7 +96,9 @@ struct MainWindow: View {
                     .transition(.opacity)
 
             } else {
-                NoteEditor(openNote: $openNote)
+                NoteEditor(
+                    openNote: $takeNoteVM.openNote,
+                )
                     .transition(.opacity)
             }
 

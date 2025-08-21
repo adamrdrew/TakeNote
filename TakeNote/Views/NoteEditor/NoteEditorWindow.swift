@@ -14,6 +14,7 @@ struct NoteEditorWindow: View {
     @State var note: Note?
 
     @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) private var editorWindowVM
 
     private func makeWindowTitle() -> String {
         var noteTitle: String = ""
@@ -40,12 +41,14 @@ struct NoteEditorWindow: View {
             return
         }
 
-        note = loadedNote
+        editorWindowVM.openNote = loadedNote
     }
 
     var body: some View {
-
-        NoteEditor(openNote: $note)
+        @Bindable var editorWindowVM = editorWindowVM
+        NoteEditor(
+            openNote: $editorWindowVM.openNote
+        )
             .onAppear {
                 getNote()
             }

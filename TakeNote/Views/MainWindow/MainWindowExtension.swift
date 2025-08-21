@@ -253,11 +253,11 @@ extension MainWindow {
 
     func onMoveToFolder() {
         selectedNotes.removeAll()
-        openNote = nil
+        takeNoteVM.openNote = nil
     }
     
     func onNoteSelect(_ note: Note) {
-        openNote = note
+        takeNoteVM.openNote = note
     }
     
     func openChatWindow() {
