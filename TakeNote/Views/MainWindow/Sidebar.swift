@@ -62,7 +62,7 @@ struct Sidebar: View {
             }
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            var importResult = folderImport(items: items, modelContext: modelContext, searchIndex: search)
+            let importResult = folderImport(items: items, modelContext: modelContext, searchIndex: search)
             importErrorMessage = importResult.toString()
             showImportError = importResult.errorsEncountered
         }

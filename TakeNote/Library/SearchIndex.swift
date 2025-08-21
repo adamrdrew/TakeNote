@@ -195,7 +195,7 @@ public final class SearchIndex {
             let lemma = (lemmaTag?.rawValue ?? raw).lowercased()
 
             // Strip possessive/apostrophes inside words
-            var cleaned = lemma.replacingOccurrences(of: "'s", with: "")
+            let cleaned = lemma.replacingOccurrences(of: "'s", with: "")
                                .replacingOccurrences(of: "'", with: "")
 
             // Drop stopwords & empties
