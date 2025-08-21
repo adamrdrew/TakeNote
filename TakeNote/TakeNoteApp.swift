@@ -16,6 +16,7 @@ private let onboardingVersionKey = "onboarding.version.seen"
 struct TakeNoteApp: App {
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
+    @State private var takeNoteVM = TakeNoteVM()
 
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
@@ -58,6 +59,7 @@ struct TakeNoteApp: App {
                     showOnboarding =
                         onboardingVersionSeen < onboardingVersionCurrent
                 }
+                .environment(takeNoteVM)
                 .environmentObject(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],

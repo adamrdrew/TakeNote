@@ -11,7 +11,8 @@ import SwiftUI
 
 struct MainWindow: View {
     let languageModel = SystemLanguageModel.default
-
+    
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @Environment(\.modelContext) var modelContext
     @Environment(\.openWindow) var openWindow
     @Query(
