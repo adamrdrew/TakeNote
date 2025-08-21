@@ -34,7 +34,7 @@ extension MainWindow {
     }
 
     var multipleNotesSelected: Bool {
-        return selectedNotes.count > 1
+        return takeNoteVM.selectedNotes.count > 1
     }
     
     var tagsExist: Bool {
@@ -78,7 +78,7 @@ extension MainWindow {
         modelContext.insert(note)
         do {
             try modelContext.save()
-            //selectedNotes = [note]
+            //takeNoteVM.selectedNotes = [note]
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
@@ -182,7 +182,7 @@ extension MainWindow {
         takeNoteVM.selectedContainer = folders.first(where: {
             $0.name == MainWindow.inboxFolderName
         })
-        selectedNotes = []
+        takeNoteVM.selectedNotes = []
     }
 
     func folderInit() {
@@ -207,10 +207,10 @@ extension MainWindow {
             errorAlertIsVisible = true
             return
         }
-        if selectedNotes.first != noteToTrash {
+        if takeNoteVM.selectedNotes.first != noteToTrash {
             return
         }
-        selectedNotes = []
+        takeNoteVM.selectedNotes = []
     }
 
     func loadNoteFromURL(_ url: URL) {
@@ -241,7 +241,7 @@ extension MainWindow {
         }
 
         if let note = notes.first {
-            self.selectedNotes = [note]
+            self.takeNoteVM.selectedNotes = [note]
             self.takeNoteVM.selectedContainer = note.folder
             return
         }
@@ -252,7 +252,7 @@ extension MainWindow {
     }
 
     func onMoveToFolder() {
-        selectedNotes.removeAll()
+        takeNoteVM.selectedNotes.removeAll()
         takeNoteVM.openNote = nil
     }
     
@@ -271,7 +271,7 @@ extension MainWindow {
     func onTagDelete(_ deletedTag: NoteContainer) {
         if deletedTag == takeNoteVM.selectedContainer {
             takeNoteVM.selectedContainer = inboxFolder
-            selectedNotes = []
+            takeNoteVM.selectedNotes = []
         }
     }
 

@@ -9,7 +9,6 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedNotes: Set<Note>
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
     @State var showFileImportError: Bool = false
@@ -48,7 +47,7 @@ struct NoteList: View {
         @Bindable var takeNoteVM = takeNoteVM
         VStack {
 
-            List(selection: $selectedNotes) {
+            List(selection: $takeNoteVM.selectedNotes) {
                 if folderHasStarredNotes() {
                     Section(header: Text("Favorites").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
@@ -78,7 +77,7 @@ struct NoteList: View {
                 }
             }
             .searchable(text: $noteSearchText, prompt: "Search")
-            .onChange(of: selectedNotes) { oldValue, newValue in
+            .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
                     if let note = newValue.first {

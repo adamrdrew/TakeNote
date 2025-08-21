@@ -34,7 +34,6 @@ struct MainWindow: View {
         folders.first { $0.isTrash }
     }
 
-    @State var selectedNotes = Set<Note>()
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
     @State var linkToNoteErrorMessage: String = ""
@@ -62,7 +61,6 @@ struct MainWindow: View {
 
         } content: {
             NoteList(
-                selectedNotes: $selectedNotes,
                 onTrash: moveNoteToTrash,
                 onSelect: onNoteSelect
             ).toolbar {
@@ -89,7 +87,7 @@ struct MainWindow: View {
 
         } detail: {
             if showMultiNoteView {
-                MultiNoteViewer(notes: $selectedNotes)
+                MultiNoteViewer()
                     .transition(.opacity)
 
             } else {

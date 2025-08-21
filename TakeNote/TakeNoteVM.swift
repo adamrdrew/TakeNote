@@ -13,5 +13,7 @@ class TakeNoteVM {
     var openNote: Note?
     // The folder or tag the user is viewing
     var selectedContainer: NoteContainer?
+    // The notes selected in the note list
+    var selectedNotes = Set<Note>()
 
 }
