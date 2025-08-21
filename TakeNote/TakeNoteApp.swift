@@ -15,9 +15,8 @@ private let onboardingVersionKey = "onboarding.version.seen"
 @main
 struct TakeNoteApp: App {
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
+    @Environment(\.modelContext) private var modelContext
     @State private var showOnboarding = false
-    @State private var takeNoteVM = TakeNoteVM()
-    @State private var editorWindowVM = TakeNoteVM()
 
     let container: ModelContainer
     @StateObject private var search = SearchIndexService()
@@ -60,7 +59,7 @@ struct TakeNoteApp: App {
                     showOnboarding =
                         onboardingVersionSeen < onboardingVersionCurrent
                 }
-                .environment(takeNoteVM)
+                .environment(TakeNoteVM(modelContext: modelContext))
                 .environmentObject(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],
@@ -99,7 +98,7 @@ struct TakeNoteApp: App {
             NoteEditorWindow(noteID: noteID)
         }
         .modelContainer(container)
-        .environment(editorWindowVM)
+        .environment(TakeNoteVM(modelContext: modelContext))
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()

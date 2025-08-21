@@ -12,31 +12,19 @@ struct Sidebar: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var search: SearchIndexService
     @Environment(TakeNoteVM.self) var takeNoteVM
-    
-    @State var folderSectionExpanded : Bool = true
-    @State var tagSectionExpanded : Bool = true
+
+    @State var folderSectionExpanded: Bool = true
+    @State var tagSectionExpanded: Bool = true
     @State var showImportError: Bool = false
     @State var importErrorMessage: String = ""
-    
-    var tagsExist: Bool = false
-    var onMoveToFolder: () -> Void = { }
-    var onFolderDelete: (NoteContainer) -> Void = { NoteContainer in  }
-    var onTagDelete: (NoteContainer) -> Void = { NoteContainer in  }
-    var onEmptyTrash: () -> Void = { }
-    var onAddFolder: () -> Void = { }
-    var onAddTag: () -> Void = { }
-    
+
     var body: some View {
-        @Bindable var takeNoteVM = takeNoteVM
-        List(selection: $takeNoteVM.selectedContainer) {
+        @Bindable var takeNoteVMBinding = takeNoteVM
+        List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 isExpanded: $folderSectionExpanded,
                 content: {
-                    FolderList(
-                        onMoveToFolder: onMoveToFolder,
-                        onDelete: onFolderDelete,
-                        onEmptyTrash: onEmptyTrash
-                    )
+                    FolderList()
 
                 },
                 header: {
@@ -45,13 +33,11 @@ struct Sidebar: View {
             )
             .headerProminence(.increased)
 
-            if tagsExist {
+            if takeNoteVM.tagsExist {
                 Section(
                     isExpanded: $tagSectionExpanded,
                     content: {
-                        TagList(
-                            onDelete: onTagDelete
-                        )
+                        TagList()
                     },
                     header: {
                         Text("Tags")
@@ -61,7 +47,11 @@ struct Sidebar: View {
             }
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            let importResult = folderImport(items: items, modelContext: modelContext, searchIndex: search)
+            let importResult = folderImport(
+                items: items,
+                modelContext: modelContext,
+                searchIndex: search
+            )
             importErrorMessage = importResult.toString()
             showImportError = importResult.errorsEncountered
         }
@@ -72,11 +62,11 @@ struct Sidebar: View {
         }
         .listStyle(.sidebar)
         .toolbar {
-            Button(action: onAddFolder) {
+            Button(action: takeNoteVM.addFolder) {
                 Label("Add Folder", systemImage: "folder.badge.plus")
             }
             .help("Add Folder")
-            AddTagButton(action: onAddTag)
+            AddTagButton(action: takeNoteVM.addTag)
         }
     }
 }

@@ -15,20 +15,12 @@ struct FolderList: View {
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
     ) var folders: [NoteContainer]
-    var onMoveToFolder: () -> Void = {}
 
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
-    var onEmptyTrash: (() -> Void) = {}
 
     var body: some View {
         ForEach(folders, id: \.self) { folder in
             FolderListEntry(
                 folder: folder,
-                onMoveToFolder: onMoveToFolder,
-                onDelete: onDelete,
-                onEmptyTrash: onEmptyTrash
             )
         }
 

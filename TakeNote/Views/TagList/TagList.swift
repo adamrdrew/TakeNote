@@ -10,19 +10,16 @@ import SwiftUI
 
 public struct TagList: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) private var takeNoteVM
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isTag
         }
     ) var tags: [NoteContainer]
 
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
-
     public var body: some View {
         ForEach(tags, id: \.self) { tag in
-            TagListEntry(tag: tag, onDelete: onDelete)
+            TagListEntry(tag: tag)
         }
     }
 }

@@ -11,6 +11,7 @@ import SwiftUI
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
+    @Environment(TakeNoteVM.self) var takeNoteVM
     var folder: NoteContainer
     var onMoveToFolder: () -> Void = { }
     @State private var inRenameMode: Bool = false
@@ -24,7 +25,7 @@ struct FolderListEntry: View {
     @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
-        onDelete(folder)
+        takeNoteVM.folderDelete(folder)
         modelContext.delete(folder)
         try? modelContext.save()
     }

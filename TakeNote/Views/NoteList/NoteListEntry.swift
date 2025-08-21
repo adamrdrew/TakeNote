@@ -15,7 +15,6 @@ struct NoteListEntry: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
     
     var note: Note
-    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
@@ -37,7 +36,7 @@ struct NoteListEntry: View {
     }
 
     func moveToTrash() {
-        onTrash(note)
+        takeNoteVM.moveNoteToTrash(note)
     }
 
     func startRename() {

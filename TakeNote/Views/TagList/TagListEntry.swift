@@ -12,6 +12,7 @@ struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @State var inDeleteMode: Bool = false
     var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
         deletedFolder in
@@ -26,7 +27,7 @@ struct TagListEntry: View {
     func deleteTag() {
         modelContext.delete(tag)
         try? modelContext.save()
-        onDelete(tag)
+        takeNoteVM.onTagDelete(tag)
     }
 
     func startRename() {

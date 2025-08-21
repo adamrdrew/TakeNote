@@ -29,8 +29,6 @@ struct NoteList: View {
 
     @EnvironmentObject private var search: SearchIndexService
 
-    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
-    var onSelect: ((Note) -> Void) = { Note in }
 
     func addNote() {
         guard let folder = takeNoteVM.selectedContainer else { return }
@@ -54,7 +52,6 @@ struct NoteList: View {
                             if note.starred {
                                 NoteListEntry(
                                     note: note,
-                                    onTrash: onTrash
                                 )
 
                             }
@@ -69,7 +66,6 @@ struct NoteList: View {
                         if !note.starred {
                             NoteListEntry(
                                 note: note,
-                                onTrash: onTrash
                             )
                         }
 
@@ -81,7 +77,7 @@ struct NoteList: View {
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
                     if let note = newValue.first {
-                        onSelect(note)
+                        takeNoteVM.onNoteSelect(note)
                     }
                 }
                 // We look in the previously selected notes so we can generate summaries and reindex
