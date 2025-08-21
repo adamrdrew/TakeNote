@@ -9,9 +9,9 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedContainer: NoteContainer?
     @Binding var selectedNotes: Set<Note>
     @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) var takeNoteVM
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
@@ -19,9 +19,9 @@ struct NoteList: View {
     
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
-            selectedContainer?.notes ?? []
+            takeNoteVM.selectedContainer?.notes ?? []
         } else {
-            selectedContainer?.notes.filter {
+            takeNoteVM.selectedContainer?.notes.filter {
                 $0.title.localizedStandardContains(noteSearchText)
                     || $0.content.localizedStandardContains(noteSearchText)
             } ?? []
@@ -34,17 +34,18 @@ struct NoteList: View {
     var onSelect: ((Note) -> Void) = { Note in }
 
     func addNote() {
-        guard let folder = selectedContainer else { return }
+        guard let folder = takeNoteVM.selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
         try? modelContext.save()
     }
 
     func folderHasStarredNotes() -> Bool {
-        return selectedContainer?.notes.contains { $0.starred } ?? false
+        return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
     }
 
     var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
         VStack {
 
             List(selection: $selectedNotes) {
@@ -54,7 +55,6 @@ struct NoteList: View {
                             if note.starred {
                                 NoteListEntry(
                                     note: note,
-                                    selectedContainer: selectedContainer,
                                     onTrash: onTrash
                                 )
 
@@ -70,7 +70,6 @@ struct NoteList: View {
                         if !note.starred {
                             NoteListEntry(
                                 note: note,
-                                selectedContainer: selectedContainer,
                                 onTrash: onTrash
                             )
                         }
@@ -101,7 +100,7 @@ struct NoteList: View {
                 items: items,
                 modelContext: modelContext,
                 searchIndex: search,
-                folder: selectedContainer!,
+                folder: takeNoteVM.selectedContainer!
             )
             showFileImportError = result.errorsEncountered
             fileImportErrorMessage = result.toString()

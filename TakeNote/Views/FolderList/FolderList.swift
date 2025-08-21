@@ -10,7 +10,7 @@ import SwiftUI
 
 struct FolderList: View {
     @Environment(\.modelContext) private var modelContext
-    @Binding var selectedContainer: NoteContainer?
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }

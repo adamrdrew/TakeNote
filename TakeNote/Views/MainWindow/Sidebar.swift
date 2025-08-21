@@ -11,8 +11,7 @@ import SwiftUI
 struct Sidebar: View {
     @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var search: SearchIndexService
-
-    @Binding var selectedContainer: NoteContainer?
+    @Environment(TakeNoteVM.self) var takeNoteVM
     
     @State var folderSectionExpanded : Bool = true
     @State var tagSectionExpanded : Bool = true
@@ -28,12 +27,12 @@ struct Sidebar: View {
     var onAddTag: () -> Void = { }
     
     var body: some View {
-        List(selection: $selectedContainer) {
+        @Bindable var takeNoteVM = takeNoteVM
+        List(selection: $takeNoteVM.selectedContainer) {
             Section(
                 isExpanded: $folderSectionExpanded,
                 content: {
                     FolderList(
-                        selectedContainer: $selectedContainer,
                         onMoveToFolder: onMoveToFolder,
                         onDelete: onFolderDelete,
                         onEmptyTrash: onEmptyTrash

@@ -34,7 +34,6 @@ struct MainWindow: View {
         folders.first { $0.isTrash }
     }
 
-    @State var selectedContainer: NoteContainer?
     @State var selectedNotes = Set<Note>()
     @State var emptyTrashAlertIsPresented: Bool = false
     @State var linkToNoteErrorIsPresented: Bool = false
@@ -52,7 +51,6 @@ struct MainWindow: View {
             // TODO: Figure out what we can pull out of MainWindow and push into Sidebar so we aren't
             // passing so much shit into it
             Sidebar(
-                selectedContainer: $selectedContainer,
                 tagsExist: tagsExist,
                 onMoveToFolder: onMoveToFolder,
                 onFolderDelete: folderDelete,
@@ -64,7 +62,6 @@ struct MainWindow: View {
 
         } content: {
             NoteList(
-                selectedContainer: $selectedContainer,
                 selectedNotes: $selectedNotes,
                 onTrash: moveNoteToTrash,
                 onSelect: onNoteSelect

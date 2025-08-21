@@ -21,8 +21,8 @@ extension MainWindow {
     }
 
     var canAddNote: Bool {
-        return selectedContainer?.isTrash == false
-            && selectedContainer?.isTag == false
+        return takeNoteVM.selectedContainer?.isTrash == false
+            && takeNoteVM.selectedContainer?.isTag == false
     }
 
     var canEmptyTrash: Bool {
@@ -42,15 +42,15 @@ extension MainWindow {
     }
 
     var navigationTitle: String {
-        return selectedContainer?.name ?? "TakeNote"
+        return takeNoteVM.selectedContainer?.name ?? "TakeNote"
     }
 
     var selectedContainerIsEmpty: Bool {
-        return selectedContainer?.notes.isEmpty ?? true
+        return takeNoteVM.selectedContainer?.notes.isEmpty ?? true
     }
 
     var trashFolderSelected: Bool {
-        return selectedContainer?.isTrash ?? false
+        return takeNoteVM.selectedContainer?.isTrash ?? false
     }
 
     // MARK: Methods
@@ -65,7 +65,7 @@ extension MainWindow {
         modelContext.insert(newFolder)
         do {
             try modelContext.save()
-            self.selectedContainer = newFolder
+            self.takeNoteVM.selectedContainer = newFolder
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
@@ -73,7 +73,7 @@ extension MainWindow {
     }
 
     func addNote() {
-        guard let folder = selectedContainer else { return }
+        guard let folder = takeNoteVM.selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
         do {
@@ -100,7 +100,7 @@ extension MainWindow {
         modelContext.insert(newTag)
         do {
             try modelContext.save()
-            selectedContainer = newTag
+            takeNoteVM.selectedContainer = newTag
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
@@ -119,7 +119,7 @@ extension MainWindow {
         modelContext.insert(inboxFolder)
         do {
             try modelContext.save()
-            self.selectedContainer = inboxFolder
+            self.takeNoteVM.selectedContainer = inboxFolder
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
@@ -176,10 +176,10 @@ extension MainWindow {
             errorAlertIsVisible = true
             return
         }
-        if deletedFolder != selectedContainer {
+        if deletedFolder != takeNoteVM.selectedContainer {
             return
         }
-        selectedContainer = folders.first(where: {
+        takeNoteVM.selectedContainer = folders.first(where: {
             $0.name == MainWindow.inboxFolderName
         })
         selectedNotes = []
@@ -242,7 +242,7 @@ extension MainWindow {
 
         if let note = notes.first {
             self.selectedNotes = [note]
-            self.selectedContainer = note.folder
+            self.takeNoteVM.selectedContainer = note.folder
             return
         }
 
@@ -269,8 +269,8 @@ extension MainWindow {
     }
 
     func onTagDelete(_ deletedTag: NoteContainer) {
-        if deletedTag == selectedContainer {
-            selectedContainer = inboxFolder
+        if deletedTag == takeNoteVM.selectedContainer {
+            takeNoteVM.selectedContainer = inboxFolder
             selectedNotes = []
         }
     }
