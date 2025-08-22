@@ -13,7 +13,7 @@ struct MainWindow: View {
     @Environment(\.modelContext) var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
     
-    @Query() var notes: [NoteContainer]
+    @Query() var notes: [Note]
     
     @MainActor
     func openChatWindow() {
@@ -87,6 +87,7 @@ struct MainWindow: View {
                 role: .destructive,
                 action: {
                     takeNoteVM.emptyTrash(modelContext)
+                    
                 }
             )
         }

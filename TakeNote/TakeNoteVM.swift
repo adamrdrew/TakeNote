@@ -170,6 +170,13 @@ class TakeNoteVM {
         for note in trash.notes {
             modelContext.delete(note)
         }
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = "Updating DB after emptying trash failed"
+            errorAlertIsVisible = true
+        }
+        
     }
 
     func folderDelete(_ deletedFolder: NoteContainer, folders: [NoteContainer], modelContext: ModelContext) {
