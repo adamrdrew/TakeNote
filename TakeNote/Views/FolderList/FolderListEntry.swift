@@ -126,7 +126,6 @@ struct FolderListEntry: View {
         ) {
             Button("Empty Trash", role: .destructive) {
                 takeNoteVM.emptyTrash(modelContext)
-                
                 showEmptyTrashWarning = false
             }
             Button("Cancel", role: .cancel) {
