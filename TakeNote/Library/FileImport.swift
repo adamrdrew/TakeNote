@@ -18,9 +18,6 @@ struct ImportResult {
         errorMessages.count > 0
     }
     
-    var errorCount : Int {
-        errorMessages.count
-    }
     var uniqueErrorMessages : [String] {
         Array(Set(errorMessages))
     }

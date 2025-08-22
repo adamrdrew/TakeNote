@@ -13,19 +13,18 @@ import SwiftData
 import SwiftUI
 
 struct MultiNoteViewer: View {
-    @Binding var notes: Set<Note>
+    @Environment(TakeNoteVM.self) private var takeNoteVM
 
     // Sort to keep a stable Z-order (topmost last)
     private var notesArray: [Note] {
-        Array(notes).sorted { ($0.createdDate) < ($1.createdDate) }
+        Array(takeNoteVM.selectedNotes).sorted { ($0.createdDate) < ($1.createdDate) }
     }
 
     // Classic US Letter aspect: 8.5 × 11
     private let paperAspect: CGFloat = 8.5 / 11.0
 
-    @State private var animGate = false  // drives the fan-in/out
-
     var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
         GeometryReader { geo in
             ZStack {
 

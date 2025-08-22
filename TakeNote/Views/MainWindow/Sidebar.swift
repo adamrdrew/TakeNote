@@ -9,35 +9,31 @@ import SwiftData
 import SwiftUI
 
 struct Sidebar: View {
-    @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var search: SearchIndexService
-
-    @Binding var selectedContainer: NoteContainer?
+    @Environment(SearchIndexService.self) var search
+    @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(\.modelContext) var modelContext 
     
-    @State var folderSectionExpanded : Bool = true
-    @State var tagSectionExpanded : Bool = true
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in folder.isTag
+        }
+    ) var tags: [NoteContainer]
+    
+    @State var folderSectionExpanded: Bool = true
+    @State var tagSectionExpanded: Bool = true
     @State var showImportError: Bool = false
     @State var importErrorMessage: String = ""
-    
-    var tagsExist: Bool = false
-    var onMoveToFolder: () -> Void = { }
-    var onFolderDelete: (NoteContainer) -> Void = { NoteContainer in  }
-    var onTagDelete: (NoteContainer) -> Void = { NoteContainer in  }
-    var onEmptyTrash: () -> Void = { }
-    var onAddFolder: () -> Void = { }
-    var onAddTag: () -> Void = { }
+
+    var tagsExist : Bool {
+        return tags.isEmpty == false
+    }
     
     var body: some View {
-        List(selection: $selectedContainer) {
+        @Bindable var takeNoteVMBinding = takeNoteVM
+        List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 isExpanded: $folderSectionExpanded,
                 content: {
-                    FolderList(
-                        selectedContainer: $selectedContainer,
-                        onMoveToFolder: onMoveToFolder,
-                        onDelete: onFolderDelete,
-                        onEmptyTrash: onEmptyTrash
-                    )
+                    FolderList()
 
                 },
                 header: {
@@ -50,9 +46,7 @@ struct Sidebar: View {
                 Section(
                     isExpanded: $tagSectionExpanded,
                     content: {
-                        TagList(
-                            onDelete: onTagDelete
-                        )
+                        TagList()
                     },
                     header: {
                         Text("Tags")
@@ -62,7 +56,11 @@ struct Sidebar: View {
             }
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            let importResult = folderImport(items: items, modelContext: modelContext, searchIndex: search)
+            let importResult = folderImport(
+                items: items,
+                modelContext: modelContext,
+                searchIndex: search
+            )
             importErrorMessage = importResult.toString()
             showImportError = importResult.errorsEncountered
         }
@@ -73,11 +71,15 @@ struct Sidebar: View {
         }
         .listStyle(.sidebar)
         .toolbar {
-            Button(action: onAddFolder) {
+            Button(action: {
+                takeNoteVM.addFolder(modelContext)
+            }) {
                 Label("Add Folder", systemImage: "folder.badge.plus")
             }
             .help("Add Folder")
-            AddTagButton(action: onAddTag)
+            AddTagButton(action: {
+                takeNoteVM.addTag(modelContext: modelContext)
+            })
         }
     }
 }

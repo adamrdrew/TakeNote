@@ -9,9 +9,8 @@ import SwiftData
 import SwiftUI
 
 struct NoteList: View {
-    @Binding var selectedContainer: NoteContainer?
-    @Binding var selectedNotes: Set<Note>
     @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) var takeNoteVM
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
@@ -19,43 +18,32 @@ struct NoteList: View {
     
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
-            selectedContainer?.notes ?? []
+            takeNoteVM.selectedContainer?.notes ?? []
         } else {
-            selectedContainer?.notes.filter {
+            takeNoteVM.selectedContainer?.notes.filter {
                 $0.title.localizedStandardContains(noteSearchText)
                     || $0.content.localizedStandardContains(noteSearchText)
             } ?? []
         }
     }
 
-    @EnvironmentObject private var search: SearchIndexService
-
-    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
-    var onSelect: ((Note) -> Void) = { Note in }
-
-    func addNote() {
-        guard let folder = selectedContainer else { return }
-        let note = Note(folder: folder)
-        modelContext.insert(note)
-        try? modelContext.save()
-    }
+    @Environment(SearchIndexService.self) private var search
 
     func folderHasStarredNotes() -> Bool {
-        return selectedContainer?.notes.contains { $0.starred } ?? false
+        return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
     }
 
     var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
         VStack {
 
-            List(selection: $selectedNotes) {
+            List(selection: $takeNoteVM.selectedNotes) {
                 if folderHasStarredNotes() {
                     Section(header: Text("Favorites").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
                             if note.starred {
                                 NoteListEntry(
                                     note: note,
-                                    selectedContainer: selectedContainer,
-                                    onTrash: onTrash
                                 )
 
                             }
@@ -70,8 +58,6 @@ struct NoteList: View {
                         if !note.starred {
                             NoteListEntry(
                                 note: note,
-                                selectedContainer: selectedContainer,
-                                onTrash: onTrash
                             )
                         }
 
@@ -79,11 +65,11 @@ struct NoteList: View {
                 }
             }
             .searchable(text: $noteSearchText, prompt: "Search")
-            .onChange(of: selectedNotes) { oldValue, newValue in
+            .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
                     if let note = newValue.first {
-                        onSelect(note)
+                        takeNoteVM.onNoteSelect(note)
                     }
                 }
                 // We look in the previously selected notes so we can generate summaries and reindex
@@ -101,7 +87,7 @@ struct NoteList: View {
                 items: items,
                 modelContext: modelContext,
                 searchIndex: search,
-                folder: selectedContainer!,
+                folder: takeNoteVM.selectedContainer!
             )
             showFileImportError = result.errorsEncountered
             fileImportErrorMessage = result.toString()

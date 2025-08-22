@@ -8,14 +8,13 @@
 import SwiftData
 import SwiftUI
 
-struct TagListEntry: View {
+internal struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @State var inDeleteMode: Bool = false
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
+
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
     @State var showColorPopover: Bool = false
@@ -26,7 +25,7 @@ struct TagListEntry: View {
     func deleteTag() {
         modelContext.delete(tag)
         try? modelContext.save()
-        onDelete(tag)
+        takeNoteVM.onTagDelete(tag)
     }
 
     func startRename() {

@@ -12,10 +12,9 @@ import SwiftUI
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
-
+    @Environment(TakeNoteVM.self) var takeNoteVM
+    
     var note: Note
-    var selectedContainer: NoteContainer?
-    var onTrash: ((_ deletedNote: Note) -> Void) = { Note in }
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
     @State private var newName: String = ""
@@ -37,7 +36,7 @@ struct NoteListEntry: View {
     }
 
     func moveToTrash() {
-        onTrash(note)
+        takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
     }
 
     func startRename() {
@@ -53,6 +52,7 @@ struct NoteListEntry: View {
     }
 
     var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
         VStack(alignment: .leading, spacing: vSpacing) {
             // Title row
             HStack(alignment: .firstTextBaseline, spacing: hSpacing) {
@@ -107,7 +107,7 @@ struct NoteListEntry: View {
 
                 Spacer(minLength: 0)
 
-                if selectedContainer?.isTag == true {
+                if takeNoteVM.selectedContainer?.isTag == true {
                     Label {
                         Text(note.folder.name)
                             .lineLimit(1)
@@ -197,7 +197,7 @@ struct NoteListEntry: View {
         )
         .contextMenu {
 
-            if selectedContainer?.isTrash == false {
+            if takeNoteVM.selectedContainer?.isTrash == false {
                 Button(
                     role: .destructive,
                     action: {
@@ -234,7 +234,14 @@ struct NoteListEntry: View {
                 pasteboard.clearContents()
                 pasteboard.setString(note.getURL(), forType: .string)
             }) {
-                Label("Copy link", systemImage: "link")
+                Label("Copy URL", systemImage: "link")
+            }
+            Button(action: {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(note.getMarkdownLink(), forType: .string)
+            }) {
+                Label("Copy Markdown Link", systemImage: "link")
             }
             if let noteLabel = note.tag {
                 Button(

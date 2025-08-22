@@ -8,15 +8,16 @@
 import SwiftUI
 
 @MainActor
-final class SearchIndexService: ObservableObject {
+@Observable
+internal final class SearchIndexService {
     #if DEBUG
     let index = try! SearchIndex(inMemory: true)
     #else
     let index = try! SearchIndex()
     #endif
     
-    @Published var hits: [SearchIndex.SearchHit] = []
-    @Published var isIndexing: Bool = false
+    var hits: [SearchIndex.SearchHit] = []
+    var isIndexing: Bool = false
 
     func reindex(note: Note) {
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
@@ -32,14 +33,6 @@ final class SearchIndexService: ObservableObject {
     
     func dropAll() {
         Task { index.dropAll() }
-    }
-
-    func search(_ q: String) {
-        Task { [weak self] in
-            guard let self else { return }
-            let r = self.index.searchNatural(q, limit: 3)
-            self.hits = r     // already explicit
-        }
     }
     
 }

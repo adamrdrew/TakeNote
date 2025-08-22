@@ -1,25 +1,59 @@
 //
-//  MainWindowExtension.swift
+//  TakeNoteVM.swift
 //  TakeNote
 //
-//  Created by Adam Drew on 8/14/25.
+//  Created by Adam Drew on 8/21/25.
 //
 
+import SwiftUI
 import FoundationModels
 import SwiftData
-import SwiftUI
 
+@Observable
 @MainActor
-extension MainWindow {
+class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
-
-    // MARK: Computed Properties
-
+    static let chatWindowID = "chat-window"
+    
+    
+    // The note currently open in the editor
+    var openNote: Note?
+    // The folder or tag the user is viewing
+    var selectedContainer: NoteContainer?
+    // The notes selected in the note list
+    var selectedNotes = Set<Note>()
+    // The LLM we use throughout the app
+    let languageModel = SystemLanguageModel.default
+    
+    var emptyTrashAlertIsPresented: Bool = false
+    var linkToNoteErrorIsPresented: Bool = false
+    var linkToNoteErrorMessage: String = ""
+    var folderSectionExpanded: Bool = true
+    var tagSectionExpanded: Bool = true
+    var errorAlertMessage: String = ""
+    var errorAlertIsVisible: Bool = false
+    var showMultiNoteView: Bool = false
+    
+    var inboxFolder: NoteContainer?
+    var trashFolder: NoteContainer?
+    
+    var navigationTitle : String {
+        var title = "TakeNote"
+        if let selectedContainerName = selectedContainer?.name {
+            title =  "\(title) / \(selectedContainerName)"
+        }
+        if let openNoteTitle = openNote?.title {
+            title =  "\(title) / \(openNoteTitle)"
+        }
+        return title
+    }
+    
     var aiIsAvailable: Bool {
         return languageModel.availability == .available
     }
 
+    // MARK: Computed Properties
     var canAddNote: Bool {
         return selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
@@ -36,14 +70,6 @@ extension MainWindow {
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
     }
-    
-    var tagsExist: Bool {
-        return tags.isEmpty == false
-    }
-
-    var navigationTitle: String {
-        return selectedContainer?.name ?? "TakeNote"
-    }
 
     var selectedContainerIsEmpty: Bool {
         return selectedContainer?.notes.isEmpty ?? true
@@ -55,7 +81,7 @@ extension MainWindow {
 
     // MARK: Methods
 
-    func addFolder() {
+    func addFolder(_ modelContext: ModelContext) {
         let newFolder = NoteContainer(
             canBeDeleted: true,
             isTrash: false,
@@ -72,7 +98,7 @@ extension MainWindow {
         }
     }
 
-    func addNote() {
+    func addNote(_ modelContext: ModelContext) {
         guard let folder = selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
@@ -85,11 +111,7 @@ extension MainWindow {
         }
     }
 
-    func addTag() {
-        addTag(name: "New Tag", color: Color(.blue))
-    }
-
-    func addTag(name: String, color: Color) {
+    func addTag(_ name: String = "New Tag", color: Color = Color(.blue), modelContext: ModelContext) {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
@@ -107,12 +129,12 @@ extension MainWindow {
         }
     }
 
-    private func createInboxFolder() {
+    func createInboxFolder(_ modelContext: ModelContext) {
         let inboxFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
             isInbox: true,
-            name: MainWindow.inboxFolderName,
+            name: TakeNoteVM.inboxFolderName,
             symbol: "tray",
             isTag: false,
         )
@@ -126,16 +148,17 @@ extension MainWindow {
         }
     }
 
-    private func createTrashFolder() {
+    func createTrashFolder(_ modelContext: ModelContext) {
         let trashFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: true,
             isInbox: false,
-            name: MainWindow.trashFolderName,
+            name: TakeNoteVM.trashFolderName,
             symbol: "trash",
             isTag: false,
         )
         modelContext.insert(trashFolder)
+        self.trashFolder = trashFolder
         do {
             try modelContext.save()
         } catch {
@@ -144,11 +167,7 @@ extension MainWindow {
         }
     }
 
-    func dataInit() {
-        folderInit()
-    }
-
-    func emptyTrash() {
+    func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
@@ -158,9 +177,16 @@ extension MainWindow {
         for note in trash.notes {
             modelContext.delete(note)
         }
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = "Updating DB after emptying trash failed"
+            errorAlertIsVisible = true
+        }
+        
     }
 
-    func folderDelete(_ deletedFolder: NoteContainer) {
+    func folderDelete(_ deletedFolder: NoteContainer, folders: [NoteContainer], modelContext: ModelContext) {
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
             errorAlertIsVisible = true
@@ -180,20 +206,20 @@ extension MainWindow {
             return
         }
         selectedContainer = folders.first(where: {
-            $0.name == MainWindow.inboxFolderName
+            $0.name == TakeNoteVM.inboxFolderName
         })
         selectedNotes = []
     }
 
-    func folderInit() {
+    func folderInit(_ modelContext: ModelContext) {
         if inboxFolderExists {
             return
         }
-        createInboxFolder()
-        createTrashFolder()
+        createInboxFolder(modelContext)
+        createTrashFolder(modelContext)
     }
 
-    func moveNoteToTrash(_ noteToTrash: Note) {
+    func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
             errorAlertIsVisible = true
@@ -213,7 +239,7 @@ extension MainWindow {
         selectedNotes = []
     }
 
-    func loadNoteFromURL(_ url: URL) {
+    func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 
         guard let uuid = UUID(uuidString: url.lastPathComponent) else {
@@ -259,10 +285,6 @@ extension MainWindow {
     func onNoteSelect(_ note: Note) {
         openNote = note
     }
-    
-    func openChatWindow() {
-        openWindow(id: "chat-window")
-    }
 
     func showEmptyTrashAlert() {
         emptyTrashAlertIsPresented = true
@@ -274,5 +296,6 @@ extension MainWindow {
             selectedNotes = []
         }
     }
+    
 
 }

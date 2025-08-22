@@ -76,12 +76,6 @@ struct NoteEditor: View {
         return selectedText.isEmpty == false
     }
 
-    func generateSummary() async {
-        if openNote != nil {
-            await openNote?.generateSummary()
-        }
-    }
-
     @MainActor
     func assistantSelectionReplacement(_ replacement: String) {
         guard let note = openNote else { return }

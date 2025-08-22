@@ -11,20 +11,21 @@ import SwiftUI
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
+    @Environment(TakeNoteVM.self) var takeNoteVM
     var folder: NoteContainer
-    var onMoveToFolder: () -> Void = { }
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in !folder.isTag
+        }
+    ) var folders: [NoteContainer]
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
-    var onEmptyTrash: (() -> Void) = {}
+
     @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
-        onDelete(folder)
+        takeNoteVM.folderDelete(folder, folders: folders, modelContext: modelContext)
         modelContext.delete(folder)
         try? modelContext.save()
     }
@@ -56,7 +57,7 @@ struct FolderListEntry: View {
         } catch {
             return
         }
-        onMoveToFolder()
+        takeNoteVM.onMoveToFolder()
     }
 
     var body: some View {
@@ -75,7 +76,9 @@ struct FolderListEntry: View {
             } else {
                 HStack {
                     Label(folder.name, systemImage: folder.getSystemImageName())
-                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
+                        .foregroundStyle(
+                            colorScheme == .light ? Color.primary : Color.white
+                        )
                     Spacer()
                     HStack {
                         Text("\(folder.notes.count)")
@@ -122,7 +125,7 @@ struct FolderListEntry: View {
             isPresented: $showEmptyTrashWarning
         ) {
             Button("Empty Trash", role: .destructive) {
-                onEmptyTrash()
+                takeNoteVM.emptyTrash(modelContext)
                 showEmptyTrashWarning = false
             }
             Button("Cancel", role: .cancel) {
