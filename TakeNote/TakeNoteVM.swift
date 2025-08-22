@@ -16,22 +16,6 @@ class TakeNoteVM {
     static let trashFolderName = "Trash"
     static let chatWindowID = "chat-window"
     
-    var folders: [NoteContainer]
-    var tags: [NoteContainer]
-    var notes: [Note]
-    
-    
-    var modelContext : ModelContext
-    
-    init(modelContext: ModelContext) {
-        self.modelContext = modelContext
-        folders = try! modelContext.fetch(FetchDescriptor<NoteContainer>(predicate: #Predicate { $0.isTag != true }))
-        tags = try! modelContext.fetch(FetchDescriptor<NoteContainer>(predicate: #Predicate { $0.isTag != true }))
-        notes = try! modelContext.fetch(FetchDescriptor<Note>())
-        trashFolder = folders.first(where: { $0.isTrash })
-        inboxFolder = folders.first(where: {$0.isInbox})
-        dataInit()
-    }
     
     // The note currently open in the editor
     var openNote: Note?
@@ -75,10 +59,6 @@ class TakeNoteVM {
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
     }
-    
-    var tagsExist: Bool {
-        return tags.isEmpty == false
-    }
 
     var navigationTitle: String {
         return selectedContainer?.name ?? "TakeNote"
@@ -94,7 +74,7 @@ class TakeNoteVM {
 
     // MARK: Methods
 
-    func addFolder() {
+    func addFolder(_ modelContext: ModelContext) {
         let newFolder = NoteContainer(
             canBeDeleted: true,
             isTrash: false,
@@ -111,7 +91,7 @@ class TakeNoteVM {
         }
     }
 
-    func addNote() {
+    func addNote(_ modelContext: ModelContext) {
         guard let folder = selectedContainer else { return }
         let note = Note(folder: folder)
         modelContext.insert(note)
@@ -124,11 +104,7 @@ class TakeNoteVM {
         }
     }
 
-    func addTag() {
-        addTag(name: "New Tag", color: Color(.blue))
-    }
-
-    func addTag(name: String, color: Color) {
+    func addTag(_ name: String = "New Tag", color: Color = Color(.blue), modelContext: ModelContext) {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
@@ -146,7 +122,7 @@ class TakeNoteVM {
         }
     }
 
-    private func createInboxFolder() {
+    func createInboxFolder(_ modelContext: ModelContext) {
         let inboxFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
@@ -165,7 +141,7 @@ class TakeNoteVM {
         }
     }
 
-    private func createTrashFolder() {
+    func createTrashFolder(_ modelContext: ModelContext) {
         let trashFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: true,
@@ -183,11 +159,7 @@ class TakeNoteVM {
         }
     }
 
-    func dataInit() {
-        folderInit()
-    }
-
-    func emptyTrash() {
+    func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
@@ -199,7 +171,7 @@ class TakeNoteVM {
         }
     }
 
-    func folderDelete(_ deletedFolder: NoteContainer) {
+    func folderDelete(_ deletedFolder: NoteContainer, folders: [NoteContainer], modelContext: ModelContext) {
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
             errorAlertIsVisible = true
@@ -224,15 +196,15 @@ class TakeNoteVM {
         selectedNotes = []
     }
 
-    func folderInit() {
+    func folderInit(_ modelContext: ModelContext) {
         if inboxFolderExists {
             return
         }
-        createInboxFolder()
-        createTrashFolder()
+        createInboxFolder(modelContext)
+        createTrashFolder(modelContext)
     }
 
-    func moveNoteToTrash(_ noteToTrash: Note) {
+    func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
             errorAlertIsVisible = true
@@ -252,7 +224,7 @@ class TakeNoteVM {
         selectedNotes = []
     }
 
-    func loadNoteFromURL(_ url: URL) {
+    func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 
         guard let uuid = UUID(uuidString: url.lastPathComponent) else {

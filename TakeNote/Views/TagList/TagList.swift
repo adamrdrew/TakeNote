@@ -9,7 +9,6 @@ import SwiftData
 import SwiftUI
 
 public struct TagList: View {
-    @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var takeNoteVM
 
     @Query(

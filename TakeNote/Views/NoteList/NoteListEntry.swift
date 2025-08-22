@@ -36,7 +36,7 @@ struct NoteListEntry: View {
     }
 
     func moveToTrash() {
-        takeNoteVM.moveNoteToTrash(note)
+        takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
     }
 
     func startRename() {

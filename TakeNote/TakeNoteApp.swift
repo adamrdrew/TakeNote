@@ -59,7 +59,7 @@ struct TakeNoteApp: App {
                     showOnboarding =
                         onboardingVersionSeen < onboardingVersionCurrent
                 }
-                .environment(TakeNoteVM(modelContext: modelContext))
+                .environment(TakeNoteVM())
                 .environmentObject(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],
@@ -98,7 +98,7 @@ struct TakeNoteApp: App {
             NoteEditorWindow(noteID: noteID)
         }
         .modelContainer(container)
-        .environment(TakeNoteVM(modelContext: modelContext))
+        .environment(TakeNoteVM())
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()

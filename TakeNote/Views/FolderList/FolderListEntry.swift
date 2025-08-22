@@ -13,7 +13,11 @@ struct FolderListEntry: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) var takeNoteVM
     var folder: NoteContainer
-    var onMoveToFolder: () -> Void = { }
+    var onMoveToFolder: () -> Void = {}
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in !folder.isTag
+        }
+    ) var folders: [NoteContainer]
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
@@ -25,7 +29,7 @@ struct FolderListEntry: View {
     @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
-        takeNoteVM.folderDelete(folder)
+        takeNoteVM.folderDelete(folder, folders: folders, modelContext: modelContext)
         modelContext.delete(folder)
         try? modelContext.save()
     }
@@ -76,7 +80,9 @@ struct FolderListEntry: View {
             } else {
                 HStack {
                     Label(folder.name, systemImage: folder.getSystemImageName())
-                        .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
+                        .foregroundStyle(
+                            colorScheme == .light ? Color.primary : Color.white
+                        )
                     Spacer()
                     HStack {
                         Text("\(folder.notes.count)")

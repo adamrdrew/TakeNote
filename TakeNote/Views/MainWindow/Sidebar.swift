@@ -9,15 +9,24 @@ import SwiftData
 import SwiftUI
 
 struct Sidebar: View {
-    @Environment(\.modelContext) private var modelContext
     @EnvironmentObject private var search: SearchIndexService
     @Environment(TakeNoteVM.self) var takeNoteVM
-
+    @Environment(\.modelContext) var modelContext : ModelContext
+    
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in folder.isTag
+        }
+    ) var tags: [NoteContainer]
+    
     @State var folderSectionExpanded: Bool = true
     @State var tagSectionExpanded: Bool = true
     @State var showImportError: Bool = false
     @State var importErrorMessage: String = ""
 
+    var tagsExist : Bool {
+        return tags.isEmpty == false
+    }
+    
     var body: some View {
         @Bindable var takeNoteVMBinding = takeNoteVM
         List(selection: $takeNoteVMBinding.selectedContainer) {
@@ -33,7 +42,7 @@ struct Sidebar: View {
             )
             .headerProminence(.increased)
 
-            if takeNoteVM.tagsExist {
+            if tagsExist {
                 Section(
                     isExpanded: $tagSectionExpanded,
                     content: {
@@ -62,11 +71,15 @@ struct Sidebar: View {
         }
         .listStyle(.sidebar)
         .toolbar {
-            Button(action: takeNoteVM.addFolder) {
+            Button(action: {
+                takeNoteVM.addFolder(modelContext)
+            }) {
                 Label("Add Folder", systemImage: "folder.badge.plus")
             }
             .help("Add Folder")
-            AddTagButton(action: takeNoteVM.addTag)
+            AddTagButton(action: {
+                takeNoteVM.addTag(modelContext: modelContext)
+            })
         }
     }
 }

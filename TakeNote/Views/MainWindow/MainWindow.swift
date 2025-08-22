@@ -10,7 +10,10 @@ import SwiftUI
 
 struct MainWindow: View {
     @Environment(\.openWindow) var openWindow
+    @Environment(\.modelContext) var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
+    
+    @Query() var notes: [NoteContainer]
     
     @MainActor
     func openChatWindow() {
@@ -25,12 +28,14 @@ struct MainWindow: View {
             NoteList()
                 .toolbar {
                     if takeNoteVM.canAddNote {
-                        Button(action: takeNoteVM.addNote) {
+                        Button(action: {
+                            takeNoteVM.addNote(modelContext)
+                        }) {
                             Image(systemName: "note.text.badge.plus")
                         }
                         .help("Add Note")
                     }
-                    if takeNoteVM.aiIsAvailable && takeNoteVM.notes.count > 0 {
+                    if takeNoteVM.aiIsAvailable && notes.count > 0 {
                         Button(action: openChatWindow) {
                             Label("Chat", systemImage: "message")
                         }
@@ -80,7 +85,9 @@ struct MainWindow: View {
             Button(
                 "Empty Trash",
                 role: .destructive,
-                action: takeNoteVM.emptyTrash
+                action: {
+                    takeNoteVM.emptyTrash(modelContext)
+                }
             )
         }
         .alert(
@@ -89,8 +96,14 @@ struct MainWindow: View {
         ) {
             Button("OK", action: { takeNoteVM.errorAlertIsVisible = false })
         }
-        .onAppear(perform: takeNoteVM.dataInit)
-        .onOpenURL(perform: takeNoteVM.loadNoteFromURL)
+        .onAppear(perform: {
+            takeNoteVM.createInboxFolder(modelContext)
+            takeNoteVM.createTrashFolder(modelContext)
+            
+        })
+        .onOpenURL(perform: { url in
+            takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
+        })
     }
     
 }
