@@ -8,7 +8,7 @@
 import SwiftData
 import SwiftUI
 
-struct TagListEntry: View {
+internal struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme

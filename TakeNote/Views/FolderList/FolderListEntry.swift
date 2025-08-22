@@ -21,10 +21,7 @@ struct FolderListEntry: View {
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
     @FocusState private var nameInputFocused: Bool
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
-    var onEmptyTrash: (() -> Void) = {}
+
     @State var inDeleteMode: Bool = false
 
     func deleteFolder() {
@@ -128,7 +125,8 @@ struct FolderListEntry: View {
             isPresented: $showEmptyTrashWarning
         ) {
             Button("Empty Trash", role: .destructive) {
-                onEmptyTrash()
+                takeNoteVM.emptyTrash(modelContext)
+                
                 showEmptyTrashWarning = false
             }
             Button("Cancel", role: .cancel) {

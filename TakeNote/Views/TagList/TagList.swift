@@ -8,7 +8,7 @@
 import SwiftData
 import SwiftUI
 
-public struct TagList: View {
+internal struct TagList: View {
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isTag

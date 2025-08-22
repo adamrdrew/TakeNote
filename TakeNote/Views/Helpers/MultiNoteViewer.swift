@@ -23,8 +23,6 @@ struct MultiNoteViewer: View {
     // Classic US Letter aspect: 8.5 × 11
     private let paperAspect: CGFloat = 8.5 / 11.0
 
-    @State private var animGate = false  // drives the fan-in/out
-
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
         GeometryReader { geo in

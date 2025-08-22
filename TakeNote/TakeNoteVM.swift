@@ -151,6 +151,7 @@ class TakeNoteVM {
             isTag: false,
         )
         modelContext.insert(trashFolder)
+        self.trashFolder = trashFolder
         do {
             try modelContext.save()
         } catch {
