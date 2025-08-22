@@ -68,7 +68,7 @@ struct MainWindow: View {
         }
         .background(Color(NSColor.textBackgroundColor))
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
-        .navigationTitle("TakeNote") //Text(navigationTitle))
+        .navigationTitle(takeNoteVM.navigationTitle)
         .alert(
             "Link Error: \(takeNoteVM.linkToNoteErrorMessage)",
             isPresented: $takeNoteVM.linkToNoteErrorIsPresented

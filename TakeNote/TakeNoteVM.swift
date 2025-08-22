@@ -38,6 +38,17 @@ class TakeNoteVM {
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
     
+    var navigationTitle : String {
+        var title = "TakeNote"
+        if let selectedContainerName = selectedContainer?.name {
+            title =  "\(title) / \(selectedContainerName)"
+        }
+        if let openNoteTitle = openNote?.title {
+            title =  "\(title) / \(openNoteTitle)"
+        }
+        return title
+    }
+    
     var aiIsAvailable: Bool {
         return languageModel.availability == .available
     }
@@ -58,10 +69,6 @@ class TakeNoteVM {
 
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
-    }
-
-    var navigationTitle: String {
-        return selectedContainer?.name ?? "TakeNote"
     }
 
     var selectedContainerIsEmpty: Bool {

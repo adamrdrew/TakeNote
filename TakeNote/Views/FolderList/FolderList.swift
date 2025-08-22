@@ -9,7 +9,6 @@ import SwiftData
 import SwiftUI
 
 struct FolderList: View {
-    @Environment(TakeNoteVM.self) private var takeNoteVM
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
