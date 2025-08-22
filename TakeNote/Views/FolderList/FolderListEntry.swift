@@ -60,7 +60,7 @@ struct FolderListEntry: View {
         } catch {
             return
         }
-        onMoveToFolder()
+        takeNoteVM.onMoveToFolder()
     }
 
     var body: some View {

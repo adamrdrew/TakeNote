@@ -28,7 +28,7 @@ struct ConversationEntry: Identifiable, Hashable {
 
 struct ChatWindow: View {
     @Environment(\.modelContext) private var modelContext
-    @EnvironmentObject private var search: SearchIndexService
+    @Environment(SearchIndexService.self) private var search
 
     @State private var conversation: [ConversationEntry] = []
     @State private var userQuery: String = ""

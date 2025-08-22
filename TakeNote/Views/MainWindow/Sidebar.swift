@@ -9,9 +9,9 @@ import SwiftData
 import SwiftUI
 
 struct Sidebar: View {
-    @EnvironmentObject private var search: SearchIndexService
+    @Environment(SearchIndexService.self) var search
     @Environment(TakeNoteVM.self) var takeNoteVM
-    @Environment(\.modelContext) var modelContext : ModelContext
+    @Environment(\.modelContext) var modelContext 
     
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isTag

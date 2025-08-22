@@ -27,7 +27,7 @@ struct NoteList: View {
         }
     }
 
-    @EnvironmentObject private var search: SearchIndexService
+    @Environment(SearchIndexService.self) private var search
 
 
     func addNote() {

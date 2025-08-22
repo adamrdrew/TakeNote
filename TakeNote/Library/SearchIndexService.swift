@@ -8,15 +8,16 @@
 import SwiftUI
 
 @MainActor
-final class SearchIndexService: ObservableObject {
+@Observable
+internal final class SearchIndexService {
     #if DEBUG
     let index = try! SearchIndex(inMemory: true)
     #else
     let index = try! SearchIndex()
     #endif
     
-    @Published var hits: [SearchIndex.SearchHit] = []
-    @Published var isIndexing: Bool = false
+    var hits: [SearchIndex.SearchHit] = []
+    var isIndexing: Bool = false
 
     func reindex(note: Note) {
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }

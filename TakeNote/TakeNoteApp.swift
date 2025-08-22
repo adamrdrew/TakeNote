@@ -19,7 +19,7 @@ struct TakeNoteApp: App {
     @State private var showOnboarding = false
 
     let container: ModelContainer
-    @StateObject private var search = SearchIndexService()
+    private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
 
     init() {
@@ -60,7 +60,7 @@ struct TakeNoteApp: App {
                         onboardingVersionSeen < onboardingVersionCurrent
                 }
                 .environment(TakeNoteVM())
-                .environmentObject(search)
+                .environment(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],
                     allowing: ["*"]
@@ -102,7 +102,7 @@ struct TakeNoteApp: App {
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()
-                .environmentObject(search)
+                .environment(search)
         }
         .modelContainer(container)
 

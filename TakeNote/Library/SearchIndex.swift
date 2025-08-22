@@ -10,7 +10,7 @@ import NaturalLanguage
 
 /// Minimal full-text index for your notes.
 /// FTS5 table with two columns: note_id (UNINDEXED), chunk (searchable).
-public final class SearchIndex {
+internal final class SearchIndex {
     
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "Database")
     
