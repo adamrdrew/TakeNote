@@ -31,7 +31,7 @@ internal final class SearchIndex {
     "t", "can", "will", "just", "don", "should", "now"]
 
     // MARK: Result type
-    public struct SearchHit: Identifiable {
+    struct SearchHit: Identifiable {
         public let id: Int64  // rowid inside FTS table
         public let noteID: UUID
         public let chunk: String  // the stored chunk text
