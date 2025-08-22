@@ -87,7 +87,6 @@ struct MainWindow: View {
                 role: .destructive,
                 action: {
                     takeNoteVM.emptyTrash(modelContext)
-                    
                 }
             )
         }
