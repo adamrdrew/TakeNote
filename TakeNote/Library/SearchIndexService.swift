@@ -34,13 +34,5 @@ internal final class SearchIndexService {
     func dropAll() {
         Task { index.dropAll() }
     }
-
-    func search(_ q: String) {
-        Task { [weak self] in
-            guard let self else { return }
-            let r = self.index.searchNatural(q, limit: 3)
-            self.hits = r     // already explicit
-        }
-    }
     
 }

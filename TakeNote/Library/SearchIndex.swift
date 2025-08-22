@@ -55,7 +55,7 @@ internal final class SearchIndex {
     ///   - chunker: how to split long notes (defaults to ~1000 chars)
     ///   - inMemory: handy for tests
     ///   - appSupportSubdir: folder under ~/Library/Application Support
-    public init(
+    init(
         chunker: WindowChunker = .init(),
         inMemory: Bool = false,
         appSupportSubdir: String = "TakeNote"
@@ -86,7 +86,7 @@ internal final class SearchIndex {
     // MARK: Indexing
 
     /// Replace this note’s chunks with fresh ones (call from a background Task).
-    public func reindex(noteID: UUID, markdown: String) {
+    func reindex(noteID: UUID, markdown: String) {
         do {
             try db.transaction {
                 try db.run(fts.filter(note_id == noteID.uuidString).delete())
@@ -105,7 +105,7 @@ internal final class SearchIndex {
         }
     }
 
-    public func dropAll() {
+    func dropAll() {
         do {
             // Fast path: wipe all rows from the FTS table.
             // (This preserves the schema and is safe for both in-memory & on-disk.)
@@ -140,7 +140,7 @@ internal final class SearchIndex {
         }
     }
     /// Bulk (re)index many notes efficiently.
-    public func reindex(_ notes: [(UUID, String)]) {
+    func reindex(_ notes: [(UUID, String)]) {
         do {
             try db.transaction {
                 for (id, md) in notes {
@@ -161,7 +161,7 @@ internal final class SearchIndex {
     }
 
     /// Remove a note from the index entirely.
-    public func delete(noteID: UUID) {
+    func delete(noteID: UUID) {
         do {
             try db.run(fts.filter(note_id == noteID.uuidString).delete())
             logger.debug("Note \(noteID) deleted from search index")
@@ -211,7 +211,7 @@ internal final class SearchIndex {
     /// - splits on non-alphanumerics (so punctuation can't break MATCH),
     /// - ORs the tokens (forgiving),
     /// - adds "*" to tokens >= 3 chars (prefix match).
-    public func searchNatural(_ text: String, limit: Int = 5) -> [SearchHit] {
+    func searchNatural(_ text: String, limit: Int = 5) -> [SearchHit] {
         
         let tokens = normalizeQuery(text)
         
@@ -234,7 +234,7 @@ internal final class SearchIndex {
     }
 
     /// Simple FTS5 search. Supports plain words or FTS syntax (phrases, prefix*).
-    public func search(_ query: String, limit: Int = 5) -> [SearchHit] {
+    func search(_ query: String, limit: Int = 5) -> [SearchHit] {
         do {
             let q =
                 fts
@@ -283,13 +283,13 @@ internal final class SearchIndex {
     // MARK: Debug Helpers
 
     /// 1) Count rows in FTS quickly
-    public func debugCount() -> Int {
+    func debugCount() -> Int {
         (try? db.scalar("SELECT COUNT(*) FROM fts") as? Int64).map(Int.init)
             ?? -1
     }
 
     /// 2) Dump a few rows (id, note_id, first 80 chars)
-    public func debugDump(limit: Int = 5) {
+    func debugDump(limit: Int = 5) {
         do {
             let rowid = Expression<Int64>("rowid")
             let note_id = Expression<String>("note_id")
