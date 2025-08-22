@@ -14,9 +14,7 @@ struct TagListEntry: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) private var takeNoteVM
     @State var inDeleteMode: Bool = false
-    var onDelete: ((_ deletedFolder: NoteContainer) -> Void) = {
-        deletedFolder in
-    }
+
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
     @State var showColorPopover: Bool = false

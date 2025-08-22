@@ -29,14 +29,6 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
-
-    func addNote() {
-        guard let folder = takeNoteVM.selectedContainer else { return }
-        let note = Note(folder: folder)
-        modelContext.insert(note)
-        try? modelContext.save()
-    }
-
     func folderHasStarredNotes() -> Bool {
         return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
     }
