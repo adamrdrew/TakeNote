@@ -51,8 +51,12 @@ class Note: Identifiable {
         self.uuid = UUID()
     }
 
-    public func getURL() -> String {
+    func getURL() -> String {
         return "takenote://note/\(uuid.uuidString)"
+    }
+    
+    func getMarkdownLink() -> String {
+        return "[\(title)](\(getURL()))"
     }
 
     func generateContentHash() -> String {

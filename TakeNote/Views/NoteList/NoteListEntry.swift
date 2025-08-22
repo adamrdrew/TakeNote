@@ -234,7 +234,14 @@ struct NoteListEntry: View {
                 pasteboard.clearContents()
                 pasteboard.setString(note.getURL(), forType: .string)
             }) {
-                Label("Copy link", systemImage: "link")
+                Label("Copy URL", systemImage: "link")
+            }
+            Button(action: {
+                let pasteboard = NSPasteboard.general
+                pasteboard.clearContents()
+                pasteboard.setString(note.getMarkdownLink(), forType: .string)
+            }) {
+                Label("Copy Markdown Link", systemImage: "link")
             }
             if let noteLabel = note.tag {
                 Button(

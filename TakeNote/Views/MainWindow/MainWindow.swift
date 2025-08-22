@@ -98,8 +98,7 @@ struct MainWindow: View {
             Button("OK", action: { takeNoteVM.errorAlertIsVisible = false })
         }
         .onAppear(perform: {
-            takeNoteVM.createInboxFolder(modelContext)
-            takeNoteVM.createTrashFolder(modelContext)
+            takeNoteVM.folderInit(modelContext)
             
         })
         .onOpenURL(perform: { url in
