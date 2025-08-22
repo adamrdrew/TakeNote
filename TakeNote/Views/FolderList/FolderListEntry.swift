@@ -13,7 +13,6 @@ struct FolderListEntry: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) var takeNoteVM
     var folder: NoteContainer
-    var onMoveToFolder: () -> Void = {}
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
