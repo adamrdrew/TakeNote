@@ -21,30 +21,41 @@ struct FileCommands: Commands {
     )
 
     @Query() var notes: [Note]
+    
+    var vmOrModelContextAreNil : Bool {
+        takeNoteVM == nil || modelContext == nil
+    }
 
     var body: some Commands {
 
         CommandGroup(after: .newItem) {
+            /// Create a new note
             Button("New Note", systemImage: "note.text.badge.plus") {
                 takeNoteVM?.addNote(modelContext!)
             }
             .disabled(
-                takeNoteVM?.canAddNote == false || takeNoteVM == nil
-                    || modelContext == nil
+                takeNoteVM?.canAddNote == false || vmOrModelContextAreNil
             )
             .keyboardShortcut("N", modifiers: [.command])
-            Button("Rebuild Search Index", systemImage: "arrow.3.trianglepath")
-            {
-                if notes.isEmpty {
-                    logger.debug("No notes to reindex.")
-                    return
-                }
-                search?.dropAll()
-                search?.reindexAll(notes)
-                logger.debug("Rebuilt search index")
+            
+            /// Create a new folder
+            Button("New Folder", systemImage: "folder.badge.plus") {
+                takeNoteVM?.addFolder(modelContext!)
             }
-            .disabled(search?.isIndexing == true || search == nil)
-            .keyboardShortcut("R", modifiers: [.command, .option, .shift])
+            .disabled(
+                vmOrModelContextAreNil
+            )
+            .keyboardShortcut("F", modifiers: [.command])
+            
+            /// Create a new tag
+            Button("New Tag", systemImage: "tag") {
+                takeNoteVM?.addTag("New Tag", modelContext: modelContext!)
+            }
+            .disabled(
+                vmOrModelContextAreNil
+            )
+            .keyboardShortcut("T", modifiers: [.command])
+            
         }
     }
 }
