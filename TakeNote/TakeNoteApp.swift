@@ -74,6 +74,7 @@ struct TakeNoteApp: App {
         .windowToolbarStyle(.expanded)
         .commands {
             FileCommands()
+            EditCommands()
         }
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {

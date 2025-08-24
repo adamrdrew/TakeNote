@@ -8,10 +8,13 @@
 import SwiftData
 import SwiftUI
 
+
+
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(FolderItemController.self) var folderItemController
     var folder: NoteContainer
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
@@ -23,9 +26,14 @@ struct FolderListEntry: View {
     @FocusState private var nameInputFocused: Bool
 
     @State var inDeleteMode: Bool = false
+    
 
     func deleteFolder() {
-        takeNoteVM.folderDelete(folder, folders: folders, modelContext: modelContext)
+        takeNoteVM.folderDelete(
+            folder,
+            folders: folders,
+            modelContext: modelContext
+        )
         modelContext.delete(folder)
         try? modelContext.save()
     }
@@ -88,6 +96,11 @@ struct FolderListEntry: View {
                     }
                 }
             }
+        }
+
+        .onAppear {
+            folderItemController.registerDeleteCommand(id: folder.id, command: deleteFolder)
+            folderItemController.registerRenameCommand(id: folder.id, command: startRename)
         }
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
