@@ -14,8 +14,10 @@ private let onboardingVersionKey = "onboarding.version.seen"
 
 @main
 struct TakeNoteApp: App {
+    @Environment(\.modelContext) var modelContext
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
+    var takeNoteVM = TakeNoteVM()
 
     let container: ModelContainer
     private var search = SearchIndexService()
@@ -42,6 +44,7 @@ struct TakeNoteApp: App {
         }
     }
 
+
     var body: some Scene {
         Window("", id: "main-window") {
             MainWindow()
@@ -58,38 +61,19 @@ struct TakeNoteApp: App {
                     showOnboarding =
                         onboardingVersionSeen < onboardingVersionCurrent
                 }
-                .environment(TakeNoteVM())
-                .environment(search)
                 .handlesExternalEvents(
                     preferring: ["takenote://"],
                     allowing: ["*"]
                 )
+                .focusedSceneValue(takeNoteVM)
+                .focusedSceneValue(search)
         }
+        .environment(takeNoteVM)
+        .environment(search)
         .modelContainer(container)
         .windowToolbarStyle(.expanded)
         .commands {
-            CommandGroup(after: .newItem) {
-                Button("Rebuild Search Index") {
-                    do {
-                        let notes = try ModelContext(container).fetch(
-                            FetchDescriptor<Note>()
-                        )
-                        if notes.isEmpty {
-                            logger.debug("No notes to reindex.")
-                            return
-                        }
-                        search.dropAll()
-                        search.reindexAll(notes)
-                        logger.debug("Rebuilt search index")
-                    } catch {
-                        logger.error(
-                            "Search index rebuild failed: \(error.localizedDescription)"
-                        )
-                    }
-
-                }
-                .disabled(search.isIndexing)
-            }
+            FileCommands()
         }
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
@@ -106,4 +90,5 @@ struct TakeNoteApp: App {
         .modelContainer(container)
 
     }
+    
 }

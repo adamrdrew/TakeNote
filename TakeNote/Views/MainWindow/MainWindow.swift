@@ -90,6 +90,7 @@ struct MainWindow: View {
                 }
             )
         }
+        .focusedSceneValue(\.modelContext, modelContext)
         .alert(
             "Something went wrong: \(takeNoteVM.errorAlertMessage)",
             isPresented: $takeNoteVM.errorAlertIsVisible
