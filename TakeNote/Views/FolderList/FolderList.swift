@@ -20,9 +20,14 @@ struct FolderList: View {
 
     var body: some View {
         ForEach(folders, id: \.self) { folder in
-            FolderListEntry(
-                folder: folder,
-            )
+            if folder.isBuffer {
+                EmptyView()
+            } else {
+                FolderListEntry(
+                    folder: folder,
+                )
+            }
+
         }
 
     }

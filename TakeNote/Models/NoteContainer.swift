@@ -17,6 +17,7 @@ class NoteContainer: Identifiable {
     internal var isTrash: Bool = false
     internal var isInbox: Bool = false
     internal var isTag: Bool = false
+    internal var isBuffer: Bool = false
     var colorRGBA: UInt32 = 0xE5E5E5FF
     var symbol: String = "folder"
     var notes: [Note] { isTag ? tagNotes : folderNotes }
