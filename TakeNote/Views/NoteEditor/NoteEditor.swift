@@ -14,6 +14,9 @@ import os
 
 extension FocusedValues {
     @Entry var togglePreview: (() -> Void)?
+    @Entry var doMagicFormat: (() -> Void)?
+    @Entry var textIsSelected: Bool?
+    @Entry var showAssistantPopover: (() -> Void)?
 }
 
 struct NoteEditor: View {
@@ -34,6 +37,10 @@ struct NoteEditor: View {
 
     func togglePreview() {
         showPreview.toggle()
+    }
+    
+    func showAssistantPopover() {
+        isAssistantPopoverPresented = true
     }
     
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
@@ -338,6 +345,9 @@ struct NoteEditor: View {
 
             }
             .focusedSceneValue(\.togglePreview, togglePreview)
+            .focusedSceneValue(\.doMagicFormat, doMagicFormat)
+            .focusedSceneValue(\.textIsSelected, textIsSelected)
+            .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
 
         } else {
             VStack {

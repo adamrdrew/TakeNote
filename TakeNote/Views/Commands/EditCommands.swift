@@ -25,6 +25,10 @@ struct EditCommands: Commands {
     
     @FocusedValue(\.togglePreview) var togglePreview : (() -> Void)?
     
+    @FocusedValue(\.doMagicFormat) var doMagicFormat : (() -> Void)?
+    @FocusedValue(\.textIsSelected) var textIsSelected : Bool?
+    @FocusedValue(\.showAssistantPopover) var showAssistantPopover : (() -> Void)?
+    
     var nothingEditableIsFocused : Bool {
         return containerDeleteRegistry == nil && noteDeleteRegistry == nil && selectedNoteContainer == nil && selectedNotes == nil
     }
@@ -144,6 +148,32 @@ struct EditCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command])
             .disabled(togglePreview == nil)
+            
+            Button("MagicFormat", systemImage: "wand.and.sparkles") {
+                if let dmf = doMagicFormat {
+                    dmf()
+                }
+            }
+            .keyboardShortcut("f", modifiers: [.command, .option])
+            .disabled(doMagicFormat == nil)
+            
+            Button("Markdown Assistant", systemImage: "apple.intelligence") {
+                if let sap = showAssistantPopover {
+                    sap()
+                }
+            }
+            .keyboardShortcut("a", modifiers: [.command, .option])
+            .disabled(textIsSelected == nil || textIsSelected! == false )
+            
+            Button("Toggle Star", systemImage: "star") {
+                if let sn = selectedNotes {
+                    for note in sn {
+                        note.starred.toggle()
+                    }
+                }
+            }
+            .disabled(selectedNotes == nil || selectedNotes!.isEmpty)
+            .keyboardShortcut("s", modifiers: [.command])
 
         }
     }
