@@ -9,35 +9,26 @@ import SwiftData
 import SwiftUI
 
 extension FocusedValues {
-    @Entry var folderItemController: FolderItemController?
+    @Entry var containerDeleteRegistry: CommandRegistry?
+    @Entry var containerRenameRegistry: CommandRegistry?
     @Entry var selectedNoteContainer: NoteContainer?
 }
 
-@Observable
-internal final class FolderItemController {
-    var deleteCommands: [PersistentIdentifier: () -> Void] = [:]
-    var renameCommands: [PersistentIdentifier: () -> Void] = [:]
+private struct ContainerDeleteRegistryKey: EnvironmentKey {
+    static let defaultValue: CommandRegistry = CommandRegistry()
+}
+private struct ContainerRenameRegistryKey: EnvironmentKey {
+    static let defaultValue: CommandRegistry = CommandRegistry()
+}
 
-    func registerDeleteCommand(
-        id: PersistentIdentifier,
-        command: @escaping () -> Void
-    ) {
-        deleteCommands[id] = command
+extension EnvironmentValues {
+    var containerDeleteRegistry: CommandRegistry {
+        get { self[ContainerDeleteRegistryKey.self] }
+        set { self[ContainerDeleteRegistryKey.self] = newValue }
     }
-
-    func registerRenameCommand(
-        id: PersistentIdentifier,
-        command: @escaping () -> Void
-    ) {
-        renameCommands[id] = command
-    }
-
-    func runDeleteCommand(id: PersistentIdentifier) {
-        deleteCommands[id]?()
-    }
-
-    func runRenameCommand(id: PersistentIdentifier) {
-        renameCommands[id]?()
+    var containerRenameRegistry: CommandRegistry {
+        get { self[ContainerRenameRegistryKey.self] }
+        set { self[ContainerRenameRegistryKey.self] = newValue }
     }
 }
 
@@ -55,32 +46,9 @@ struct Sidebar: View {
     @State var tagSectionExpanded: Bool = true
     @State var showImportError: Bool = false
     @State var importErrorMessage: String = ""
-    @State var deleteCommands: [PersistentIdentifier: () -> Void] = [:]
-    @State var renameCommands: [PersistentIdentifier: () -> Void] = [:]
-    
-    @State var folderItemController = FolderItemController()
 
-    func registerDeleteCommand(
-        id: PersistentIdentifier,
-        command: @escaping () -> Void
-    ) {
-        deleteCommands[id] = command
-    }
-
-    func registerRenameCommand(
-        id: PersistentIdentifier,
-        command: @escaping () -> Void
-    ) {
-        renameCommands[id] = command
-    }
-
-    func runDeleteCommand(id: PersistentIdentifier) {
-        deleteCommands[id]?()
-    }
-
-    func runRenameCommand(id: PersistentIdentifier) {
-        renameCommands[id]?()
-    }
+    @State var containerDeleteRegistry : CommandRegistry = CommandRegistry()
+    @State var containerRenameRegistry : CommandRegistry = CommandRegistry()
 
     var tagsExist: Bool {
         return tags.isEmpty == false
@@ -113,8 +81,18 @@ struct Sidebar: View {
 
             }
         }
-        .focusedValue(\.folderItemController, folderItemController)
-        .focusedValue(\.selectedNoteContainer, takeNoteVMBinding.selectedContainer)
+        /// Add the command registries to the environment so that the list entries can access them
+        .environment(\.containerDeleteRegistry, containerDeleteRegistry)
+        .environment(\.containerRenameRegistry, containerRenameRegistry)
+        /// Make the command registries the focused values for this list so that the menubar commands can access them
+        .focusedValue(\.containerDeleteRegistry, containerDeleteRegistry)
+        .focusedValue(\.containerRenameRegistry, containerRenameRegistry)
+        /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
+        /// command registries
+        .focusedValue(
+            \.selectedNoteContainer,
+            takeNoteVMBinding.selectedContainer
+        )
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let importResult = folderImport(
                 items: items,
@@ -130,7 +108,6 @@ struct Sidebar: View {
             }
         }
         .listStyle(.sidebar)
-        .environment(folderItemController)
         .toolbar {
             Button(action: {
                 takeNoteVM.addFolder(modelContext)

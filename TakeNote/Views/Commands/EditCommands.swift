@@ -9,22 +9,41 @@ import SwiftUI
 import SwiftData
 
 struct EditCommands: Commands {
-    @FocusedValue(\.folderItemController) var folderItemController: FolderItemController?
+    @FocusedValue(\.containerDeleteRegistry) var containerDeleteRegistry: CommandRegistry?
+    @FocusedValue(\.containerRenameRegistry) var containerRenameRegistry: CommandRegistry?
+
+    
     @FocusedValue(\.selectedNoteContainer) var selectedNoteContainer: NoteContainer?
     
     var body: some Commands {
         CommandGroup(after: .pasteboard) {
-            Button("Rename Folder", systemImage: "folder") {
-                if let selectedFolder = selectedNoteContainer {
-                    if let fc = folderItemController {
-                        fc.runRenameCommand(id: selectedFolder.id)
+            Button("Rename", systemImage: "pencil") {
+                if let sc = selectedNoteContainer {
+                    if let dr = containerRenameRegistry {
+                        dr.runCommand(id: sc.id)
                     }
                 }
             }
             .disabled(
-                folderItemController == nil || selectedNoteContainer == nil || selectedNoteContainer!.isTrash || selectedNoteContainer!.isInbox
+                containerRenameRegistry == nil || selectedNoteContainer == nil || selectedNoteContainer!.isTrash || selectedNoteContainer!.isInbox
             )
             .keyboardShortcut("R", modifiers: [.command])
+            
+            Button("Delete", systemImage: "delete.left") {
+                if let sc = selectedNoteContainer {
+                    if let rr = containerDeleteRegistry {
+                        rr.runCommand(id: sc.id)
+                    }
+                }
+            }
+            .disabled(
+                containerDeleteRegistry == nil || selectedNoteContainer == nil || selectedNoteContainer!.isTrash || selectedNoteContainer!.isInbox
+            )
+            .keyboardShortcut(.delete, modifiers: [.command])
+            
+
+            
+            
         }
     }
 }

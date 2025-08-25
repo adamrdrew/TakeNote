@@ -14,6 +14,9 @@ internal struct TagListEntry: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) private var takeNoteVM
     @State var inDeleteMode: Bool = false
+    
+    @Environment(\.containerRenameRegistry) var containerRenameRegistry
+    @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
 
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
@@ -21,6 +24,10 @@ internal struct TagListEntry: View {
     @FocusState private var nameInputFocused: Bool
 
     @State var newTagColor: Color = Color(.blue)
+    
+    func startDelete() {
+        inDeleteMode = true
+    }
 
     func deleteTag() {
         modelContext.delete(tag)
@@ -84,6 +91,24 @@ internal struct TagListEntry: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+        .onAppear {
+            containerDeleteRegistry.registerCommand(
+                id: tag.id,
+                command: startDelete
+            )
+            containerRenameRegistry.registerCommand(
+                id: tag.id,
+                command: startRename
+            )
+        }
+        .onDisappear {
+            containerDeleteRegistry.unregisterCommand(
+                id: tag.id
+            )
+            containerRenameRegistry.unregisterCommand(
+                id: tag.id
+            )
         }
         .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
             VStack(alignment: .leading, spacing: 12) {
