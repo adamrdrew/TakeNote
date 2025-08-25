@@ -60,6 +60,14 @@ class TakeNoteVM {
             && selectedContainer?.isTag == false
     }
 
+    var bufferIsEmpty: Bool {
+        return bufferFolder?.notes.isEmpty ?? true
+    }
+    
+    var bufferNotesCount : Int {
+        return bufferFolder?.notes.count ?? 0
+    }
+    
     var canEmptyTrash: Bool {
         return trashFolderSelected && !selectedContainerIsEmpty
     }
@@ -115,6 +123,8 @@ class TakeNoteVM {
         }
     }
 
+
+    
     func addTag(_ name: String = "New Tag", color: Color = Color(.blue), modelContext: ModelContext) {
         let newTag = NoteContainer(
             isTrash: false,
@@ -265,6 +275,22 @@ class TakeNoteVM {
         selectedNotes = []
     }
 
+    func moveNotesFromBufferToInbox(_ modelContext: ModelContext) {
+        if bufferIsEmpty {
+            return
+        }
+        guard let bf = bufferFolder else {
+            return
+        }
+        guard let ibx = inboxFolder else {
+            return
+        }
+        for note : Note in bf.notes {
+            note.folder = ibx
+        }
+        try? modelContext.save()
+    }
+    
     func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 
