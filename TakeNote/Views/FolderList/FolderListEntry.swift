@@ -37,6 +37,8 @@ struct FolderListEntry: View {
             modelContext: modelContext
         )
         modelContext.delete(folder)
+        containerDeleteRegistry.unregisterCommand(id: folder.id)
+        containerRenameRegistry.unregisterCommand(id: folder.id)
         try? modelContext.save()
     }
 

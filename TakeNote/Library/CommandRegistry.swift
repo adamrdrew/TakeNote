@@ -10,8 +10,9 @@ import SwiftData
 
 @Observable
 internal final class CommandRegistry {
-    var commands: [PersistentIdentifier: () -> Void] = [:]
+    private var commands: [PersistentIdentifier: () -> Void] = [:]
 
+    @MainActor
     func registerCommand(
         id: PersistentIdentifier,
         command: @escaping () -> Void
@@ -19,12 +20,14 @@ internal final class CommandRegistry {
         commands[id] = command
     }
 
+    @MainActor
     func unregisterCommand(
         id: PersistentIdentifier
     ) {
         commands.removeValue(forKey: id)
     }
 
+    @MainActor
     func runCommand(id: PersistentIdentifier) {
         print("CommandRegistry: Running Command with ID: \(id)")
         commands[id]?()

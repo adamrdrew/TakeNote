@@ -31,6 +31,8 @@ internal struct TagListEntry: View {
 
     func deleteTag() {
         modelContext.delete(tag)
+        containerDeleteRegistry.unregisterCommand(id: tag.id)
+        containerRenameRegistry.unregisterCommand(id: tag.id)
         try? modelContext.save()
         takeNoteVM.onTagDelete(tag)
     }
