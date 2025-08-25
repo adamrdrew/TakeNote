@@ -83,6 +83,7 @@ struct TakeNoteApp: App {
             NoteEditorWindow(noteID: noteID)
         }
         .modelContainer(container)
+        .environment(search)
         .environment(TakeNoteVM())
 
         Window("TakeNote - AI Chat", id: "chat-window") {
@@ -90,6 +91,10 @@ struct TakeNoteApp: App {
                 .environment(search)
         }
         .modelContainer(container)
+        .environment(search)
+        .environment(TakeNoteVM())
+
+
 
     }
     
