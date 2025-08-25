@@ -134,6 +134,7 @@ class TakeNoteVM {
     }
 
     func createInboxFolder(_ modelContext: ModelContext) {
+        if self.inboxFolder != nil { return }
         let inboxFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
@@ -154,6 +155,7 @@ class TakeNoteVM {
     }
 
     func createTrashFolder(_ modelContext: ModelContext) {
+        if self.trashFolder != nil { return }
         let trashFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: true,
@@ -173,6 +175,7 @@ class TakeNoteVM {
     }
     
     func createBufferFolder(_ modelContext: ModelContext) {
+        if self.bufferFolder != nil { return }
         let bufferFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
@@ -237,9 +240,6 @@ class TakeNoteVM {
     }
 
     func folderInit(_ modelContext: ModelContext) {
-        if inboxFolderExists {
-            return
-        }
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
         createBufferFolder(modelContext)
