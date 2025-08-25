@@ -8,7 +8,6 @@
 import SwiftData
 import SwiftUI
 
-
 extension FocusedValues {
     @Entry var noteDeleteRegistry: CommandRegistry?
     @Entry var noteRenameRegistry: CommandRegistry?
@@ -38,10 +37,10 @@ struct NoteList: View {
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
-    
-    @State var noteDeleteRegistry : CommandRegistry = CommandRegistry()
-    @State var noteRenameRegistry : CommandRegistry = CommandRegistry()
-    
+
+    @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
+    @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
+
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
             takeNoteVM.selectedContainer?.notes ?? []
@@ -55,8 +54,47 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
+    func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
+        for wrappedID in wrappedIDs {
+            let id = wrappedID.id
+            // Find the note we're going to move by ID
+            guard let note = modelContext.model(for: id) as? Note else {
+                continue
+            }
+            // Add the destination folder to the note and save
+            if let nc = takeNoteVM.selectedContainer {
+                if nc.isTag {
+                    return
+                }
+                // If the note is in the hidden buffer folder then this
+                // is a cut and paste, so we wholesale move the note into
+                // the selected container
+                if note.folder == takeNoteVM.bufferFolder {
+                    note.folder = nc
+                    continue
+                }
+                // If the note.folder isn't the buffer folder then this is a
+                // copy and paste and we need a new note
+                let newNote = Note(folder: nc)
+                newNote.content = note.content
+                newNote.title = note.title
+                newNote.aiSummary = note.aiSummary
+                newNote.createdDate = note.createdDate
+                newNote.starred = note.starred
+                modelContext.insert(newNote)
+            }
+        }
+        do {
+            try modelContext.save()
+        } catch {
+            return
+        }
+        takeNoteVM.onMoveToFolder()
+    }
+
     func folderHasStarredNotes() -> Bool {
-        return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
+        return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
+            ?? false
     }
 
     var body: some View {
@@ -119,6 +157,20 @@ struct NoteList: View {
                 }
 
             }
+        }
+        .copyable(takeNoteVM.selectedNotes.map { NoteIDWrapper(id: $0.persistentModelID) })
+        .cuttable(for: NoteIDWrapper.self) {
+            // Stash the notes in the hidden buffer folder
+            for note : Note in takeNoteVM.selectedNotes {
+                if let bf = takeNoteVM.bufferFolder {
+                    note.folder = bf
+                }
+            }
+            return takeNoteVM.selectedNotes.map { NoteIDWrapper(id: $0.persistentModelID) }
+        }
+
+        .pasteDestination(for: NoteIDWrapper.self) { wrappedIDs in
+            pasteNote(wrappedIDs)
         }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let result = fileImport(

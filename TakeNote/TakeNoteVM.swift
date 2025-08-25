@@ -37,6 +37,7 @@ class TakeNoteVM {
     
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
+    var bufferFolder: NoteContainer?
     
     var navigationTitle : String {
         var title = "TakeNote"
@@ -170,6 +171,26 @@ class TakeNoteVM {
             errorAlertIsVisible = true
         }
     }
+    
+    func createBufferFolder(_ modelContext: ModelContext) {
+        let bufferFolder = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: false,
+            name: "Buffer",
+            symbol: "shippingbox",
+            isTag: false,
+        )
+        bufferFolder.isBuffer = true
+        modelContext.insert(bufferFolder)
+        self.bufferFolder = bufferFolder
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
 
     func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
@@ -221,6 +242,7 @@ class TakeNoteVM {
         }
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
+        createBufferFolder(modelContext)
     }
 
     func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
