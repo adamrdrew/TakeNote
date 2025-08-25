@@ -99,7 +99,10 @@ class TakeNoteVM {
     }
 
     func addNote(_ modelContext: ModelContext) {
-        guard let folder = selectedContainer else { return }
+        guard let folder = selectedContainer else {
+            print("Adding note failed, no folder selected")
+            return
+        }
         let note = Note(folder: folder)
         modelContext.insert(note)
         do {
@@ -139,6 +142,7 @@ class TakeNoteVM {
             isTag: false,
         )
         modelContext.insert(inboxFolder)
+        self.inboxFolder = inboxFolder
         do {
             try modelContext.save()
             self.selectedContainer = inboxFolder

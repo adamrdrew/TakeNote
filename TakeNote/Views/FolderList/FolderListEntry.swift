@@ -12,6 +12,8 @@ struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(\.containerRenameRegistry) var containerRenameRegistry
+    @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
     var folder: NoteContainer
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
@@ -23,10 +25,20 @@ struct FolderListEntry: View {
     @FocusState private var nameInputFocused: Bool
 
     @State var inDeleteMode: Bool = false
+    
+    func startDelete() {
+        inDeleteMode = true
+    }
 
     func deleteFolder() {
-        takeNoteVM.folderDelete(folder, folders: folders, modelContext: modelContext)
+        takeNoteVM.folderDelete(
+            folder,
+            folders: folders,
+            modelContext: modelContext
+        )
         modelContext.delete(folder)
+        containerDeleteRegistry.unregisterCommand(id: folder.id)
+        containerRenameRegistry.unregisterCommand(id: folder.id)
         try? modelContext.save()
     }
 
@@ -88,6 +100,24 @@ struct FolderListEntry: View {
                     }
                 }
             }
+        }
+        .onAppear {
+            containerDeleteRegistry.registerCommand(
+                id: folder.id,
+                command: startDelete
+            )
+            containerRenameRegistry.registerCommand(
+                id: folder.id,
+                command: startRename
+            )
+        }
+        .onDisappear {
+            containerDeleteRegistry.unregisterCommand(
+                id: folder.id
+            )
+            containerRenameRegistry.unregisterCommand(
+                id: folder.id
+            )
         }
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
