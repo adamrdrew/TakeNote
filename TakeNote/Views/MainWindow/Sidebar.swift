@@ -53,6 +53,7 @@ extension FocusedValues {
     @Entry var containerDeleteRegistry: CommandRegistry?
     @Entry var containerRenameRegistry: CommandRegistry?
     @Entry var selectedNoteContainer: NoteContainer?
+    @Entry var tagSetColorRegistry: CommandRegistry?
 }
 
 /// Allow our command registries for delete and rename commands to be accessed from the environment
@@ -63,6 +64,9 @@ private struct ContainerDeleteRegistryKey: EnvironmentKey {
 private struct ContainerRenameRegistryKey: EnvironmentKey {
     static let defaultValue: CommandRegistry = CommandRegistry()
 }
+private struct TagSetColorRegistryKey: EnvironmentKey {
+    static let defaultValue: CommandRegistry = CommandRegistry()
+}
 extension EnvironmentValues {
     var containerDeleteRegistry: CommandRegistry {
         get { self[ContainerDeleteRegistryKey.self] }
@@ -71,6 +75,10 @@ extension EnvironmentValues {
     var containerRenameRegistry: CommandRegistry {
         get { self[ContainerRenameRegistryKey.self] }
         set { self[ContainerRenameRegistryKey.self] = newValue }
+    }
+    var tagSetColorRegistry: CommandRegistry {
+        get { self[TagSetColorRegistryKey.self] }
+        set { self[TagSetColorRegistryKey.self] = newValue }
     }
 }
 
@@ -91,6 +99,7 @@ struct Sidebar: View {
 
     @State var containerDeleteRegistry : CommandRegistry = CommandRegistry()
     @State var containerRenameRegistry : CommandRegistry = CommandRegistry()
+    @State var tagSetColorRegistry : CommandRegistry = CommandRegistry()
 
     var tagsExist: Bool {
         return tags.isEmpty == false
@@ -126,9 +135,11 @@ struct Sidebar: View {
         /// Add the command registries to the environment so that the list entries can access them
         .environment(\.containerDeleteRegistry, containerDeleteRegistry)
         .environment(\.containerRenameRegistry, containerRenameRegistry)
+        .environment(\.tagSetColorRegistry, tagSetColorRegistry)
         /// Make the command registries the focused values for this list so that the menubar commands can access them
         .focusedValue(\.containerDeleteRegistry, containerDeleteRegistry)
         .focusedValue(\.containerRenameRegistry, containerRenameRegistry)
+        .focusedValue(\.tagSetColorRegistry, tagSetColorRegistry)
         /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
         /// command registries
         .focusedValue(

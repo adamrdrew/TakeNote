@@ -17,6 +17,7 @@ internal struct TagListEntry: View {
     
     @Environment(\.containerRenameRegistry) var containerRenameRegistry
     @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
+    @Environment(\.tagSetColorRegistry) var tagSetColorRegistry
 
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
@@ -103,12 +104,21 @@ internal struct TagListEntry: View {
                 id: tag.id,
                 command: startRename
             )
+            tagSetColorRegistry.registerCommand(
+                id: tag.id,
+                command: {
+                    showColorPopover = true
+                }
+            )
         }
         .onDisappear {
             containerDeleteRegistry.unregisterCommand(
                 id: tag.id
             )
             containerRenameRegistry.unregisterCommand(
+                id: tag.id
+            )
+            tagSetColorRegistry.unregisterCommand(
                 id: tag.id
             )
         }

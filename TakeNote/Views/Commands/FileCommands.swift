@@ -21,8 +21,8 @@ struct FileCommands: Commands {
     )
 
     @Query() var notes: [Note]
-    
-    var vmOrModelContextAreNil : Bool {
+
+    var vmOrModelContextAreNil: Bool {
         takeNoteVM == nil || modelContext == nil
     }
 
@@ -31,31 +31,48 @@ struct FileCommands: Commands {
         CommandGroup(after: .newItem) {
             /// Create a new note
             Button("New Note", systemImage: "note.text.badge.plus") {
-                takeNoteVM?.addNote(modelContext!)
+                if let vm = takeNoteVM, let mc = modelContext {
+                    vm.addNote(mc)
+                }
             }
             .disabled(
                 takeNoteVM?.canAddNote == false || vmOrModelContextAreNil
             )
             .keyboardShortcut("N", modifiers: [.command])
-            
+
             /// Create a new folder
             Button("New Folder", systemImage: "folder.badge.plus") {
-                takeNoteVM?.addFolder(modelContext!)
+                if let vm = takeNoteVM, let mc = modelContext {
+                    vm.addFolder(mc)
+                }
             }
             .disabled(
                 vmOrModelContextAreNil
             )
             .keyboardShortcut("F", modifiers: [.command])
-            
+
             /// Create a new tag
             Button("New Tag", systemImage: "tag") {
-                takeNoteVM?.addTag("New Tag", modelContext: modelContext!)
+                if let vm = takeNoteVM, let mc = modelContext {
+                    vm.addTag("New Tag", modelContext: mc)
+                }
             }
             .disabled(
                 vmOrModelContextAreNil
             )
             .keyboardShortcut("T", modifiers: [.command])
-            
+
+            /// Create a new tag
+            Button("Empty Trash", systemImage: "trash.slash") {
+                if let vm = takeNoteVM {
+                    vm.showEmptyTrashAlert()
+                }
+            }
+            .disabled(
+                vmOrModelContextAreNil
+            )
+            .keyboardShortcut(.delete, modifiers: [.command, .option])
+
         }
     }
 }

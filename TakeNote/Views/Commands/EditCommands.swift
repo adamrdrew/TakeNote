@@ -20,6 +20,9 @@ struct EditCommands: Commands {
     @FocusedValue(\.noteRenameRegistry) var noteRenameRegistry: CommandRegistry?
     @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
 
+    @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
+        CommandRegistry?
+    
     var nothingEditableIsFocused : Bool {
         return containerDeleteRegistry == nil && noteDeleteRegistry == nil && selectedNoteContainer == nil && selectedNotes == nil
     }
@@ -76,6 +79,13 @@ struct EditCommands: Commands {
         }
         return true
     }
+    
+    var canSetColor: Bool {
+        if let sc = selectedNoteContainer {
+            return sc.isTag
+        }
+        return false
+    }
 
     var body: some Commands {
         CommandGroup(after: .pasteboard) {
@@ -112,6 +122,18 @@ struct EditCommands: Commands {
             }
             .disabled(!canDelete)
             .keyboardShortcut(.delete, modifiers: [.command])
+            
+            Button("Set Color", systemImage: "paintpalette") {
+                if let sc = selectedNoteContainer {
+                    if sc.isTag {
+                        if let tsc = tagSetColorRegistry {
+                            tsc.runCommand(id: sc.id)
+                        }
+                    }
+                }
+            }
+            .disabled(!canSetColor)
+            .keyboardShortcut("c", modifiers: [.command, .option])
 
         }
     }
