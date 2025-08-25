@@ -14,6 +14,9 @@ struct NoteListEntry: View {
     @Environment(\.openWindow) private var openWindow
     @Environment(TakeNoteVM.self) var takeNoteVM
     
+    @Environment(\.noteDeleteRegistry) private var noteDeleteRegistry
+    @Environment(\.noteRenameRegistry) private var noteRenameRegistry
+    
     var note: Note
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
@@ -37,6 +40,8 @@ struct NoteListEntry: View {
 
     func moveToTrash() {
         takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
+        noteDeleteRegistry.unregisterCommand(id: note.id)
+        noteRenameRegistry.unregisterCommand(id: note.id)
     }
 
     func startRename() {
@@ -270,6 +275,14 @@ struct NoteListEntry: View {
                 exportError = error.localizedDescription
                 showExportError = true
             }
+        }
+        .onAppear {
+            noteDeleteRegistry.registerCommand(id: note.id, command: moveToTrash)
+            noteRenameRegistry.registerCommand(id: note.id, command: startRename)
+        }
+        .onDisappear {
+            noteDeleteRegistry.unregisterCommand(id: note.id)
+            noteRenameRegistry.unregisterCommand(id: note.id)
         }
         .alert(
             "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",
