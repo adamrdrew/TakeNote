@@ -48,7 +48,7 @@ struct EditCommands: Commands {
     }
     
     
-    var canEdit: Bool {
+    var canRename: Bool {
         if nothingEditableIsFocused {
             return false
         }
@@ -56,6 +56,19 @@ struct EditCommands: Commands {
             return false
         }
         if multipleNotesAreSelected {
+            return false
+        }
+        if noteIsInTrash {
+            return false
+        }
+        return true
+    }
+    
+    var canDelete: Bool {
+        if nothingEditableIsFocused {
+            return false
+        }
+        if selectedContainerIsPermanent {
             return false
         }
         if noteIsInTrash {
@@ -80,7 +93,7 @@ struct EditCommands: Commands {
                     }
                 }
             }
-            .disabled(!canEdit)
+            .disabled(!canRename)
             .keyboardShortcut("R", modifiers: [.command])
 
             Button("Delete", systemImage: "delete.left") {
@@ -97,7 +110,7 @@ struct EditCommands: Commands {
                     }
                 }
             }
-            .disabled(!canEdit)
+            .disabled(!canDelete)
             .keyboardShortcut(.delete, modifiers: [.command])
 
         }
