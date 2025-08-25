@@ -81,6 +81,8 @@ struct NoteList: View {
                 newNote.aiSummary = note.aiSummary
                 newNote.createdDate = note.createdDate
                 newNote.starred = note.starred
+                newNote.contentHash = note.contentHash
+                newNote.aiSummaryIsGenerating = note.aiSummaryIsGenerating
                 modelContext.insert(newNote)
             }
         }
