@@ -8,6 +8,11 @@
 import SwiftData
 import SwiftUI
 
+extension FocusedValues {
+    @Entry var chatEnabled: Bool?
+    @Entry var openChatWindow: (() -> Void)?
+}
+
 struct MainWindow: View {
     @Environment(\.openWindow) var openWindow
     @Environment(\.modelContext) var modelContext
@@ -18,6 +23,10 @@ struct MainWindow: View {
     @MainActor
     func openChatWindow() {
         openWindow(id: TakeNoteVM.chatWindowID)
+    }
+    
+    var chatEnabled : Bool {
+        return takeNoteVM.aiIsAvailable && notes.count > 0
     }
     
     var body: some View {
@@ -35,7 +44,7 @@ struct MainWindow: View {
                         }
                         .help("Add Note")
                     }
-                    if takeNoteVM.aiIsAvailable && notes.count > 0 {
+                    if chatEnabled {
                         Button(action: openChatWindow) {
                             Label("Chat", systemImage: "message")
                         }
@@ -91,6 +100,8 @@ struct MainWindow: View {
             )
         }
         .focusedSceneValue(\.modelContext, modelContext)
+        .focusedSceneValue(\.chatEnabled, chatEnabled)
+        .focusedSceneValue(\.openChatWindow, openChatWindow)
         .alert(
             "Something went wrong: \(takeNoteVM.errorAlertMessage)",
             isPresented: $takeNoteVM.errorAlertIsVisible

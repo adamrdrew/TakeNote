@@ -12,6 +12,10 @@ import SwiftData
 import SwiftUI
 import os
 
+extension FocusedValues {
+    @Entry var togglePreview: (() -> Void)?
+}
+
 struct NoteEditor: View {
     @Binding var openNote: Note?
     @State private var position: CodeEditor.Position = CodeEditor.Position()
@@ -22,9 +26,16 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
-    
-    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "NoteEditor")
 
+    let logger = Logger(
+        subsystem: "com.adammdrew.takenote",
+        category: "NoteEditor"
+    )
+
+    func togglePreview() {
+        showPreview.toggle()
+    }
+    
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
         let upper = max(lower, min(r.location + r.length, n))
@@ -49,9 +60,12 @@ struct NoteEditor: View {
             }
             let currentContentHash = magicFormatter.hashFor(openNote!.content)
             if currentContentHash != result.inputHash {
-                logger.critical("Mismatch between MagicFormat input and current note content.")
+                logger.critical(
+                    "Mismatch between MagicFormat input and current note content."
+                )
                 magicFormatterErrorIsPresented = true
-                magicFormatterErrorMessage = "Mismatch between MagicFormat input and current note content."
+                magicFormatterErrorMessage =
+                    "Mismatch between MagicFormat input and current note content."
                 return
             }
             openNote!.content = result.formattedText
@@ -323,6 +337,7 @@ struct NoteEditor: View {
                 }
 
             }
+            .focusedSceneValue(\.togglePreview, togglePreview)
 
         } else {
             VStack {
@@ -334,5 +349,6 @@ struct NoteEditor: View {
                 Spacer()
             }
         }
+
     }
 }

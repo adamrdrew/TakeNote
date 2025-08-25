@@ -75,6 +75,7 @@ struct TakeNoteApp: App {
         .commands {
             FileCommands()
             EditCommands()
+            WindowCommands()
         }
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {

@@ -23,6 +23,8 @@ struct EditCommands: Commands {
     @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
         CommandRegistry?
     
+    @FocusedValue(\.togglePreview) var togglePreview : (() -> Void)?
+    
     var nothingEditableIsFocused : Bool {
         return containerDeleteRegistry == nil && noteDeleteRegistry == nil && selectedNoteContainer == nil && selectedNotes == nil
     }
@@ -134,6 +136,14 @@ struct EditCommands: Commands {
             }
             .disabled(!canSetColor)
             .keyboardShortcut("c", modifiers: [.command, .option])
+            
+            Button("Toggle Preview", systemImage: "eye") {
+                if let tp = togglePreview {
+                    tp()
+                }
+            }
+            .keyboardShortcut("p", modifiers: [.command])
+            .disabled(togglePreview == nil)
 
         }
     }
