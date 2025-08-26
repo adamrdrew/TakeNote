@@ -67,10 +67,7 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
-    // --- For playing the user's preferred alert sound ---
     func playSystemErrorSound() {
-        // Play the alert sound chosen by the user in System Settings.
-        // This function is for macOS only.
         AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
     }
     
@@ -84,6 +81,8 @@ struct NoteList: View {
             // Add the destination folder to the note and save
             if let nc = takeNoteVM.selectedContainer {
                 if nc.isTag {
+                    // Error sound cues the user that they tried to do something
+                    // that isn't allowed
                     playSystemErrorSound()
                     return
                 }
@@ -193,6 +192,7 @@ struct NoteList: View {
                     note.folder = bf
                 }
             }
+            try? modelContext.save()
             return takeNoteVM.selectedNotes.map { NoteIDWrapper(id: $0.persistentModelID) }
         }
 
