@@ -7,6 +7,9 @@
 
 import SwiftData
 import SwiftUI
+import AVFoundation // For custom sound files
+import AudioToolbox // For system sounds
+
 
 extension FocusedValues {
     @Entry var noteDeleteRegistry: CommandRegistry?
@@ -64,6 +67,13 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
+    // --- For playing the user's preferred alert sound ---
+    func playSystemErrorSound() {
+        // Play the alert sound chosen by the user in System Settings.
+        // This function is for macOS only.
+        AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
+    }
+    
     func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
@@ -74,6 +84,7 @@ struct NoteList: View {
             // Add the destination folder to the note and save
             if let nc = takeNoteVM.selectedContainer {
                 if nc.isTag {
+                    playSystemErrorSound()
                     return
                 }
                 // If the note is in the hidden buffer folder then this
