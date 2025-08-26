@@ -82,6 +82,7 @@ struct TakeNoteApp: App {
             NoteEditorWindow(noteID: noteID)
         }
         .environment(search)
+        /// Having different TakeNoteVM instances per window is by design and is not a bug
         .environment(TakeNoteVM())
         .modelContainer(container)
 
@@ -90,6 +91,7 @@ struct TakeNoteApp: App {
                 .environment(search)
         }
         .environment(search)
+        /// Having different TakeNoteVM instances per window is by design and is not a bug
         .environment(TakeNoteVM())
         .modelContainer(container)
 
