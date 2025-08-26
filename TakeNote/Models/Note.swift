@@ -15,13 +15,27 @@ extension UTType {
     static let noteID = UTType(exportedAs: "com.takenote.noteid")
 }
 
-struct NoteIDWrapper: Codable, Transferable, Hashable {
+struct NoteIDWrapper: Hashable, Codable, Transferable {
     let id: PersistentIdentifier
+    private let snapshot: Data  // eager bytes to avoid work-at-quit
+
+    init(id: PersistentIdentifier) {
+        self.id = id
+        self.snapshot = (try? JSONEncoder().encode(id)) ?? Data()
+    }
 
     static var transferRepresentation: some TransferRepresentation {
-        CodableRepresentation(contentType: .noteID)
+        DataRepresentation(contentType: .noteID) { wrapper in
+            // Export: no SwiftData touched during app termination
+            wrapper.snapshot
+        } importing: { data in
+            // Import: decode when pasting (normal app runtime)
+            let id = try JSONDecoder().decode(PersistentIdentifier.self, from: data)
+            return NoteIDWrapper(id: id)
+        }
     }
 }
+
 
 @Model
 class Note: Identifiable {
