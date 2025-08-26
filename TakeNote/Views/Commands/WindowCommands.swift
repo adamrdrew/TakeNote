@@ -18,7 +18,7 @@ struct WindowCommands : Commands {
         guard let sn = selectedNotes, sn.count == 1 else {
             return true
         }
-        guard let oewr = noteOpenEditorWindowRegistry else {
+        guard let _ = noteOpenEditorWindowRegistry else {
             return true
         }
         return false
