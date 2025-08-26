@@ -86,12 +86,12 @@ struct NoteList: View {
                 modelContext.insert(newNote)
             }
         }
+        takeNoteVM.onMoveToFolder()
         do {
             try modelContext.save()
         } catch {
             return
         }
-        takeNoteVM.onMoveToFolder()
     }
 
     func folderHasStarredNotes() -> Bool {
