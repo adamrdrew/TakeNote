@@ -23,28 +23,27 @@ struct TakeNoteApp: App {
     private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
 
-    init() {
-        do {
-            container = try ModelContainer(
-                for: Note.self,
-                NoteContainer.self,
-                configurations: {
-                    #if DEBUG
-                        let config = ModelConfiguration(
-                            isStoredInMemoryOnly: true
-                        )
-                    #else
-                        let config = ModelConfiguration()
-                    #endif
-                    return config
-                }()
-            )
-        } catch {
-            fatalError("Failed to initialize ModelContainer: \(error)")
+        init() {
+            do {
+                container = try ModelContainer(
+                    for: Note.self,
+                    NoteContainer.self,
+                    configurations: {
+                        #if DEBUG
+                            let config = ModelConfiguration(
+                                isStoredInMemoryOnly: true
+                            )
+                        #else
+                            let config = ModelConfiguration()
+                        #endif
+                        return config
+                    }()
+                )
+            } catch {
+                fatalError("Failed to initialize ModelContainer: \(error)")
+            }
         }
-    }
-
-
+    
     var body: some Scene {
         Window("", id: "main-window") {
             MainWindow()
@@ -70,32 +69,32 @@ struct TakeNoteApp: App {
         }
         .environment(takeNoteVM)
         .environment(search)
-        .modelContainer(container)
         .windowToolbarStyle(.expanded)
         .commands {
             FileCommands()
             EditCommands()
             WindowCommands()
         }
+        .modelContainer(container)
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
             NoteEditorWindow(noteID: noteID)
         }
-        .modelContainer(container)
         .environment(search)
+        /// Having different TakeNoteVM instances per window is by design and is not a bug
         .environment(TakeNoteVM())
+        .modelContainer(container)
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()
                 .environment(search)
         }
-        .modelContainer(container)
         .environment(search)
+        /// Having different TakeNoteVM instances per window is by design and is not a bug
         .environment(TakeNoteVM())
-
-
+        .modelContainer(container)
 
     }
-    
+
 }

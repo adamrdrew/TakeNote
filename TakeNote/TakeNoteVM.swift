@@ -37,6 +37,7 @@ class TakeNoteVM {
     
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
+    var bufferFolder: NoteContainer?
     
     var navigationTitle : String {
         var title = "TakeNote"
@@ -59,6 +60,14 @@ class TakeNoteVM {
             && selectedContainer?.isTag == false
     }
 
+    var bufferIsEmpty: Bool {
+        return bufferFolder?.notes.isEmpty ?? true
+    }
+    
+    var bufferNotesCount : Int {
+        return bufferFolder?.notes.count ?? 0
+    }
+    
     var canEmptyTrash: Bool {
         return trashFolderSelected && !selectedContainerIsEmpty
     }
@@ -114,6 +123,8 @@ class TakeNoteVM {
         }
     }
 
+
+    
     func addTag(_ name: String = "New Tag", color: Color = Color(.blue), modelContext: ModelContext) {
         let newTag = NoteContainer(
             isTrash: false,
@@ -133,6 +144,7 @@ class TakeNoteVM {
     }
 
     func createInboxFolder(_ modelContext: ModelContext) {
+        if self.inboxFolder != nil { return }
         let inboxFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
@@ -153,6 +165,7 @@ class TakeNoteVM {
     }
 
     func createTrashFolder(_ modelContext: ModelContext) {
+        if self.trashFolder != nil { return }
         let trashFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: true,
@@ -163,6 +176,27 @@ class TakeNoteVM {
         )
         modelContext.insert(trashFolder)
         self.trashFolder = trashFolder
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
+    
+    func createBufferFolder(_ modelContext: ModelContext) {
+        if self.bufferFolder != nil { return }
+        let bufferFolder = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: false,
+            name: "Buffer",
+            symbol: "shippingbox",
+            isTag: false,
+        )
+        bufferFolder.isBuffer = true
+        modelContext.insert(bufferFolder)
+        self.bufferFolder = bufferFolder
         do {
             try modelContext.save()
         } catch {
@@ -216,11 +250,9 @@ class TakeNoteVM {
     }
 
     func folderInit(_ modelContext: ModelContext) {
-        if inboxFolderExists {
-            return
-        }
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
+        createBufferFolder(modelContext)
     }
 
     func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
@@ -243,6 +275,22 @@ class TakeNoteVM {
         selectedNotes = []
     }
 
+    func moveNotesFromBufferToInbox(_ modelContext: ModelContext) {
+        if bufferIsEmpty {
+            return
+        }
+        guard let bf = bufferFolder else {
+            return
+        }
+        guard let ibx = inboxFolder else {
+            return
+        }
+        for note : Note in Array(bf.notes) {
+            note.folder = ibx
+        }
+        try? modelContext.save()
+    }
+    
     func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 

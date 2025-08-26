@@ -10,8 +10,8 @@ import SwiftUI
 
 struct NoteEditorWindow: View {
     @Binding var noteID: NoteIDWrapper?
-
-    @State var note: Note?
+    
+    @State var windowTitle : String = ""
 
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var editorWindowVM
@@ -21,14 +21,14 @@ struct NoteEditorWindow: View {
         var folderName: String = ""
         let appName = "TakeNote"
 
-        guard let note = note else {
+        guard let note = editorWindowVM.openNote else {
             return appName
         }
 
         folderName = note.folder.name
 
         noteTitle = note.title
-        return "\(appName) - \(folderName)/\(noteTitle)"
+        return "\(appName) / \(folderName) / \(noteTitle)"
     }
 
     private func getNote() {
@@ -42,6 +42,8 @@ struct NoteEditorWindow: View {
         }
 
         editorWindowVM.openNote = loadedNote
+        windowTitle = makeWindowTitle()
+
     }
 
     var body: some View {
@@ -52,7 +54,7 @@ struct NoteEditorWindow: View {
             .onAppear {
                 getNote()
             }
-            .navigationTitle(makeWindowTitle())
+            .navigationTitle(windowTitle)
 
     }
 

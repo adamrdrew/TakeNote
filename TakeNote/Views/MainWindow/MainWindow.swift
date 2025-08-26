@@ -20,6 +20,8 @@ struct MainWindow: View {
     
     @Query() var notes: [Note]
     
+    @State var notesInBufferMessagePresented : Bool = false
+    
     @MainActor
     func openChatWindow() {
         openWindow(id: TakeNoteVM.chatWindowID)
@@ -108,8 +110,16 @@ struct MainWindow: View {
         ) {
             Button("OK", action: { takeNoteVM.errorAlertIsVisible = false })
         }
+        .alert("\(takeNoteVM.bufferNotesCount) notes found in the cut and paste buffer. They'll be returned to your Inbox.", isPresented: $notesInBufferMessagePresented) {
+            Button("OK", action: { notesInBufferMessagePresented = false })
+
+        }
         .onAppear(perform: {
             takeNoteVM.folderInit(modelContext)
+            if !takeNoteVM.bufferIsEmpty {
+                notesInBufferMessagePresented = true
+                takeNoteVM.moveNotesFromBufferToInbox(modelContext)
+            }
             
         })
         .onOpenURL(perform: { url in
