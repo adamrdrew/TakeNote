@@ -285,7 +285,7 @@ class TakeNoteVM {
         guard let ibx = inboxFolder else {
             return
         }
-        for note : Note in bf.notes {
+        for note : Note in Array(bf.notes) {
             note.folder = ibx
         }
         try? modelContext.save()
