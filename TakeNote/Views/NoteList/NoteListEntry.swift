@@ -279,14 +279,14 @@ struct NoteListEntry: View {
             }
         }
         .onAppear {
-            noteDeleteRegistry.registerCommand(id: note.id, command: moveToTrash)
-            noteRenameRegistry.registerCommand(id: note.id, command: startRename)
-            noteOpenEditorWindowRegistry.registerCommand(id: note.id, command: openEditorWindow)
+            noteDeleteRegistry.registerCommand(id: note.persistentModelID, command: moveToTrash)
+            noteRenameRegistry.registerCommand(id: note.persistentModelID, command: startRename)
+            noteOpenEditorWindowRegistry.registerCommand(id: note.persistentModelID, command: openEditorWindow)
         }
         .onDisappear {
-            noteDeleteRegistry.unregisterCommand(id: note.id)
-            noteRenameRegistry.unregisterCommand(id: note.id)
-            noteOpenEditorWindowRegistry.unregisterCommand(id: note.id)
+            noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
+            noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
+            noteOpenEditorWindowRegistry.unregisterCommand(id: note.persistentModelID)
         }
         .alert(
             "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",
