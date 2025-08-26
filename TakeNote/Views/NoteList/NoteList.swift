@@ -11,6 +11,7 @@ import SwiftUI
 extension FocusedValues {
     @Entry var noteDeleteRegistry: CommandRegistry?
     @Entry var noteRenameRegistry: CommandRegistry?
+    @Entry var noteOpenEditorWindowRegistry: CommandRegistry?
     @Entry var selectedNotes: Set<Note>?
 }
 
@@ -18,6 +19,9 @@ private struct NoteDeleteRegistryKey: EnvironmentKey {
     static let defaultValue: CommandRegistry = CommandRegistry()
 }
 private struct NoteRenameRegistryKey: EnvironmentKey {
+    static let defaultValue: CommandRegistry = CommandRegistry()
+}
+private struct NoteOpenEditorWindowRegistry: EnvironmentKey {
     static let defaultValue: CommandRegistry = CommandRegistry()
 }
 extension EnvironmentValues {
@@ -28,6 +32,10 @@ extension EnvironmentValues {
     var noteRenameRegistry: CommandRegistry {
         get { self[NoteRenameRegistryKey.self] }
         set { self[NoteRenameRegistryKey.self] = newValue }
+    }
+    var noteOpenEditorWindowRegistry: CommandRegistry {
+        get { self[NoteOpenEditorWindowRegistry.self] }
+        set { self[NoteOpenEditorWindowRegistry.self] = newValue }
     }
 }
 
@@ -40,6 +48,8 @@ struct NoteList: View {
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
+    @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
+
 
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
@@ -133,9 +143,13 @@ struct NoteList: View {
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
             .environment(\.noteRenameRegistry, noteRenameRegistry)
+            .environment(\.noteOpenEditorWindowRegistry, noteOpenEditorWindowRegistry)
+
             /// Make the command registries the focused values for this list so that the menubar commands can access them
             .focusedValue(\.noteDeleteRegistry, noteDeleteRegistry)
             .focusedValue(\.noteRenameRegistry, noteRenameRegistry)
+            .focusedValue(\.noteOpenEditorWindowRegistry, noteOpenEditorWindowRegistry)
+
             /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
             /// command registries
             .focusedValue(

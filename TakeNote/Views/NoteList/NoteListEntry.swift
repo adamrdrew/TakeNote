@@ -16,6 +16,8 @@ struct NoteListEntry: View {
     
     @Environment(\.noteDeleteRegistry) private var noteDeleteRegistry
     @Environment(\.noteRenameRegistry) private var noteRenameRegistry
+    @Environment(\.noteOpenEditorWindowRegistry) private var noteOpenEditorWindowRegistry
+
     
     var note: Note
     @State private var inRenameMode: Bool = false
@@ -279,10 +281,12 @@ struct NoteListEntry: View {
         .onAppear {
             noteDeleteRegistry.registerCommand(id: note.id, command: moveToTrash)
             noteRenameRegistry.registerCommand(id: note.id, command: startRename)
+            noteOpenEditorWindowRegistry.registerCommand(id: note.id, command: openEditorWindow)
         }
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.id)
             noteRenameRegistry.unregisterCommand(id: note.id)
+            noteOpenEditorWindowRegistry.unregisterCommand(id: note.id)
         }
         .alert(
             "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",

@@ -19,9 +19,31 @@ struct TakeNoteApp: App {
     @State private var showOnboarding = false
     var takeNoteVM = TakeNoteVM()
 
+    let container: ModelContainer
     private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
 
+        init() {
+            do {
+                container = try ModelContainer(
+                    for: Note.self,
+                    NoteContainer.self,
+                    configurations: {
+                        #if DEBUG
+                            let config = ModelConfiguration(
+                                isStoredInMemoryOnly: true
+                            )
+                        #else
+                            let config = ModelConfiguration()
+                        #endif
+                        return config
+                    }()
+                )
+            } catch {
+                fatalError("Failed to initialize ModelContainer: \(error)")
+            }
+        }
+    
     var body: some Scene {
         Window("", id: "main-window") {
             MainWindow()
@@ -47,68 +69,29 @@ struct TakeNoteApp: App {
         }
         .environment(takeNoteVM)
         .environment(search)
-        #if DEBUG
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                inMemory: true,
-                isAutosaveEnabled: true,
-                isUndoEnabled: false,
-            )
-        #else
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                isAutosaveEnabled: true,
-                isUndoEnabled: false
-            )
-        #endif
         .windowToolbarStyle(.expanded)
         .commands {
             FileCommands()
             EditCommands()
             WindowCommands()
         }
+        .modelContainer(container)
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
             NoteEditorWindow(noteID: noteID)
         }
-        #if DEBUG
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                inMemory: true,
-                isAutosaveEnabled: true,
-                isUndoEnabled: false,
-            )
-        #else
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                isAutosaveEnabled: true,
-                isUndoEnabled: false
-            )
-        #endif
         .environment(search)
         .environment(TakeNoteVM())
+        .modelContainer(container)
 
         Window("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()
                 .environment(search)
         }
-        #if DEBUG
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                inMemory: true,
-                isAutosaveEnabled: true,
-                isUndoEnabled: false,
-            )
-        #else
-            .modelContainer(
-                for: [Note.self, NoteContainer.self],
-                isAutosaveEnabled: true,
-                isUndoEnabled: false
-            )
-        #endif
         .environment(search)
         .environment(TakeNoteVM())
+        .modelContainer(container)
 
     }
 
