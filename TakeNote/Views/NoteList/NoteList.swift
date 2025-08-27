@@ -12,10 +12,14 @@ import SwiftUI
 extension FocusedValues {
     @Entry var noteDeleteRegistry: CommandRegistry?
     @Entry var noteRenameRegistry: CommandRegistry?
+    @Entry var noteCopyMarkdownLinkRegistry: CommandRegistry?
     @Entry var noteOpenEditorWindowRegistry: CommandRegistry?
     @Entry var selectedNotes: Set<Note>?
 }
 
+private struct NoteCopyMarkdownLinkRegistryKey: EnvironmentKey {
+    static let defaultValue: CommandRegistry = CommandRegistry()
+}
 private struct NoteDeleteRegistryKey: EnvironmentKey {
     static let defaultValue: CommandRegistry = CommandRegistry()
 }
@@ -29,6 +33,10 @@ extension EnvironmentValues {
     var noteDeleteRegistry: CommandRegistry {
         get { self[NoteDeleteRegistryKey.self] }
         set { self[NoteDeleteRegistryKey.self] = newValue }
+    }
+    var noteCopyMarkdownLinkRegistry: CommandRegistry {
+        get { self[NoteCopyMarkdownLinkRegistryKey.self] }
+        set { self[NoteCopyMarkdownLinkRegistryKey.self] = newValue }
     }
     var noteRenameRegistry: CommandRegistry {
         get { self[NoteRenameRegistryKey.self] }
@@ -49,6 +57,7 @@ struct NoteList: View {
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
+    @State var noteCopyMarkdownLinkRegistry : CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
     
     
@@ -153,6 +162,7 @@ struct NoteList: View {
             }
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
+            .environment(\.noteCopyMarkdownLinkRegistry, noteCopyMarkdownLinkRegistry)
             .environment(\.noteRenameRegistry, noteRenameRegistry)
             .environment(
                 \.noteOpenEditorWindowRegistry,
@@ -162,6 +172,7 @@ struct NoteList: View {
             /// Make the command registries the focused values for this list so that the menubar commands can access them
             .focusedValue(\.noteDeleteRegistry, noteDeleteRegistry)
             .focusedValue(\.noteRenameRegistry, noteRenameRegistry)
+            .focusedValue(\.noteCopyMarkdownLinkRegistry, noteCopyMarkdownLinkRegistry)
             .focusedValue(
                 \.noteOpenEditorWindowRegistry,
                 noteOpenEditorWindowRegistry

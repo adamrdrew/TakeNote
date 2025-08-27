@@ -17,36 +17,40 @@ struct EditCommands: Commands {
         NoteContainer?
 
     @FocusedValue(\.noteDeleteRegistry) var noteDeleteRegistry: CommandRegistry?
+    @FocusedValue(\.noteCopyMarkdownLinkRegistry) var noteCopyMarkdownLinkRegistry: CommandRegistry?
+
     @FocusedValue(\.noteRenameRegistry) var noteRenameRegistry: CommandRegistry?
     @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
 
     @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
         CommandRegistry?
-    
-    @FocusedValue(\.togglePreview) var togglePreview : (() -> Void)?
-    
-    @FocusedValue(\.doMagicFormat) var doMagicFormat : (() -> Void)?
-    @FocusedValue(\.textIsSelected) var textIsSelected : Bool?
-    @FocusedValue(\.showAssistantPopover) var showAssistantPopover : (() -> Void)?
-    
-    var nothingEditableIsFocused : Bool {
-        return containerDeleteRegistry == nil && noteDeleteRegistry == nil && selectedNoteContainer == nil && selectedNotes == nil
+
+    @FocusedValue(\.togglePreview) var togglePreview: (() -> Void)?
+
+    @FocusedValue(\.doMagicFormat) var doMagicFormat: (() -> Void)?
+    @FocusedValue(\.textIsSelected) var textIsSelected: Bool?
+    @FocusedValue(\.showAssistantPopover) var showAssistantPopover:
+        (() -> Void)?
+
+    var nothingEditableIsFocused: Bool {
+        return containerDeleteRegistry == nil && noteDeleteRegistry == nil
+            && selectedNoteContainer == nil && selectedNotes == nil
     }
- 
+
     var selectedContainerIsPermanent: Bool {
         if let snc = selectedNoteContainer {
             return snc.isTrash || snc.isInbox
         }
         return false
     }
-    
+
     var multipleNotesAreSelected: Bool {
         if let sn = selectedNotes {
             return sn.count != 1
         }
         return false
     }
-    
+
     var noteIsInTrash: Bool {
         if let sn = selectedNotes {
             if let note = sn.first {
@@ -55,8 +59,7 @@ struct EditCommands: Commands {
         }
         return false
     }
-    
-    
+
     var canRename: Bool {
         if nothingEditableIsFocused {
             return false
@@ -72,7 +75,7 @@ struct EditCommands: Commands {
         }
         return true
     }
-    
+
     var canDelete: Bool {
         if nothingEditableIsFocused {
             return false
@@ -85,7 +88,7 @@ struct EditCommands: Commands {
         }
         return true
     }
-    
+
     var canSetColor: Bool {
         if let sc = selectedNoteContainer {
             return sc.isTag
@@ -112,6 +115,19 @@ struct EditCommands: Commands {
             .disabled(!canRename)
             .keyboardShortcut("R", modifiers: [.command])
 
+            Button("Copy Markdown Link", systemImage: "link.badge.plus") {
+                print("EditMenu.copyMarkdownLink")
+                if let sn = selectedNotes {
+                    if let sc = sn.first {
+                        if let cml = noteCopyMarkdownLinkRegistry {
+                            cml.runCommand(id: sc.id)
+                        }
+                    }
+                }
+            }
+            .disabled(noteCopyMarkdownLinkRegistry == nil || selectedNotes == nil || selectedNotes?.count != 1 )
+            .keyboardShortcut("C", modifiers: [.command, .option])
+
             Button("Delete", systemImage: "delete.left") {
                 if let sc = selectedNoteContainer {
                     if let rr = containerDeleteRegistry {
@@ -128,7 +144,7 @@ struct EditCommands: Commands {
             }
             .disabled(!canDelete)
             .keyboardShortcut(.delete, modifiers: [.command])
-            
+
             Button("Set Color", systemImage: "paintpalette") {
                 if let sc = selectedNoteContainer {
                     if sc.isTag {
@@ -140,7 +156,7 @@ struct EditCommands: Commands {
             }
             .disabled(!canSetColor)
             .keyboardShortcut("c", modifiers: [.command, .option])
-            
+
             Button("Toggle Preview", systemImage: "eye") {
                 if let tp = togglePreview {
                     tp()
@@ -148,7 +164,7 @@ struct EditCommands: Commands {
             }
             .keyboardShortcut("p", modifiers: [.command])
             .disabled(togglePreview == nil)
-            
+
             Button("MagicFormat", systemImage: "wand.and.sparkles") {
                 if let dmf = doMagicFormat {
                     dmf()
@@ -156,15 +172,15 @@ struct EditCommands: Commands {
             }
             .keyboardShortcut("f", modifiers: [.command, .option])
             .disabled(doMagicFormat == nil)
-            
+
             Button("Markdown Assistant", systemImage: "apple.intelligence") {
                 if let sap = showAssistantPopover {
                     sap()
                 }
             }
             .keyboardShortcut("a", modifiers: [.command, .option])
-            .disabled(textIsSelected == nil || textIsSelected! == false )
-            
+            .disabled(textIsSelected == nil || textIsSelected! == false)
+
             Button("Toggle Star", systemImage: "star") {
                 if let sn = selectedNotes {
                     for note in sn {
