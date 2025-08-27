@@ -5,10 +5,9 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
+import AudioToolbox  // For system sounds
 import SwiftData
 import SwiftUI
-import AudioToolbox // For system sounds
-
 
 extension FocusedValues {
     @Entry var noteDeleteRegistry: CommandRegistry?
@@ -51,7 +50,8 @@ struct NoteList: View {
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
-
+    
+    
 
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
@@ -66,10 +66,12 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
+    
+
     func playSystemErrorSound() {
         AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
     }
-    
+
     func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
@@ -152,12 +154,18 @@ struct NoteList: View {
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
             .environment(\.noteRenameRegistry, noteRenameRegistry)
-            .environment(\.noteOpenEditorWindowRegistry, noteOpenEditorWindowRegistry)
+            .environment(
+                \.noteOpenEditorWindowRegistry,
+                noteOpenEditorWindowRegistry
+            )
 
             /// Make the command registries the focused values for this list so that the menubar commands can access them
             .focusedValue(\.noteDeleteRegistry, noteDeleteRegistry)
             .focusedValue(\.noteRenameRegistry, noteRenameRegistry)
-            .focusedValue(\.noteOpenEditorWindowRegistry, noteOpenEditorWindowRegistry)
+            .focusedValue(
+                \.noteOpenEditorWindowRegistry,
+                noteOpenEditorWindowRegistry
+            )
 
             /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
             /// command registries
@@ -173,26 +181,33 @@ struct NoteList: View {
                         takeNoteVM.onNoteSelect(note)
                     }
                 }
-                // We look in the previously selected notes so we can generate summaries and reindex
+                // We look in the previously selected notes so we can generate summaries, link objects, and reindex
                 for note in oldValue {
                     Task { await note.generateSummary() }
                     if note.contentHasChanged() {
                         search.reindex(note: note)
+                        LinkManager(modelContext: modelContext).generateLinksFor(note)
                     }
                 }
 
             }
         }
-        .copyable(takeNoteVM.selectedNotes.map { NoteIDWrapper(id: $0.persistentModelID) })
+        .copyable(
+            takeNoteVM.selectedNotes.map {
+                NoteIDWrapper(id: $0.persistentModelID)
+            }
+        )
         .cuttable(for: NoteIDWrapper.self) {
             // Stash the notes in the hidden buffer folder
-            for note : Note in takeNoteVM.selectedNotes {
+            for note: Note in takeNoteVM.selectedNotes {
                 if let bf = takeNoteVM.bufferFolder {
                     note.folder = bf
                 }
             }
             try? modelContext.save()
-            return takeNoteVM.selectedNotes.map { NoteIDWrapper(id: $0.persistentModelID) }
+            return takeNoteVM.selectedNotes.map {
+                NoteIDWrapper(id: $0.persistentModelID)
+            }
         }
 
         .pasteDestination(for: NoteIDWrapper.self) { wrappedIDs in
