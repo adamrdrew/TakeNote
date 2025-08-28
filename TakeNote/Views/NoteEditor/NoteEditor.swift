@@ -35,14 +35,15 @@ struct NoteEditor: View {
     @State private var openNoteHasBacklinks: Bool = false
 
     @StateObject private var magicFormatter = MagicFormatter()
-
+    
+    @FocusState var isInputActive: Bool
     @Binding var openNote: Note?
     
     #if os(macOS)
     let toolbarPosition = ToolbarItemPlacement.secondaryAction
     #endif
     #if os(iOS)
-    let toolbarPosition = ToolbarItemPlacement.bottomBar
+    let toolbarPosition = ToolbarItemPlacement.automatic
     #endif
 
     let logger = Logger(
@@ -245,6 +246,7 @@ struct NoteEditor: View {
                         #endif
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
+                        .focused($isInputActive)
                         .environment(
                             \.codeEditorTheme,
                             colorScheme == .dark
@@ -314,7 +316,7 @@ struct NoteEditor: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: toolbarPosition) {
+                ToolbarItemGroup(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
                             showPreview.toggle()

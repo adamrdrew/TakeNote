@@ -115,15 +115,23 @@ struct NoteListEntry: View {
                 }
 
                 Spacer(minLength: 0)
+                #if os(macOS)
+                    Button("", systemImage: note.starred ? "star.fill" : "star")
+                    {
+                        note.starred.toggle()
+                        try? modelContext.save()
+                    }
+                    .buttonStyle(.plain)
+                    .imageScale(.medium)
+                    .foregroundStyle(note.starred ? .yellow : .secondary)
+                    .help(note.starred ? "Unstar" : "Star")
+                #else
+                    if note.starred {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(Color(.yellow))
+                    }
 
-                Button("", systemImage: note.starred ? "star.fill" : "star") {
-                    note.starred.toggle()
-                    try? modelContext.save()
-                }
-                .buttonStyle(.plain)
-                .imageScale(.medium)
-                .foregroundStyle(note.starred ? .yellow : .secondary)
-                .help(note.starred ? "Unstar" : "Star")
+                #endif
             }
 
             // Metadata row
@@ -198,6 +206,28 @@ struct NoteListEntry: View {
                 }
             }
         }
+        // trailing = left swipe
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive, action: { moveToTrash() }) {
+                Label("Trash", systemImage: "trash")
+            }
+            Button(action: { note.starred.toggle() }) {
+                Label(
+                    note.starred ? "Unstar" : "Star",
+                    systemImage: note.starred ? "star.slash" : "star"
+                )
+            }
+            .tint(.yellow)
+        }
+        // leading = right swipe
+        .swipeActions(edge: .leading) {
+            Button(action: { inMoveToTrashMode = true }) {
+                Label("Move…", systemImage: "folder")
+            }
+            Button(action: { inMoveToTrashMode = true }) {
+                Label("Tag…", systemImage: "tag")
+            }
+        }
         .draggable(NoteIDWrapper(id: note.persistentModelID)) {
             ZStack {
                 RoundedRectangle(cornerRadius: 1.0, style: .continuous)
@@ -261,13 +291,13 @@ struct NoteListEntry: View {
 
             Button(action: {
                 #if os(macOS)
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(note.getURL(), forType: .string)
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(note.getURL(), forType: .string)
                 #endif
                 #if os(iOS)
-                let pasteboard = UIPasteboard.general
-                pasteboard.string = note.getURL()
+                    let pasteboard = UIPasteboard.general
+                    pasteboard.string = note.getURL()
                 #endif
             }) {
                 Label("Copy URL", systemImage: "link")
