@@ -32,6 +32,10 @@ class NoteLinkManager {
         return linksToThisNote.compactMap(\.sourceNote)
     }
     
+    func notesLinkToDestination(_ note: Note) -> Bool {
+        getNotesThatLinkTo(note).isEmpty == false
+    }
+    
     func generateLinksFor(_ note: Note) {
         /// Get the link models for this note
         let linksFromThisNote = getLinksForSourceNote(note)

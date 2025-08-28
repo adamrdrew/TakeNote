@@ -20,6 +20,7 @@ extension FocusedValues {
 }
 
 struct NoteEditor: View {
+    @Environment(\.modelContext) var modelContext: ModelContext
     @Binding var openNote: Note?
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
@@ -30,6 +31,7 @@ struct NoteEditor: View {
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
     @StateObject private var magicFormatter = MagicFormatter()
+    @State var openNoteHasBacklinks: Bool = false
 
     let logger = Logger(
         subsystem: "com.adammdrew.takenote",
@@ -259,6 +261,9 @@ struct NoteEditor: View {
             }
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
+                openNoteHasBacklinks = NoteLinkManager(
+                    modelContext: modelContext
+                ).notesLinkToDestination(openNote!)
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 VStack {
@@ -296,21 +301,23 @@ struct NoteEditor: View {
 
                 }
 
-                ToolbarItem(placement: .secondaryAction) {
-                    Button(action: {
-                        showBackLinks.toggle()
-                    }) {
-                        Image(
-                            systemName: "link"
-                        )
-                    }
-                    .help("Backlinks")
-                    .popover(
-                        isPresented: $showBackLinks,
-                        attachmentAnchor: .point(.center),
-                        arrowEdge: .bottom
-                    ) {
-                        BackLinks()
+                if openNoteHasBacklinks {
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button(action: {
+                            showBackLinks.toggle()
+                        }) {
+                            Image(
+                                systemName: "link"
+                            )
+                        }
+                        .help("Backlinks")
+                        .popover(
+                            isPresented: $showBackLinks,
+                            attachmentAnchor: .point(.center),
+                            arrowEdge: .bottom
+                        ) {
+                            BackLinks()
+                        }
                     }
                 }
 
