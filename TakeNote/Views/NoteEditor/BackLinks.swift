@@ -25,13 +25,6 @@ struct BackLinks: View {
                         .background(Capsule().fill(.secondary.opacity(0.2)))
                 }
                 Spacer()
-                Button {
-                    refresh()
-                } label: {
-                    Image(systemName: "arrow.clockwise")
-                }
-                .buttonStyle(.borderless)
-                .help("Refresh")
             }
             .padding(.horizontal)
             .padding(.top, 10)
