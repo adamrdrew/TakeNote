@@ -197,7 +197,7 @@ struct NoteList: View {
                     Task { await note.generateSummary() }
                     if note.contentHasChanged() {
                         search.reindex(note: note)
-                        LinkManager(modelContext: modelContext).generateLinksFor(note)
+                        NoteLinkManager(modelContext: modelContext).generateLinksFor(note)
                     }
                 }
 

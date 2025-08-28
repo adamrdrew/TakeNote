@@ -9,7 +9,7 @@ import SwiftData
 import SwiftUI
 
 @Model
-class Link {
+class NoteLink {
     var sourceNote: Note
     var destinationNote: Note
     

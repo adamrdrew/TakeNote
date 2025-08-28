@@ -308,6 +308,7 @@ struct NoteListEntry: View {
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
             noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
+            noteCopyMarkdownLinkRegistry.unregisterCommand(id: note.persistentModelID)
             noteOpenEditorWindowRegistry.unregisterCommand(
                 id: note.persistentModelID
             )

@@ -10,7 +10,7 @@ import SwiftData
 
 @MainActor
 @Observable
-class LinkManager {
+class NoteLinkManager {
     
     var modelContext : ModelContext
     
@@ -20,10 +20,16 @@ class LinkManager {
     
     // MARK: Public Methods
     
-    func getLinksToDestinationNote(_ note: Note) -> [Link] {
+    func getLinksToDestinationNote(_ note: Note) -> [NoteLink] {
         let links = getLinksForDestinationNote(note)
         guard let linksToThisNote = links else { return [] }
         return linksToThisNote
+    }
+    
+    func getNotesThatLinkTo(_ note: Note) -> [Note] {
+        let links = getLinksForDestinationNote(note)
+        guard let linksToThisNote = links else { return [] }
+        return linksToThisNote.compactMap(\.sourceNote)
     }
     
     func generateLinksFor(_ note: Note) {
@@ -69,29 +75,29 @@ class LinkManager {
         return result
     }
     
-    private func getLinksForSourceNote(_ note: Note) -> [Link]? {
+    private func getLinksForSourceNote(_ note: Note) -> [NoteLink]? {
         /// Query all of the links that have this note as the source
         let sourceUUID = note.uuid
-        let linksFromThisNote: [Link]? = try? modelContext.fetch(
-            FetchDescriptor<Link>(
+        let linksFromThisNote: [NoteLink]? = try? modelContext.fetch(
+            FetchDescriptor<NoteLink>(
                 predicate: #Predicate { $0.sourceNote.uuid == sourceUUID }
             )
         )
         return linksFromThisNote
     }
     
-    private func getLinksForDestinationNote(_ note: Note) -> [Link]? {
+    private func getLinksForDestinationNote(_ note: Note) -> [NoteLink]? {
         /// Query all of the links that have this note as the source
         let destinationUUID = note.uuid
-        let linksFromThisNote: [Link]? = try? modelContext.fetch(
-            FetchDescriptor<Link>(
+        let linksToThisNote: [NoteLink]? = try? modelContext.fetch(
+            FetchDescriptor<NoteLink>(
                 predicate: #Predicate { $0.destinationNote.uuid == destinationUUID }
             )
         )
-        return linksFromThisNote
+        return linksToThisNote
     }
     
-    private func deleteLinks(links: [Link]) {
+    private func deleteLinks(links: [NoteLink]) {
         /// Delete all of these links
         for link in links {
             modelContext.delete(link)
@@ -127,9 +133,11 @@ class LinkManager {
         /// Create links for any UUIDs that resolved to a Note
         for linkToUUID in linkToUUIDs {
             guard let targetNote = noteByUUID[linkToUUID] else { continue }
-            let newLink = Link(sourceNote: note, destinationNote: targetNote)
+            let newLink = NoteLink(sourceNote: note, destinationNote: targetNote)
             modelContext.insert(newLink)
         }
+        
+        try? modelContext.save()
     }
     
 

@@ -25,6 +25,7 @@ struct NoteEditor: View {
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
     @State private var magicFormatterErrorMessage: String = ""
+    @State private var showBackLinks: Bool = false
     @State var magicFormatterErrorIsPresented: Bool = false
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
     @State private var isAssistantPopoverPresented: Bool = false
@@ -38,11 +39,11 @@ struct NoteEditor: View {
     func togglePreview() {
         showPreview.toggle()
     }
-    
+
     func showAssistantPopover() {
         isAssistantPopoverPresented = true
     }
-    
+
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
         let upper = max(lower, min(r.location + r.length, n))
@@ -294,6 +295,25 @@ struct NoteEditor: View {
                     .help(showPreview ? "Hide Preview" : "Show Preview")
 
                 }
+
+                ToolbarItem(placement: .secondaryAction) {
+                    Button(action: {
+                        showBackLinks.toggle()
+                    }) {
+                        Image(
+                            systemName: "link"
+                        )
+                    }
+                    .help("Backlinks")
+                    .popover(
+                        isPresented: $showBackLinks,
+                        attachmentAnchor: .point(.center),
+                        arrowEdge: .bottom
+                    ) {
+                        BackLinks()
+                    }
+                }
+
                 if magicFormatter.isAvailable {
                     ToolbarItem(placement: .secondaryAction) {
                         Button(action: {
