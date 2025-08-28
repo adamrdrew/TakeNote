@@ -106,6 +106,7 @@ class NoteLinkManager {
         for link in links {
             modelContext.delete(link)
         }
+        try? modelContext.save()
     }
 
     private func getNotesForUUIDs(_ linkToUUIDs: [UUID]) -> [Note]? {

@@ -28,7 +28,7 @@ struct ViewCommands: Commands {
                 sb()
             }
             .disabled(backlinksCommandDisabled)
-            .keyboardShortcut("B", modifiers: [.command])
+            .keyboardShortcut("B", modifiers: [.command, .option])
 
             Button("Toggle Preview", systemImage: "eye") {
                 if let tp = togglePreview {
