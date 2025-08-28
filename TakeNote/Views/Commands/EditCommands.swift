@@ -25,7 +25,6 @@ struct EditCommands: Commands {
     @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
         CommandRegistry?
 
-    @FocusedValue(\.togglePreview) var togglePreview: (() -> Void)?
 
     @FocusedValue(\.doMagicFormat) var doMagicFormat: (() -> Void)?
     @FocusedValue(\.textIsSelected) var textIsSelected: Bool?
@@ -156,14 +155,6 @@ struct EditCommands: Commands {
             }
             .disabled(!canSetColor)
             .keyboardShortcut("c", modifiers: [.command, .option])
-
-            Button("Toggle Preview", systemImage: "eye") {
-                if let tp = togglePreview {
-                    tp()
-                }
-            }
-            .keyboardShortcut("p", modifiers: [.command])
-            .disabled(togglePreview == nil)
 
             Button("MagicFormat", systemImage: "wand.and.sparkles") {
                 if let dmf = doMagicFormat {

@@ -75,6 +75,7 @@ struct TakeNoteApp: App {
             FileCommands()
             EditCommands()
             WindowCommands()
+            ViewCommands()
         }
         .modelContainer(container)
 

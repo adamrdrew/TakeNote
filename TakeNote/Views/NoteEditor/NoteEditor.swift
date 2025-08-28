@@ -17,6 +17,8 @@ extension FocusedValues {
     @Entry var doMagicFormat: (() -> Void)?
     @Entry var textIsSelected: Bool?
     @Entry var showAssistantPopover: (() -> Void)?
+    @Entry var showBacklinks: (() -> Void)?
+    @Entry var openNoteHasBacklinks: Bool?
 }
 
 struct NoteEditor: View {
@@ -46,6 +48,10 @@ struct NoteEditor: View {
         showPreview.toggle()
     }
 
+    func showBacklinks() {
+        showBackLinks.toggle()
+    }
+    
     func showAssistantPopover() {
         isAssistantPopoverPresented = true
     }
@@ -379,6 +385,8 @@ struct NoteEditor: View {
             .focusedSceneValue(\.doMagicFormat, doMagicFormat)
             .focusedSceneValue(\.textIsSelected, textIsSelected)
             .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
+            .focusedSceneValue(\.openNoteHasBacklinks, openNoteHasBacklinks)
+            .focusedSceneValue(\.showBacklinks, showBacklinks)
 
         } else {
             VStack {
