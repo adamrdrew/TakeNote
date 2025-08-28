@@ -33,6 +33,7 @@ struct MessageBubble: View {
                             Label("Accept", systemImage: "checkmark")
                                 .symbolRenderingMode(.monochrome)
                         }
+                        .padding(10)
                         .glassEffect(.regular.tint(.green).interactive())
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: true, vertical: false)
