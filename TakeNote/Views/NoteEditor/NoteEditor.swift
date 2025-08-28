@@ -316,7 +316,7 @@ struct NoteEditor: View {
                 }
             }
             .toolbar {
-                ToolbarItemGroup(placement: toolbarPosition) {
+                ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
                             showPreview.toggle()
