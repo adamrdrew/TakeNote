@@ -6,7 +6,13 @@
 //
 import SwiftData
 import SwiftUI
+#if os(macOS)
 import AppKit
+#endif
+#if os(iOS)
+import UIKit
+#endif
+
 
 @Model
 class NoteContainer: Identifiable {
@@ -73,7 +79,12 @@ class NoteContainer: Identifiable {
     }
     
     func setColor(_ color: Color) {
+        #if os(macOS)
         guard let ns = NSColor(color).usingColorSpace(.sRGB) else { return }
+        #endif
+        #if os(iOS)
+        let ns = UIColor(color)
+        #endif
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 1
         ns.getRed(&r, green: &g, blue: &b, alpha: &a)
         let R = UInt32(clamping: Int(r * 255.0))

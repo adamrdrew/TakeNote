@@ -5,9 +5,15 @@
 //  Created by Adam Drew on 8/5/25.
 //
 
-import AppKit
 import SwiftData
 import SwiftUI
+
+#if os(macOS)
+    import AppKit
+#endif
+#if os(iOS)
+    import UIKit
+#endif
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
@@ -36,9 +42,15 @@ struct NoteListEntry: View {
     private let vSpacing: CGFloat = 6
 
     func copyMarkdownLink() {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(note.getMarkdownLink(), forType: .string)
+        #if os(macOS)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(note.getMarkdownLink(), forType: .string)
+        #endif
+        #if os(iOS)
+            let pasteboard = UIPasteboard.general
+            pasteboard.string = note.getMarkdownLink()
+        #endif
     }
 
     func openEditorWindow() {
@@ -248,9 +260,15 @@ struct NoteListEntry: View {
             }
 
             Button(action: {
+                #if os(macOS)
                 let pasteboard = NSPasteboard.general
                 pasteboard.clearContents()
                 pasteboard.setString(note.getURL(), forType: .string)
+                #endif
+                #if os(iOS)
+                let pasteboard = UIPasteboard.general
+                pasteboard.string = note.getURL()
+                #endif
             }) {
                 Label("Copy URL", systemImage: "link")
             }
@@ -308,7 +326,9 @@ struct NoteListEntry: View {
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
             noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
-            noteCopyMarkdownLinkRegistry.unregisterCommand(id: note.persistentModelID)
+            noteCopyMarkdownLinkRegistry.unregisterCommand(
+                id: note.persistentModelID
+            )
             noteOpenEditorWindowRegistry.unregisterCommand(
                 id: note.persistentModelID
             )

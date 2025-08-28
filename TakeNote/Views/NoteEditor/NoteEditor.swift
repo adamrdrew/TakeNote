@@ -37,6 +37,13 @@ struct NoteEditor: View {
     @StateObject private var magicFormatter = MagicFormatter()
 
     @Binding var openNote: Note?
+    
+    #if os(macOS)
+    let toolbarPosition = ToolbarItemPlacement.secondaryAction
+    #endif
+    #if os(iOS)
+    let toolbarPosition = ToolbarItemPlacement.bottomBar
+    #endif
 
     let logger = Logger(
         subsystem: "com.adammdrew.takenote",
@@ -229,11 +236,13 @@ struct NoteEditor: View {
                                 wrapText: true
                             )
                         )
+                        #if os(macOS)
                         .onExitCommand(perform: {
                             withAnimation {
                                 showPreview.toggle()
                             }
                         })
+                        #endif
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
                         .environment(
@@ -264,9 +273,11 @@ struct NoteEditor: View {
                             )
 
                         }
+                        #if os(macOS)
                         .onExitCommand(perform: {
                             showPreview.toggle()
                         })
+                        #endif
                         .onTapGesture {
                             withAnimation {
                                 showPreview.toggle()
@@ -303,7 +314,7 @@ struct NoteEditor: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .secondaryAction) {
+                ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
                             showPreview.toggle()
@@ -320,7 +331,7 @@ struct NoteEditor: View {
                 }
 
                 if openNoteHasBacklinks {
-                    ToolbarItem(placement: .secondaryAction) {
+                    ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
                             showBackLinks.toggle()
                         }) {
@@ -340,7 +351,7 @@ struct NoteEditor: View {
                 }
 
                 if magicFormatter.isAvailable {
-                    ToolbarItem(placement: .secondaryAction) {
+                    ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
                             doMagicFormat()
                         }) {
@@ -356,7 +367,7 @@ struct NoteEditor: View {
 
                 if textIsSelected {
 
-                    ToolbarItem(placement: .secondaryAction) {
+                    ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
                             isAssistantPopoverPresented.toggle()
                         }) {

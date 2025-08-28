@@ -77,7 +77,12 @@ struct MainWindow: View {
                 takeNoteVM.showMultiNoteView = newValue
             }
         }
+        #if os(macOS)
         .background(Color(NSColor.textBackgroundColor))
+        #endif
+        #if os(iOS)
+        .background(Color(UIColor.systemBackground))
+        #endif
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(takeNoteVM.navigationTitle)
         .alert(

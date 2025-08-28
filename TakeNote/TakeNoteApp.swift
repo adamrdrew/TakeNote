@@ -46,7 +46,7 @@ struct TakeNoteApp: App {
         }
     
     var body: some Scene {
-        Window("", id: "main-window") {
+        WindowGroup(id: "main-window") {
             MainWindow()
                 .sheet(isPresented: $showOnboarding) {
                     WelcomeView {
@@ -70,7 +70,9 @@ struct TakeNoteApp: App {
         }
         .environment(takeNoteVM)
         .environment(search)
+        #if os(macOS)
         .windowToolbarStyle(.expanded)
+        #endif
         .commands {
             FileCommands()
             EditCommands()
@@ -88,7 +90,7 @@ struct TakeNoteApp: App {
         .environment(TakeNoteVM())
         .modelContainer(container)
 
-        Window("TakeNote - AI Chat", id: "chat-window") {
+        WindowGroup("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()
                 .environment(search)
         }

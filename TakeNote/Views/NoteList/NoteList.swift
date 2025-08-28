@@ -78,7 +78,9 @@ struct NoteList: View {
     
 
     func playSystemErrorSound() {
+        #if os(macOS)
         AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
+        #endif
     }
 
     func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
@@ -203,6 +205,7 @@ struct NoteList: View {
 
             }
         }
+        #if os(maacOS)
         .copyable(
             takeNoteVM.selectedNotes.map {
                 NoteIDWrapper(id: $0.persistentModelID)
@@ -224,6 +227,7 @@ struct NoteList: View {
         .pasteDestination(for: NoteIDWrapper.self) { wrappedIDs in
             pasteNote(wrappedIDs)
         }
+        #endif
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let result = fileImport(
                 items: items,
