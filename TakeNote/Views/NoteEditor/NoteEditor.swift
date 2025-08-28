@@ -17,18 +17,26 @@ extension FocusedValues {
     @Entry var doMagicFormat: (() -> Void)?
     @Entry var textIsSelected: Bool?
     @Entry var showAssistantPopover: (() -> Void)?
+    @Entry var showBacklinks: (() -> Void)?
+    @Entry var openNoteHasBacklinks: Bool?
 }
 
 struct NoteEditor: View {
-    @Binding var openNote: Note?
+    @Environment(\.modelContext) var modelContext: ModelContext
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
+
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
     @State private var magicFormatterErrorMessage: String = ""
-    @State var magicFormatterErrorIsPresented: Bool = false
-    @Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @State private var showBackLinks: Bool = false
+    @State private var magicFormatterErrorIsPresented: Bool = false
     @State private var isAssistantPopoverPresented: Bool = false
+    @State private var openNoteHasBacklinks: Bool = false
+
     @StateObject private var magicFormatter = MagicFormatter()
+
+    @Binding var openNote: Note?
 
     let logger = Logger(
         subsystem: "com.adammdrew.takenote",
@@ -38,11 +46,15 @@ struct NoteEditor: View {
     func togglePreview() {
         showPreview.toggle()
     }
-    
+
+    func showBacklinks() {
+        showBackLinks.toggle()
+    }
+
     func showAssistantPopover() {
         isAssistantPopoverPresented = true
     }
-    
+
     private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
         let lower = max(0, min(r.location, n))
         let upper = max(lower, min(r.location + r.length, n))
@@ -190,6 +202,14 @@ struct NoteEditor: View {
         - If unable per the narrow policy, output exactly: I don't know how to do that.
         """
 
+    fileprivate func setShowBacklinks() {
+        if let on = openNote {
+            openNoteHasBacklinks = NoteLinkManager(
+                modelContext: modelContext
+            ).notesLinkToDestination(on)
+        }
+    }
+    
     var body: some View {
         if let note = openNote {
             ZStack {
@@ -258,6 +278,10 @@ struct NoteEditor: View {
             }
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
+                setShowBacklinks()
+            }
+            .onAppear() {
+                setShowBacklinks()
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 VStack {
@@ -294,6 +318,27 @@ struct NoteEditor: View {
                     .help(showPreview ? "Hide Preview" : "Show Preview")
 
                 }
+
+                if openNoteHasBacklinks {
+                    ToolbarItem(placement: .secondaryAction) {
+                        Button(action: {
+                            showBackLinks.toggle()
+                        }) {
+                            Image(
+                                systemName: "link"
+                            )
+                        }
+                        .help("Backlinks")
+                        .popover(
+                            isPresented: $showBackLinks,
+                            attachmentAnchor: .point(.center),
+                            arrowEdge: .bottom
+                        ) {
+                            BackLinks()
+                        }
+                    }
+                }
+
                 if magicFormatter.isAvailable {
                     ToolbarItem(placement: .secondaryAction) {
                         Button(action: {
@@ -348,6 +393,8 @@ struct NoteEditor: View {
             .focusedSceneValue(\.doMagicFormat, doMagicFormat)
             .focusedSceneValue(\.textIsSelected, textIsSelected)
             .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
+            .focusedSceneValue(\.openNoteHasBacklinks, openNoteHasBacklinks)
+            .focusedSceneValue(\.showBacklinks, showBacklinks)
 
         } else {
             VStack {

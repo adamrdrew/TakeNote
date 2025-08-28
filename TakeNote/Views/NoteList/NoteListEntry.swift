@@ -13,12 +13,14 @@ struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
     @Environment(TakeNoteVM.self) var takeNoteVM
-    
-    @Environment(\.noteDeleteRegistry) private var noteDeleteRegistry
-    @Environment(\.noteRenameRegistry) private var noteRenameRegistry
-    @Environment(\.noteOpenEditorWindowRegistry) private var noteOpenEditorWindowRegistry
 
-    
+    @Environment(\.noteDeleteRegistry) private var noteDeleteRegistry
+    @Environment(\.noteCopyMarkdownLinkRegistry) private
+        var noteCopyMarkdownLinkRegistry
+    @Environment(\.noteRenameRegistry) private var noteRenameRegistry
+    @Environment(\.noteOpenEditorWindowRegistry) private
+        var noteOpenEditorWindowRegistry
+
     var note: Note
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
@@ -32,6 +34,12 @@ struct NoteListEntry: View {
     private let horizontalPadding: CGFloat = 12
     private let hSpacing: CGFloat = 8
     private let vSpacing: CGFloat = 6
+
+    func copyMarkdownLink() {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        pasteboard.setString(note.getMarkdownLink(), forType: .string)
+    }
 
     func openEditorWindow() {
         openWindow(
@@ -131,7 +139,10 @@ struct NoteListEntry: View {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
 
                 if note.aiSummaryIsGenerating {
-                    AIMessage(message: "AI Summary Generating...", font: .callout)
+                    AIMessage(
+                        message: "AI Summary Generating...",
+                        font: .callout
+                    )
 
                 } else {
                     if !note.aiSummary.isEmpty {
@@ -193,7 +204,7 @@ struct NoteListEntry: View {
                         .foregroundColor(.gray)
                 }
             }
-                
+
         }
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, horizontalPadding)
@@ -244,9 +255,7 @@ struct NoteListEntry: View {
                 Label("Copy URL", systemImage: "link")
             }
             Button(action: {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(note.getMarkdownLink(), forType: .string)
+                copyMarkdownLink()
             }) {
                 Label("Copy Markdown Link", systemImage: "link")
             }
@@ -279,14 +288,30 @@ struct NoteListEntry: View {
             }
         }
         .onAppear {
-            noteDeleteRegistry.registerCommand(id: note.persistentModelID, command: moveToTrash)
-            noteRenameRegistry.registerCommand(id: note.persistentModelID, command: startRename)
-            noteOpenEditorWindowRegistry.registerCommand(id: note.persistentModelID, command: openEditorWindow)
+            noteDeleteRegistry.registerCommand(
+                id: note.persistentModelID,
+                command: moveToTrash
+            )
+            noteRenameRegistry.registerCommand(
+                id: note.persistentModelID,
+                command: startRename
+            )
+            noteOpenEditorWindowRegistry.registerCommand(
+                id: note.persistentModelID,
+                command: openEditorWindow
+            )
+            noteCopyMarkdownLinkRegistry.registerCommand(
+                id: note.persistentModelID,
+                command: copyMarkdownLink
+            )
         }
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
             noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
-            noteOpenEditorWindowRegistry.unregisterCommand(id: note.persistentModelID)
+            noteCopyMarkdownLinkRegistry.unregisterCommand(id: note.persistentModelID)
+            noteOpenEditorWindowRegistry.unregisterCommand(
+                id: note.persistentModelID
+            )
         }
         .alert(
             "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",

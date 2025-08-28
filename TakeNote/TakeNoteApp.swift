@@ -28,6 +28,7 @@ struct TakeNoteApp: App {
                 container = try ModelContainer(
                     for: Note.self,
                     NoteContainer.self,
+                    NoteLink.self,
                     configurations: {
                         #if DEBUG
                             let config = ModelConfiguration(
@@ -74,6 +75,7 @@ struct TakeNoteApp: App {
             FileCommands()
             EditCommands()
             WindowCommands()
+            ViewCommands()
         }
         .modelContainer(container)
 
