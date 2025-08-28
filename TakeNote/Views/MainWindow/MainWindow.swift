@@ -11,26 +11,47 @@ import SwiftUI
 extension FocusedValues {
     @Entry var chatEnabled: Bool?
     @Entry var openChatWindow: (() -> Void)?
+    @Entry var showDeleteEverything: (() -> Void)?
 }
 
 struct MainWindow: View {
     @Environment(\.openWindow) var openWindow
     @Environment(\.modelContext) var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
-    
+
     @Query() var notes: [Note]
-    
-    @State var notesInBufferMessagePresented : Bool = false
-    
+    @Query() var containers: [NoteContainer]
+    @Query() var noteLinks: [NoteLink]
+
+    @State var notesInBufferMessagePresented: Bool = false
+    @State var showDeleteEverythingAlert: Bool = false
+
+    func showDeleteEverything() {
+        showDeleteEverythingAlert = true
+    }
+
     @MainActor
     func openChatWindow() {
         openWindow(id: TakeNoteVM.chatWindowID)
     }
-    
-    var chatEnabled : Bool {
+
+    var chatEnabled: Bool {
         return takeNoteVM.aiIsAvailable && notes.count > 0
     }
-    
+
+    func deleteEverything() {
+        for note in notes {
+            modelContext.delete(note)
+        }
+        for container in containers {
+            modelContext.delete(container)
+        }
+        for noteLink in noteLinks {
+            modelContext.delete(noteLink)
+        }
+        try? modelContext.save()
+    }
+
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
         NavigationSplitView {
@@ -58,10 +79,9 @@ struct MainWindow: View {
                         }
                         .help("Empty Trash")
                     }
-                    
+
                 }
-        }
-        detail: {
+        } detail: {
             if takeNoteVM.showMultiNoteView {
                 MultiNoteViewer()
                     .transition(.opacity)
@@ -77,9 +97,32 @@ struct MainWindow: View {
                 takeNoteVM.showMultiNoteView = newValue
             }
         }
-        .background(Color(NSColor.textBackgroundColor))
+        #if os(macOS)
+            .background(Color(NSColor.textBackgroundColor))
+        #endif
+        #if os(iOS)
+            .background(Color(UIColor.systemBackground))
+        #endif
         .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(takeNoteVM.navigationTitle)
+        .alert(
+            "Do you want to delete everything?",
+            isPresented: $showDeleteEverythingAlert
+        ) {
+            Button(
+                "Delete",
+                role: .destructive,
+                action: {
+                    deleteEverything()
+
+                    takeNoteVM.trashFolder = nil
+                    takeNoteVM.inboxFolder = nil
+                    takeNoteVM.bufferFolder = nil
+
+                    takeNoteVM.folderInit(modelContext)
+                }
+            )
+        }
         .alert(
             "Link Error: \(takeNoteVM.linkToNoteErrorMessage)",
             isPresented: $takeNoteVM.linkToNoteErrorIsPresented
@@ -104,13 +147,17 @@ struct MainWindow: View {
         .focusedSceneValue(\.modelContext, modelContext)
         .focusedSceneValue(\.chatEnabled, chatEnabled)
         .focusedSceneValue(\.openChatWindow, openChatWindow)
+        .focusedSceneValue(\.showDeleteEverything, showDeleteEverything)
         .alert(
             "Something went wrong: \(takeNoteVM.errorAlertMessage)",
             isPresented: $takeNoteVM.errorAlertIsVisible
         ) {
             Button("OK", action: { takeNoteVM.errorAlertIsVisible = false })
         }
-        .alert("\(takeNoteVM.bufferNotesCount) notes found in the cut and paste buffer. They'll be returned to your Inbox.", isPresented: $notesInBufferMessagePresented) {
+        .alert(
+            "\(takeNoteVM.bufferNotesCount) notes found in the cut and paste buffer. They'll be returned to your Inbox.",
+            isPresented: $notesInBufferMessagePresented
+        ) {
             Button("OK", action: { notesInBufferMessagePresented = false })
 
         }
@@ -120,13 +167,13 @@ struct MainWindow: View {
                 notesInBufferMessagePresented = true
                 takeNoteVM.moveNotesFromBufferToInbox(modelContext)
             }
-            
+
         })
         .onOpenURL(perform: { url in
             takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
         })
     }
-    
+
 }
 
 #Preview {

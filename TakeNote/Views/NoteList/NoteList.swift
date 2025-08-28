@@ -57,10 +57,8 @@ struct NoteList: View {
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
-    @State var noteCopyMarkdownLinkRegistry : CommandRegistry = CommandRegistry()
+    @State var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
-    
-    
 
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
@@ -75,10 +73,10 @@ struct NoteList: View {
 
     @Environment(SearchIndexService.self) private var search
 
-    
-
     func playSystemErrorSound() {
-        AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
+        #if os(macOS)
+            AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
+        #endif
     }
 
     func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
@@ -128,12 +126,54 @@ struct NoteList: View {
         return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
             ?? false
     }
+    
+    var folderSymbol : String {
+        guard let container = takeNoteVM.selectedContainer else {
+            return "folder"
+        }
+        if container.isTrash {
+            return "trash"
+        }
+        if container.isTag {
+            return "tag"
+        }
+        return "folder"
+    }
+    
+    var noteCountLabel : String {
+        let noNotes = "No notes"
+        guard let container = takeNoteVM.selectedContainer else {
+            return noNotes
+        }
+        if container.notes.isEmpty {
+            return noNotes
+        }
+        if container.notes.count == 1 {
+            return "\(String(describing: container.notes.count)) note"
+        }
+        return "\(String(describing: container.notes.count)) notes"
+    }
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
         VStack {
-
+            HStack {
+                VStack(alignment: .leading) {
+                    Label(
+                        takeNoteVM.selectedContainer?.name
+                            ?? "No folder selected",
+                        systemImage: folderSymbol
+                    )
+                    .font(.title)
+                    .fontWeight(.bold)
+                    Text(noteCountLabel)
+                    .font(.headline)
+                }
+                Spacer()
+            }
+            .padding()
             List(selection: $takeNoteVM.selectedNotes) {
+
                 if folderHasStarredNotes() {
                     Section(header: Text("Favorites").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
@@ -147,22 +187,26 @@ struct NoteList: View {
                     }
 
                 }
-                Section(
-                    header: Text("Notes").font(.headline)
-                ) {
-                    ForEach(filteredNotes, id: \.self) { note in
-                        if !note.starred {
-                            NoteListEntry(
-                                note: note,
-                            )
-                        }
+                if filteredNotes.isEmpty == false {
+                    Section(header: Text("Notes").font(.headline)) {
+                        ForEach(filteredNotes, id: \.self) { note in
+                            if !note.starred {
+                                NoteListEntry(
+                                    note: note,
+                                )
+                            }
 
+                        }
                     }
                 }
+
             }
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
-            .environment(\.noteCopyMarkdownLinkRegistry, noteCopyMarkdownLinkRegistry)
+            .environment(
+                \.noteCopyMarkdownLinkRegistry,
+                noteCopyMarkdownLinkRegistry
+            )
             .environment(\.noteRenameRegistry, noteRenameRegistry)
             .environment(
                 \.noteOpenEditorWindowRegistry,
@@ -172,7 +216,10 @@ struct NoteList: View {
             /// Make the command registries the focused values for this list so that the menubar commands can access them
             .focusedValue(\.noteDeleteRegistry, noteDeleteRegistry)
             .focusedValue(\.noteRenameRegistry, noteRenameRegistry)
-            .focusedValue(\.noteCopyMarkdownLinkRegistry, noteCopyMarkdownLinkRegistry)
+            .focusedValue(
+                \.noteCopyMarkdownLinkRegistry,
+                noteCopyMarkdownLinkRegistry
+            )
             .focusedValue(
                 \.noteOpenEditorWindowRegistry,
                 noteOpenEditorWindowRegistry
@@ -197,33 +244,36 @@ struct NoteList: View {
                     Task { await note.generateSummary() }
                     if note.contentHasChanged() {
                         search.reindex(note: note)
-                        NoteLinkManager(modelContext: modelContext).generateLinksFor(note)
+                        NoteLinkManager(modelContext: modelContext)
+                            .generateLinksFor(note)
                     }
                 }
 
             }
         }
-        .copyable(
-            takeNoteVM.selectedNotes.map {
-                NoteIDWrapper(id: $0.persistentModelID)
-            }
-        )
-        .cuttable(for: NoteIDWrapper.self) {
-            // Stash the notes in the hidden buffer folder
-            for note: Note in takeNoteVM.selectedNotes {
-                if let bf = takeNoteVM.bufferFolder {
-                    note.folder = bf
+        #if os(maacOS)
+            .copyable(
+                takeNoteVM.selectedNotes.map {
+                    NoteIDWrapper(id: $0.persistentModelID)
+                }
+            )
+            .cuttable(for: NoteIDWrapper.self) {
+                // Stash the notes in the hidden buffer folder
+                for note: Note in takeNoteVM.selectedNotes {
+                    if let bf = takeNoteVM.bufferFolder {
+                        note.folder = bf
+                    }
+                }
+                try? modelContext.save()
+                return takeNoteVM.selectedNotes.map {
+                    NoteIDWrapper(id: $0.persistentModelID)
                 }
             }
-            try? modelContext.save()
-            return takeNoteVM.selectedNotes.map {
-                NoteIDWrapper(id: $0.persistentModelID)
-            }
-        }
 
-        .pasteDestination(for: NoteIDWrapper.self) { wrappedIDs in
-            pasteNote(wrappedIDs)
-        }
+            .pasteDestination(for: NoteIDWrapper.self) { wrappedIDs in
+                pasteNote(wrappedIDs)
+            }
+        #endif
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let result = fileImport(
                 items: items,

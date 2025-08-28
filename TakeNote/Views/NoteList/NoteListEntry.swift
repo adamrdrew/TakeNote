@@ -5,9 +5,15 @@
 //  Created by Adam Drew on 8/5/25.
 //
 
-import AppKit
 import SwiftData
 import SwiftUI
+
+#if os(macOS)
+    import AppKit
+#endif
+#if os(iOS)
+    import UIKit
+#endif
 
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
@@ -36,9 +42,15 @@ struct NoteListEntry: View {
     private let vSpacing: CGFloat = 6
 
     func copyMarkdownLink() {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(note.getMarkdownLink(), forType: .string)
+        #if os(macOS)
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            pasteboard.setString(note.getMarkdownLink(), forType: .string)
+        #endif
+        #if os(iOS)
+            let pasteboard = UIPasteboard.general
+            pasteboard.string = note.getMarkdownLink()
+        #endif
     }
 
     func openEditorWindow() {
@@ -103,15 +115,23 @@ struct NoteListEntry: View {
                 }
 
                 Spacer(minLength: 0)
+                #if os(macOS)
+                    Button("", systemImage: note.starred ? "star.fill" : "star")
+                    {
+                        note.starred.toggle()
+                        try? modelContext.save()
+                    }
+                    .buttonStyle(.plain)
+                    .imageScale(.medium)
+                    .foregroundStyle(note.starred ? .yellow : .secondary)
+                    .help(note.starred ? "Unstar" : "Star")
+                #else
+                    if note.starred {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(Color(.yellow))
+                    }
 
-                Button("", systemImage: note.starred ? "star.fill" : "star") {
-                    note.starred.toggle()
-                    try? modelContext.save()
-                }
-                .buttonStyle(.plain)
-                .imageScale(.medium)
-                .foregroundStyle(note.starred ? .yellow : .secondary)
-                .help(note.starred ? "Unstar" : "Star")
+                #endif
             }
 
             // Metadata row
@@ -186,6 +206,28 @@ struct NoteListEntry: View {
                 }
             }
         }
+        // trailing = left swipe
+        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+            Button(role: .destructive, action: { moveToTrash() }) {
+                Label("Trash", systemImage: "trash")
+            }
+            Button(action: { note.starred.toggle() }) {
+                Label(
+                    note.starred ? "Unstar" : "Star",
+                    systemImage: note.starred ? "star.slash" : "star"
+                )
+            }
+            .tint(.yellow)
+        }
+        // leading = right swipe
+        .swipeActions(edge: .leading) {
+            Button(action: { inMoveToTrashMode = true }) {
+                Label("Move…", systemImage: "folder")
+            }
+            Button(action: { inMoveToTrashMode = true }) {
+                Label("Tag…", systemImage: "tag")
+            }
+        }
         .draggable(NoteIDWrapper(id: note.persistentModelID)) {
             ZStack {
                 RoundedRectangle(cornerRadius: 1.0, style: .continuous)
@@ -248,9 +290,15 @@ struct NoteListEntry: View {
             }
 
             Button(action: {
-                let pasteboard = NSPasteboard.general
-                pasteboard.clearContents()
-                pasteboard.setString(note.getURL(), forType: .string)
+                #if os(macOS)
+                    let pasteboard = NSPasteboard.general
+                    pasteboard.clearContents()
+                    pasteboard.setString(note.getURL(), forType: .string)
+                #endif
+                #if os(iOS)
+                    let pasteboard = UIPasteboard.general
+                    pasteboard.string = note.getURL()
+                #endif
             }) {
                 Label("Copy URL", systemImage: "link")
             }
@@ -308,7 +356,9 @@ struct NoteListEntry: View {
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
             noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
-            noteCopyMarkdownLinkRegistry.unregisterCommand(id: note.persistentModelID)
+            noteCopyMarkdownLinkRegistry.unregisterCommand(
+                id: note.persistentModelID
+            )
             noteOpenEditorWindowRegistry.unregisterCommand(
                 id: note.persistentModelID
             )

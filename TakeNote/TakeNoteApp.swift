@@ -23,30 +23,30 @@ struct TakeNoteApp: App {
     private var search = SearchIndexService()
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "App")
 
-        init() {
-            do {
-                container = try ModelContainer(
-                    for: Note.self,
-                    NoteContainer.self,
-                    NoteLink.self,
-                    configurations: {
-                        #if DEBUG
-                            let config = ModelConfiguration(
-                                isStoredInMemoryOnly: true
-                            )
-                        #else
-                            let config = ModelConfiguration()
-                        #endif
-                        return config
-                    }()
-                )
-            } catch {
-                fatalError("Failed to initialize ModelContainer: \(error)")
-            }
+    init() {
+        do {
+            container = try ModelContainer(
+                for: Note.self,
+                NoteContainer.self,
+                NoteLink.self,
+                configurations: {
+                    #if DEBUG
+                        let config = ModelConfiguration(
+                            isStoredInMemoryOnly: true
+                        )
+                    #else
+                        let config = ModelConfiguration()
+                    #endif
+                    return config
+                }()
+            )
+        } catch {
+            fatalError("Failed to initialize ModelContainer: \(error)")
         }
-    
+    }
+
     var body: some Scene {
-        Window("", id: "main-window") {
+        WindowGroup(id: "main-window") {
             MainWindow()
                 .sheet(isPresented: $showOnboarding) {
                     WelcomeView {
@@ -70,8 +70,13 @@ struct TakeNoteApp: App {
         }
         .environment(takeNoteVM)
         .environment(search)
-        .windowToolbarStyle(.expanded)
+        #if os(macOS)
+            .windowToolbarStyle(.expanded)
+        #endif
         .commands {
+            CommandGroup(replacing: CommandGroupPlacement.newItem) {
+                EmptyView()
+            }
             FileCommands()
             EditCommands()
             WindowCommands()
@@ -88,7 +93,7 @@ struct TakeNoteApp: App {
         .environment(TakeNoteVM())
         .modelContainer(container)
 
-        Window("TakeNote - AI Chat", id: "chat-window") {
+        WindowGroup("TakeNote - AI Chat", id: "chat-window") {
             ChatWindow()
                 .environment(search)
         }

@@ -54,6 +54,7 @@ struct BackLinks: View {
                                     openURL(url)
                                 }
                             }
+                            #if os(macOS)
                             .contextMenu {
                                 Button("Copy Link") {
                                     if let url = URL(string: note.getURL()) {
@@ -65,6 +66,7 @@ struct BackLinks: View {
                                     }
                                 }
                             }
+                            #endif
                         }
                     }
                     .padding(.horizontal, 8)

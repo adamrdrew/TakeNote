@@ -29,7 +29,7 @@ struct WelcomeView: View {
             WelcomeRow(
                 title: "Private by Design",
                 text:
-                    "Your data never leaves your Mac. No servers, no accounts.",
+                    "AI features run directly on your device.",
                 systemImage: "lock.shield"
             )
 

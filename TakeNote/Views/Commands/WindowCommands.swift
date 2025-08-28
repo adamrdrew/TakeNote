@@ -7,32 +7,39 @@
 
 import SwiftUI
 
-struct WindowCommands : Commands {
-    
-    @FocusedValue(\.chatEnabled) var chatEnabled : Bool?
-    @FocusedValue(\.openChatWindow) var openChatWindow : (() -> Void)?
-    @FocusedValue(\.noteOpenEditorWindowRegistry) var noteOpenEditorWindowRegistry : CommandRegistry?
+struct WindowCommands: Commands {
+
+    @FocusedValue(\.chatEnabled) var chatEnabled: Bool?
+    @FocusedValue(\.openChatWindow) var openChatWindow: (() -> Void)?
+    @FocusedValue(\.noteOpenEditorWindowRegistry)
+    var noteOpenEditorWindowRegistry: CommandRegistry?
     @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
 
     var openEditorWindowDisabled: Bool {
         guard let sn = selectedNotes, sn.count == 1 else {
             return true
         }
-        guard let _ = noteOpenEditorWindowRegistry else {
+        guard noteOpenEditorWindowRegistry != nil else {
             return true
         }
         return false
     }
-    
+
     var chatDisabled: Bool {
         if let ce = chatEnabled {
             return !ce
         }
         return true
     }
-    
-    var body : some Commands {
-        CommandGroup(after: .windowList) {
+
+    var body: some Commands {
+        #if os(macOS)
+            let placement = CommandGroupPlacement.windowList
+        #endif
+        #if os(iOS)
+            let placement = CommandGroupPlacement.toolbar
+        #endif
+        CommandGroup(after: placement) {
             Button("Open Chat", systemImage: "message") {
                 if let ocw = openChatWindow {
                     ocw()
@@ -40,7 +47,7 @@ struct WindowCommands : Commands {
             }
             .keyboardShortcut("c", modifiers: [.command, .shift])
             .disabled(chatDisabled)
-            
+
             Button("Open Editor Window", systemImage: "macwindow.badge.plus") {
                 guard let sn = selectedNotes, sn.count == 1 else {
                     return
@@ -54,7 +61,7 @@ struct WindowCommands : Commands {
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
             .disabled(openEditorWindowDisabled)
-            
+
         }
     }
 }

@@ -14,6 +14,7 @@ struct FileCommands: Commands {
     @FocusedValue(SearchIndexService.self) private var search:
         SearchIndexService?
     @FocusedValue(\.modelContext) private var modelContext: ModelContext?
+    @FocusedValue(\.showDeleteEverything) private var showDeleteEverything : (() -> Void)?
 
     let logger = Logger(
         subsystem: "com.adamdrew.takenote",
@@ -29,6 +30,15 @@ struct FileCommands: Commands {
     var body: some Commands {
 
         CommandGroup(after: .newItem) {
+            Button("Delete Everything", systemImage: "flame") {
+                guard let sde = showDeleteEverything else {
+                    return
+                }
+                sde()
+            }
+            .disabled(
+                showDeleteEverything == nil
+            )
             /// Create a new note
             Button("New Note", systemImage: "note.text.badge.plus") {
                 if let vm = takeNoteVM, let mc = modelContext {

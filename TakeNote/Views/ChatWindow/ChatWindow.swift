@@ -193,9 +193,8 @@ struct ChatWindow: View {
             HStack(spacing: 8) {
                 // Rounded, iMessage-like input
                 HStack(spacing: 8) {
-                    TextField("Ask anything", text: $userQuery, axis: .vertical)
+                    TextField("Ask anything", text: $userQuery)
                         .textFieldStyle(.plain)
-                        .lineLimit(1...4)
                         .focused($textFieldFocused)
                         .onSubmit(askQuestion)
 
