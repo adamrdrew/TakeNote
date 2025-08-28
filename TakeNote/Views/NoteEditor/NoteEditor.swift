@@ -202,6 +202,14 @@ struct NoteEditor: View {
         - If unable per the narrow policy, output exactly: I don't know how to do that.
         """
 
+    fileprivate func setShowBacklinks() {
+        if let on = openNote {
+            openNoteHasBacklinks = NoteLinkManager(
+                modelContext: modelContext
+            ).notesLinkToDestination(on)
+        }
+    }
+    
     var body: some View {
         if let note = openNote {
             ZStack {
@@ -270,11 +278,10 @@ struct NoteEditor: View {
             }
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
-                if let on = openNote {
-                    openNoteHasBacklinks = NoteLinkManager(
-                        modelContext: modelContext
-                    ).notesLinkToDestination(on)
-                }
+                setShowBacklinks()
+            }
+            .onAppear() {
+                setShowBacklinks()
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 VStack {
