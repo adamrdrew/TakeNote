@@ -33,11 +33,10 @@ struct NoteEditor: View {
     @State private var magicFormatterErrorIsPresented: Bool = false
     @State private var isAssistantPopoverPresented: Bool = false
     @State private var openNoteHasBacklinks: Bool = false
-    
-    @StateObject private var magicFormatter = MagicFormatter()
-    
-    @Binding var openNote: Note?
 
+    @StateObject private var magicFormatter = MagicFormatter()
+
+    @Binding var openNote: Note?
 
     let logger = Logger(
         subsystem: "com.adammdrew.takenote",
@@ -51,7 +50,7 @@ struct NoteEditor: View {
     func showBacklinks() {
         showBackLinks.toggle()
     }
-    
+
     func showAssistantPopover() {
         isAssistantPopoverPresented = true
     }
@@ -271,9 +270,11 @@ struct NoteEditor: View {
             }
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
-                openNoteHasBacklinks = NoteLinkManager(
-                    modelContext: modelContext
-                ).notesLinkToDestination(openNote!)
+                if let on = openNote {
+                    openNoteHasBacklinks = NoteLinkManager(
+                        modelContext: modelContext
+                    ).notesLinkToDestination(on)
+                }
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 VStack {
