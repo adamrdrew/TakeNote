@@ -15,23 +15,18 @@ struct BackLinks: View {
     @State var selectedNoteHasBacklinks: Bool = false
     @State var linkManager: NoteLinkManager? = nil
     @State var backLinkedNotes: [Note] = []
-    
-    @Query() var links : [NoteLink]
-    
-    func doSomething() {
-        for link in links {
-            print(link.destinationNote.title)
-        }
-    }
-    
+
     var body: some View {
         VStack {
+            Text("Backlinks")
+                .font(.headline)
+                .padding()
             if !selectedNoteHasBacklinks || linkManager == nil {
                 Text("No Backlinks Found")
             } else {
                 List {
                     ForEach(backLinkedNotes) { note in
-                        SwiftUI.Link(
+                        Link(
                             note.title,
                             destination: URL(string: note.getURL())!
                         )
@@ -42,7 +37,9 @@ struct BackLinks: View {
         .frame(width: 200, height: 200)
         .onAppear {
             linkManager = NoteLinkManager(modelContext: modelContext)
-            backLinkedNotes = linkManager!.getNotesThatLinkTo(takeNoteVM.openNote!)
+            backLinkedNotes = linkManager!.getNotesThatLinkTo(
+                takeNoteVM.openNote!
+            )
             selectedNoteHasBacklinks = backLinkedNotes.isEmpty == false
         }
 
