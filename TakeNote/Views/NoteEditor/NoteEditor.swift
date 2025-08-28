@@ -21,17 +21,21 @@ extension FocusedValues {
 
 struct NoteEditor: View {
     @Environment(\.modelContext) var modelContext: ModelContext
-    @Binding var openNote: Note?
+    @Environment(\.colorScheme) private var colorScheme: ColorScheme
+
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
     @State private var magicFormatterErrorMessage: String = ""
     @State private var showBackLinks: Bool = false
-    @State var magicFormatterErrorIsPresented: Bool = false
-    @Environment(\.colorScheme) private var colorScheme: ColorScheme
+    @State private var magicFormatterErrorIsPresented: Bool = false
     @State private var isAssistantPopoverPresented: Bool = false
+    @State private var openNoteHasBacklinks: Bool = false
+    
     @StateObject private var magicFormatter = MagicFormatter()
-    @State var openNoteHasBacklinks: Bool = false
+    
+    @Binding var openNote: Note?
+
 
     let logger = Logger(
         subsystem: "com.adammdrew.takenote",
