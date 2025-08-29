@@ -162,6 +162,10 @@ struct MainWindow: View {
 
         }
         .onAppear(perform: {
+            takeNoteVM.trashFolder = containers.first(where: { $0.isTrash })
+            takeNoteVM.inboxFolder = containers.first(where: { $0.isInbox })
+            takeNoteVM.bufferFolder = containers.first(where: { $0.isBuffer })
+
             takeNoteVM.folderInit(modelContext)
             if !takeNoteVM.bufferIsEmpty {
                 notesInBufferMessagePresented = true
