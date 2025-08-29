@@ -253,6 +253,7 @@ class TakeNoteVM {
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
         createBufferFolder(modelContext)
+        selectedContainer = inboxFolder
     }
 
     func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
