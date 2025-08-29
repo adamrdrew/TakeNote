@@ -87,10 +87,13 @@ struct FolderListEntry: View {
                     }
             } else {
                 HStack {
-                    Label(folder.name, systemImage: folder.getSystemImageName())
-                        .foregroundStyle(
-                            colorScheme == .light ? Color.primary : Color.white
-                        )
+                    Label {
+                        Text(folder.name)
+                            .foregroundColor(colorScheme == .light ? Color.primary : Color.white)
+                    } icon: {
+                        Image(systemName: folder.getSystemImageName())
+                            .foregroundColor(.takeNotePink)
+                    }
                     Spacer()
                     HStack {
                         Text("\(folder.notes.count)")
