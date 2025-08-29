@@ -82,7 +82,7 @@ class NoteContainer: Identifiable {
         #if os(macOS)
         guard let ns = NSColor(color).usingColorSpace(.sRGB) else { return }
         #endif
-        #if os(iOS)
+        #if os(iOS) || os(visionOS)
         let ns = UIColor(color)
         #endif
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 1

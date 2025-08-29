@@ -221,7 +221,9 @@ struct ChatWindow: View {
                     } label: {
                         Label("New Chat", systemImage: "plus.message")
                     }
+                    #if !os(visionOS)
                     .glassEffect()
+                    #endif
                     .help("New Chat")
                 }
             }

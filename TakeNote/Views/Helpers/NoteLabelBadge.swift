@@ -17,7 +17,9 @@ struct NoteLabelBadge: View {
                 .fill(
                     noteLabel.getColor()
                 )
+            #if !os(visionOS)
                 .glassEffect()
+            #endif
                 .overlay(
                     Circle().stroke(.separator, lineWidth: 0.5)
                 )

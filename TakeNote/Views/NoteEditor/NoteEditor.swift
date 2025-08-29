@@ -42,7 +42,7 @@ struct NoteEditor: View {
     #if os(macOS)
     let toolbarPosition = ToolbarItemPlacement.secondaryAction
     #endif
-    #if os(iOS)
+    #if os(iOS) || os(visionOS)
     let toolbarPosition = ToolbarItemPlacement.automatic
     #endif
 

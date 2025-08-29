@@ -39,7 +39,7 @@ struct WindowCommands: Commands {
         #if os(iOS)
             let placement = CommandGroupPlacement.toolbar
         #endif
-        CommandGroup(after: placement) {
+        CommandGroup(after: .windowArrangement) {
             Button("Open Chat", systemImage: "message") {
                 if let ocw = openChatWindow {
                     ocw()

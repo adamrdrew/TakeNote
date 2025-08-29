@@ -34,7 +34,9 @@ struct MessageBubble: View {
                                 .symbolRenderingMode(.monochrome)
                         }
                         .padding(10)
+                        #if !os(visionOS)
                         .glassEffect(.regular.tint(.green).interactive())
+                        #endif
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: true, vertical: false)
                         .help("Accept AI changes")
@@ -56,11 +58,13 @@ struct MessageBubble: View {
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .foregroundColor(isHuman ? .white : .primary)
+        #if !os(visionOS)
             .glassEffect(
                 .regular.tint(isHuman ? .takeNotePink : .secondary.opacity(0.2))
                     .interactive(),
                 in: .rect(cornerRadius: 16.0)
             )
+        #endif
             .shadow(color: .black.opacity(0.25), radius: 2, x: 0, y: 1)
             .transition(
                 .move(edge: isHuman ? .trailing : .leading).combined(
