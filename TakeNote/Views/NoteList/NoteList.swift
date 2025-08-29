@@ -162,15 +162,22 @@ struct NoteList: View {
 
                 HStack {
                     VStack(alignment: .leading) {
-                        Label(
-                            takeNoteVM.selectedContainer?.name
-                                ?? "No folder selected",
-                            systemImage: folderSymbol
-                        )
+
+                        Label {
+                            Text(
+                                takeNoteVM.selectedContainer?.name
+                                    ?? "No folder selected",
+                            )
+                        } icon: {
+                            Image(systemName: folderSymbol)
+                                .foregroundColor(.takeNotePink)
+                        }
                         .font(.title)
                         .fontWeight(.bold)
+
                         Text(noteCountLabel)
                             .font(.headline)
+                            .foregroundStyle(.secondary)
                     }
                     Spacer()
                 }
