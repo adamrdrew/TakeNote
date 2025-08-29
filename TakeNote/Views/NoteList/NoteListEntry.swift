@@ -77,6 +77,13 @@ struct NoteListEntry: View {
         note.title = newName
         try? modelContext.save()
     }
+    
+    var iconColor : Color {
+        if note == takeNoteVM.openNote {
+            return .primary
+        }
+        return .takeNotePink
+    }
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
@@ -103,7 +110,7 @@ struct NoteListEntry: View {
                     } icon: {
                         Image(systemName: "note.text")
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(.takeNotePink)
+                            .foregroundColor(iconColor)
                     }
                     .labelStyle(.titleAndIcon)
                 }
@@ -153,7 +160,7 @@ struct NoteListEntry: View {
                     } icon: {
                         Image(systemName: "folder")
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(Color(.takeNotePink))
+                            .foregroundColor(iconColor)
                     }
 
                 }

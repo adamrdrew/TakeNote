@@ -71,6 +71,13 @@ struct FolderListEntry: View {
         }
         takeNoteVM.onMoveToFolder()
     }
+    
+    var iconColor: Color {
+        if folder == takeNoteVM.selectedContainer {
+            return .primary
+        }
+        return .takeNotePink
+    }
 
     var body: some View {
         HStack {
@@ -92,7 +99,7 @@ struct FolderListEntry: View {
                             .foregroundColor(colorScheme == .light ? Color.primary : Color.white)
                     } icon: {
                         Image(systemName: folder.getSystemImageName())
-                            .foregroundColor(.takeNotePink)
+                            .foregroundColor(iconColor)
                     }
                     Spacer()
                     HStack {
