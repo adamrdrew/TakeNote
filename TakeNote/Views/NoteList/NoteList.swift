@@ -126,8 +126,8 @@ struct NoteList: View {
         return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
             ?? false
     }
-    
-    var folderSymbol : String {
+
+    var folderSymbol: String {
         guard let container = takeNoteVM.selectedContainer else {
             return "folder"
         }
@@ -139,8 +139,8 @@ struct NoteList: View {
         }
         return "folder"
     }
-    
-    var noteCountLabel : String {
+
+    var noteCountLabel: String {
         let noNotes = "No notes"
         guard let container = takeNoteVM.selectedContainer else {
             return noNotes
@@ -156,22 +156,34 @@ struct NoteList: View {
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
+
         VStack {
-            HStack {
-                VStack(alignment: .leading) {
-                    Label(
-                        takeNoteVM.selectedContainer?.name
-                            ?? "No folder selected",
-                        systemImage: folderSymbol
-                    )
-                    .font(.title)
-                    .fontWeight(.bold)
-                    Text(noteCountLabel)
-                    .font(.headline)
+            if takeNoteVM.selectedContainer != nil {
+
+                HStack {
+                    VStack(alignment: .leading) {
+
+                        Label {
+                            Text(
+                                takeNoteVM.selectedContainer?.name
+                                    ?? "No folder selected",
+                            )
+                        } icon: {
+                            Image(systemName: folderSymbol)
+                                .foregroundColor(.takeNotePink)
+                        }
+                        .font(.title)
+                        .fontWeight(.bold)
+
+                        Text(noteCountLabel)
+                            .font(.headline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
                 }
-                Spacer()
+                .padding()
             }
-            .padding()
+
             List(selection: $takeNoteVM.selectedNotes) {
 
                 if folderHasStarredNotes() {

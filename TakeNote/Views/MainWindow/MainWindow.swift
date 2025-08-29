@@ -26,8 +26,14 @@ struct MainWindow: View {
     @State var notesInBufferMessagePresented: Bool = false
     @State var showDeleteEverythingAlert: Bool = false
 
+    @State var showChatPopover: Bool = false
+
     func showDeleteEverything() {
         showDeleteEverythingAlert = true
+    }
+
+    func doShowChatPopover() {
+        showChatPopover.toggle()
     }
 
     @MainActor
@@ -56,6 +62,25 @@ struct MainWindow: View {
         @Bindable var takeNoteVM = takeNoteVM
         NavigationSplitView {
             Sidebar()
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: {
+                            takeNoteVM.addFolder(modelContext)
+                        }) {
+                            Label(
+                                "Add Folder",
+                                systemImage: "folder.badge.plus"
+                            )
+                        }
+                        .help("Add Folder")
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        AddTagButton(action: {
+                            takeNoteVM.addTag(modelContext: modelContext)
+                        })
+                    }
+
+                }
         } content: {
             NoteList()
                 .toolbar {
@@ -67,12 +92,25 @@ struct MainWindow: View {
                         }
                         .help("Add Note")
                     }
-                    if chatEnabled {
-                        Button(action: openChatWindow) {
-                            Label("Chat", systemImage: "message")
+                    #if os(macOS)
+                        if chatEnabled {
+                            Button(action: openChatWindow) {
+                                Label("Chat", systemImage: "message")
+                            }
+                            .help("AI Chat")
                         }
-                        .help("AI Chat")
-                    }
+                    #endif
+                    #if os(iOS)
+                        if chatEnabled {
+                            Button(action: doShowChatPopover) {
+                                Label("Chat", systemImage: "message")
+                            }
+                            .help("AI Chat")
+                            .popover(isPresented: $showChatPopover, arrowEdge: .trailing) {
+                                ChatWindow()
+                            }
+                        }
+                    #endif
                     if takeNoteVM.canEmptyTrash {
                         Button(action: takeNoteVM.showEmptyTrashAlert) {
                             Label("Empty Trash", systemImage: "trash.slash")

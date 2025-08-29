@@ -77,6 +77,13 @@ struct NoteListEntry: View {
         note.title = newName
         try? modelContext.save()
     }
+    
+    var iconColor : Color {
+        if note == takeNoteVM.openNote {
+            return .primary
+        }
+        return .takeNotePink
+    }
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
@@ -103,6 +110,7 @@ struct NoteListEntry: View {
                     } icon: {
                         Image(systemName: "note.text")
                             .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(iconColor)
                     }
                     .labelStyle(.titleAndIcon)
                 }
@@ -147,12 +155,14 @@ struct NoteListEntry: View {
                         Text(note.folder!.name)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     } icon: {
                         Image(systemName: "folder")
                             .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(iconColor)
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+
                 }
             }
 
@@ -272,6 +282,7 @@ struct NoteListEntry: View {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
             }
+            #if os(macOS)
             Button(
                 action: {
                     openEditorWindow()
@@ -279,6 +290,7 @@ struct NoteListEntry: View {
             ) {
                 Label("Open Editor Window", systemImage: "macwindow")
             }
+            #endif
             if !note.isEmpty {
                 Button(
                     action: {
