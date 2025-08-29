@@ -123,7 +123,7 @@ struct Sidebar: View {
         List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 content: {
-                    ForEach(systemFolders, id: \.self) { folder in
+                    ForEach(systemFolders.sorted(by: { $0.name < $1.name}), id: \.self) { folder in
                         FolderListEntry(
                             folder: folder
                         )
