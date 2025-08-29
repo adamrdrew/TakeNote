@@ -103,6 +103,7 @@ struct NoteListEntry: View {
                     } icon: {
                         Image(systemName: "note.text")
                             .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(.takeNotePink)
                     }
                     .labelStyle(.titleAndIcon)
                 }
@@ -147,12 +148,14 @@ struct NoteListEntry: View {
                         Text(note.folder!.name)
                             .lineLimit(1)
                             .truncationMode(.tail)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
                     } icon: {
                         Image(systemName: "folder")
                             .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(Color(.takeNotePink))
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+
                 }
             }
 

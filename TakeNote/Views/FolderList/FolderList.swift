@@ -20,7 +20,7 @@ struct FolderList: View {
 
     var body: some View {
         ForEach(folders, id: \.self) { folder in
-            if folder.isBuffer {
+            if folder.isBuffer || folder.isInbox || folder.isTag || folder.isTrash {
                 EmptyView()
             } else {
                 FolderListEntry(

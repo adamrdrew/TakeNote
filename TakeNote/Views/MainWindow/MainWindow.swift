@@ -56,6 +56,25 @@ struct MainWindow: View {
         @Bindable var takeNoteVM = takeNoteVM
         NavigationSplitView {
             Sidebar()
+                .toolbar {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(action: {
+                            takeNoteVM.addFolder(modelContext)
+                        }) {
+                            Label(
+                                "Add Folder",
+                                systemImage: "folder.badge.plus"
+                            )
+                        }
+                        .help("Add Folder")
+                    }
+                    ToolbarItem(placement: .primaryAction) {
+                        AddTagButton(action: {
+                            takeNoteVM.addTag(modelContext: modelContext)
+                        })
+                    }
+
+                }
         } content: {
             NoteList()
                 .toolbar {

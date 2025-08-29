@@ -10,37 +10,37 @@ import SwiftUI
 
 /*
  How delete and rename commands work with the List entries, and why:
- 
+
  Menubar commands sit outside of the view hierarchy. This makes accessing state and functionality
  within the View hierarchy challenging. The correct way to do this is with FocusedValues. When a
  View has focus you can have it pop data into the FocusedValues that the Menubar Commands can read.
- 
+
  There's a problem though. SwiftUI Lists get focus, but their child list items do not. In TakeNote
  the functionality and UI for rename and delete happen in the list items. This made implementing rename
  and delete challenging. I could find no information on how SwiftUI developers for macOS are supposed to
  address this issue, so I came up with the following solution.
- 
+
  I created a class called CommandRegistry. Instances of CommandRegistry can map SwiftData PersistantIdentfiers
  to functions of type () -> Void. This is done via the CommandRegistry.registerCommand(id:) method. The registered
  commands can then be run via the CommandRegistry.runCommand(id:) method.
- 
+
  Sidebar creates two CommandRegistry instanes: containerDeleteRegistry and containerRenameRegistry. These
  CommandRegistries are then added to the Environment with the \.containerDeleteRegistry and \.containerRenameRegistry
  environment keys. The List items are able to access the registries via the environment. On appear the
  list items register their delete and rename methods via their container IDs to the registries. On disappear
  they unregister them.
- 
+
  Sidebar also takes these same CommandRegistry instances and makes them the FocusedValues, so when the List
  has focus the CommandRegistry instances for delete and rename are available to the Menubar EditCommands. The
  EditCommands can then see that the FocusedValues for containerDeleteRegistry and containerRenameRegistry are
  non nil making them available for use.
- 
+
  The final part of this is that the List also adds the selected container to the FocusedValues. When you put it
  all together it means that when the List has focus the Menubar edit commands see that the selected container and
  the registries are non nil which lights up the Rename and Delete menubar commands as available, and then they are
  able to run the commands at the List item level by using the ID of the selected container to resolve the correct list
  item methods by way of the CommandRegistry instances.
- 
+
  I think this is an utterly insane way to do this and feel SwiftUI should have some way to accomplish this natively
  or that there be some pattern devs can use to do this that doesn't require so much boilerplate and abstraction.
  However, I can find no such way. I can find no docuemntation from Apple on how this should be done. Nor can I find
@@ -92,14 +92,27 @@ struct Sidebar: View {
         }
     ) var tags: [NoteContainer]
 
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in
+            !folder.isTag && !folder.isTrash && !folder.isInbox
+                && !folder.isBuffer
+        }
+    ) var folders: [NoteContainer]
+
+    @Query(
+        filter: #Predicate<NoteContainer> { folder in
+            folder.isTrash || folder.isInbox
+        }
+    ) var systemFolders: [NoteContainer]
+
     @State var folderSectionExpanded: Bool = true
     @State var tagSectionExpanded: Bool = true
     @State var showImportError: Bool = false
     @State var importErrorMessage: String = ""
 
-    @State var containerDeleteRegistry : CommandRegistry = CommandRegistry()
-    @State var containerRenameRegistry : CommandRegistry = CommandRegistry()
-    @State var tagSetColorRegistry : CommandRegistry = CommandRegistry()
+    @State var containerDeleteRegistry: CommandRegistry = CommandRegistry()
+    @State var containerRenameRegistry: CommandRegistry = CommandRegistry()
+    @State var tagSetColorRegistry: CommandRegistry = CommandRegistry()
 
     var tagsExist: Bool {
         return tags.isEmpty == false
@@ -109,15 +122,30 @@ struct Sidebar: View {
         @Bindable var takeNoteVMBinding = takeNoteVM
         List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
-                isExpanded: $folderSectionExpanded,
                 content: {
-                    FolderList()
+                    ForEach(systemFolders, id: \.self) { folder in
+                        FolderListEntry(
+                            folder: folder
+                        )
+                    }
                 },
                 header: {
-                    Text("Folders")
+                    Text("TakeNote")
                 }
             )
-            .headerProminence(.increased)
+
+            if folders.isEmpty == false {
+                Section(
+                    isExpanded: $folderSectionExpanded,
+                    content: {
+                        FolderList()
+                    },
+                    header: {
+                        Text("Folders")
+                    }
+                )
+                .headerProminence(.increased)
+            }
 
             if tagsExist {
                 Section(
@@ -161,16 +189,20 @@ struct Sidebar: View {
             }
         }
         .listStyle(.sidebar)
+        /*
         .toolbar {
-            Button(action: {
-                takeNoteVM.addFolder(modelContext)
-            }) {
-                Label("Add Folder", systemImage: "folder.badge.plus")
+            ToolbarItemGroup(placement: .primaryAction) {
+                Button(action: {
+                    takeNoteVM.addFolder(modelContext)
+                }) {
+                    Label("Add Folder", systemImage: "folder.badge.plus")
+                }
+                .help("Add Folder")
+                AddTagButton(action: {
+                    takeNoteVM.addTag(modelContext: modelContext)
+                })
             }
-            .help("Add Folder")
-            AddTagButton(action: {
-                takeNoteVM.addTag(modelContext: modelContext)
-            })
-        }
+        
+        }*/
     }
 }
