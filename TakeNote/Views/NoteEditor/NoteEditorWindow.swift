@@ -25,7 +25,7 @@ struct NoteEditorWindow: View {
             return appName
         }
 
-        folderName = note.folder.name
+        folderName = note.folder!.name
 
         noteTitle = note.title
         return "\(appName) / \(folderName) / \(noteTitle)"

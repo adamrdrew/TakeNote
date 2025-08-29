@@ -144,7 +144,7 @@ struct NoteListEntry: View {
 
                 if takeNoteVM.selectedContainer?.isTag == true {
                     Label {
-                        Text(note.folder.name)
+                        Text(note.folder!.name)
                             .lineLimit(1)
                             .truncationMode(.tail)
                     } icon: {

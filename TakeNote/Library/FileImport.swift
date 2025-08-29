@@ -43,7 +43,7 @@ private func isDirectory(_ url: URL) -> Bool {
 
 @MainActor
 func folderImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService) -> ImportResult {
-    let logger = Logger(subsystem: "com.adammdrew.TakeNote", category: "FolderImport")
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "FolderImport")
     var result = ImportResult()
     let fileManager = FileManager.default
     var fileURLs : [URL] = []
@@ -86,7 +86,7 @@ func folderImport(items: [URL], modelContext: ModelContext, searchIndex: SearchI
 
 @MainActor
 func fileImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService, folder: NoteContainer) -> ImportResult {
-    let logger = Logger(subsystem: "com.adammdrew.TakeNote", category: "FileImport")
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "FileImport")
     var noteImported = false
     var result = ImportResult()
     for url in items {

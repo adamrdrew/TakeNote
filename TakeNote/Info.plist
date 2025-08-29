@@ -2,15 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>CFBundleIdentifier</key>
-	<string></string>
-	<key>UILaunchStoryboardName</key>
-	<string>Launch Screen</string>
-	<key>UILaunchScreen</key>
-	<dict>
-		<key>UIImageName</key>
-		<string>Launch Screen.storyboard</string>
-	</dict>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict/>
@@ -21,13 +12,22 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.adamrdrew.takenote</string>
+			<string>com.adamdrew.takenote</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>takenote</string>
 			</array>
 		</dict>
 	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIImageName</key>
+		<string>Launch Screen.storyboard</string>
+	</dict>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
@@ -40,7 +40,7 @@
 			<key>UTTypeIcons</key>
 			<dict/>
 			<key>UTTypeIdentifier</key>
-			<string>com.takenote.noteid</string>
+			<string>com.adamdrew.takenote.noteid</string>
 			<key>UTTypeTagSpecification</key>
 			<dict/>
 		</dict>
