@@ -282,6 +282,7 @@ struct NoteListEntry: View {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
             }
+            #if os(macOS)
             Button(
                 action: {
                     openEditorWindow()
@@ -289,6 +290,7 @@ struct NoteListEntry: View {
             ) {
                 Label("Open Editor Window", systemImage: "macwindow")
             }
+            #endif
             if !note.isEmpty {
                 Button(
                     action: {
