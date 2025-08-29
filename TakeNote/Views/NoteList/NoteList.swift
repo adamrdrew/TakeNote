@@ -251,7 +251,7 @@ struct NoteList: View {
 
             }
         }
-        #if os(maacOS)
+        #if os(macOS)
             .copyable(
                 takeNoteVM.selectedNotes.map {
                     NoteIDWrapper(id: $0.persistentModelID)

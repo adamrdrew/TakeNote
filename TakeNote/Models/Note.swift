@@ -12,7 +12,7 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 extension UTType {
-    static let noteID = UTType(exportedAs: "com.takenote.noteid")
+    static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
 }
 
 struct NoteIDWrapper: Hashable, Codable, Transferable {
@@ -30,12 +30,14 @@ struct NoteIDWrapper: Hashable, Codable, Transferable {
             wrapper.snapshot
         } importing: { data in
             // Import: decode when pasting (normal app runtime)
-            let id = try JSONDecoder().decode(PersistentIdentifier.self, from: data)
+            let id = try JSONDecoder().decode(
+                PersistentIdentifier.self,
+                from: data
+            )
             return NoteIDWrapper(id: id)
         }
     }
 }
-
 
 @Model
 class Note: Identifiable {
@@ -52,9 +54,14 @@ class Note: Identifiable {
     // but SwiftData can still set it
     private(set) var uuid: UUID = UUID()
     @Relationship(deleteRule: .noAction, inverse: \NoteContainer.folderNotes)
-    var folder: NoteContainer
+    var folder: NoteContainer?
     @Relationship(deleteRule: .nullify, inverse: \NoteContainer.tagNotes)
     var tag: NoteContainer?
+
+    // Keep these as relationships but DO NOT specify inverses here
+    // (we'll specify inverses on NoteLink to avoid macro circularity).
+    @Relationship var outgoingLinks: [NoteLink]? = []
+    @Relationship var incomingLinks: [NoteLink]? = []
 
     init(folder: NoteContainer) {
         self.title = "New Note"
@@ -68,7 +75,7 @@ class Note: Identifiable {
     func getURL() -> String {
         return "takenote://note/\(uuid.uuidString)"
     }
-    
+
     func getMarkdownLink() -> String {
         return "[\(title)](\(getURL()))"
     }

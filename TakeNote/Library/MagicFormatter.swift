@@ -24,7 +24,7 @@ class MagicFormatter: ObservableObject {
 
     var session: LanguageModelSession
     let languageModel = SystemLanguageModel.default
-    let logger = Logger(subsystem: "com.adammdrew.takenote", category: "MagicFormatter")
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MagicFormatter")
 
     var isAvailable: Bool {
         return languageModel.isAvailable

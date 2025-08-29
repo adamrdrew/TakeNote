@@ -10,8 +10,10 @@ import SwiftUI
 
 @Model
 class NoteLink {
-    var sourceNote: Note
-    var destinationNote: Note
+    @Relationship(inverse: \Note.outgoingLinks)
+    var sourceNote: Note?
+    @Relationship(inverse: \Note.incomingLinks)
+    var destinationNote: Note?
     
     init(sourceNote: Note, destinationNote: Note) {
         self.sourceNote = sourceNote

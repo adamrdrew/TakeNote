@@ -16,9 +16,9 @@ import UIKit
 
 @Model
 class NoteContainer: Identifiable {
-    var name: String
-    var folderNotes: [Note] = []
-    var tagNotes: [Note] = []
+    var name: String = ""
+    var folderNotes: [Note]? = []
+    var tagNotes: [Note]? = []
     internal var canBeDeleted: Bool = true
     internal var isTrash: Bool = false
     internal var isInbox: Bool = false
@@ -26,7 +26,7 @@ class NoteContainer: Identifiable {
     internal var isBuffer: Bool = false
     var colorRGBA: UInt32 = 0xE5E5E5FF
     var symbol: String = "folder"
-    var notes: [Note] { isTag ? tagNotes : folderNotes }
+    var notes: [Note] { isTag ? tagNotes! : folderNotes! }
 
     init(
         canBeDeleted: Bool = true,
@@ -46,25 +46,25 @@ class NoteContainer: Identifiable {
 
     func getSystemImageName() -> String {
         if !isTag {
-            if isTrash && folderNotes.isEmpty {
+            if isTrash && folderNotes!.isEmpty {
                 return "trash"
             }
-            if isTrash && !folderNotes.isEmpty {
+            if isTrash && !folderNotes!.isEmpty {
                 return "trash.fill"
             }
-            if isInbox && folderNotes.isEmpty {
+            if isInbox && folderNotes!.isEmpty {
                 return "tray"
             }
-            if isInbox && !folderNotes.isEmpty {
+            if isInbox && !folderNotes!.isEmpty {
                 return "tray.fill"
             }
             return symbol
         }
 
-        if tagNotes.isEmpty {
+        if tagNotes!.isEmpty {
             return "tag"
         }
-        if !tagNotes.isEmpty {
+        if !tagNotes!.isEmpty {
             return "tag.fill"
         }
         return symbol

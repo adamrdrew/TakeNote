@@ -47,7 +47,7 @@ struct NoteEditor: View {
     #endif
 
     let logger = Logger(
-        subsystem: "com.adammdrew.takenote",
+        subsystem: "com.adamdrew.takenote",
         category: "NoteEditor"
     )
 

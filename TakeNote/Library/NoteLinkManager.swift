@@ -84,7 +84,7 @@ class NoteLinkManager {
         let sourceUUID = note.uuid
         let linksFromThisNote: [NoteLink]? = try? modelContext.fetch(
             FetchDescriptor<NoteLink>(
-                predicate: #Predicate { $0.sourceNote.uuid == sourceUUID }
+                predicate: #Predicate { $0.sourceNote!.uuid == sourceUUID }
             )
         )
         return linksFromThisNote
@@ -95,7 +95,7 @@ class NoteLinkManager {
         let destinationUUID = note.uuid
         let linksToThisNote: [NoteLink]? = try? modelContext.fetch(
             FetchDescriptor<NoteLink>(
-                predicate: #Predicate { $0.destinationNote.uuid == destinationUUID }
+                predicate: #Predicate { $0.destinationNote!.uuid == destinationUUID }
             )
         )
         return linksToThisNote
