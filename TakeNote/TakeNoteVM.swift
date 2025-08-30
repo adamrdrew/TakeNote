@@ -40,7 +40,11 @@ class TakeNoteVM {
     var bufferFolder: NoteContainer?
     
     var navigationTitle : String {
+        #if DEBUG
+        var title = "TakeNote Debug Build"
+        #else
         var title = "TakeNote"
+        #endif
         if let selectedContainerName = selectedContainer?.name {
             title =  "\(title) / \(selectedContainerName)"
         }
