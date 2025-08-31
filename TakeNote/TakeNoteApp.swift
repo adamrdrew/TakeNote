@@ -186,7 +186,9 @@ struct TakeNoteApp: App {
                 object: container.mainContext,
                 queue: .main
             ) { [weak r] _ in
-                try? r?.runOnce()
+                Task { @MainActor in
+                    try? r?.runOnce()
+                }
             }
         )
         tokens.append(
@@ -195,7 +197,9 @@ struct TakeNoteApp: App {
                 object: nil,
                 queue: .main
             ) { [weak r] _ in
-                try? r?.runOnce()
+                Task { @MainActor in
+                    try? r?.runOnce()
+                }
             }
         )
 
