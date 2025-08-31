@@ -18,6 +18,8 @@ struct TakeNoteApp: App {
     @Environment(\.modelContext) var modelContext
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
+    @State private var reconciler: SystemFolderReconciler!
+    private var tokens: [NSObjectProtocol] = []
     var takeNoteVM = TakeNoteVM()
 
     let container: ModelContainer
@@ -160,6 +162,7 @@ struct TakeNoteApp: App {
                 NoteLink.self,
                 configurations: config
             )
+            initSystemFolderReconciler(container)
         } catch {
             // If you land here, the error is almost always model-schema related in DEBUG:
             //  - Relationship missing an inverse
@@ -168,6 +171,36 @@ struct TakeNoteApp: App {
             //  - Wrong/missing iCloud container entitlement
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
+    }
+
+    @MainActor
+    mutating func initSystemFolderReconciler(_ container: ModelContainer) {
+        let ctx = container.mainContext
+        let r = SystemFolderReconciler(ctx: ctx, vm: takeNoteVM)
+        _reconciler = State(initialValue: r)
+
+        let nc = NotificationCenter.default
+        tokens.append(
+            nc.addObserver(
+                forName: .NSManagedObjectContextDidSave,
+                object: container.mainContext,
+                queue: .main
+            ) { [weak r] _ in
+                try? r?.runOnce()
+            }
+        )
+        tokens.append(
+            nc.addObserver(
+                forName: .NSPersistentStoreRemoteChange,
+                object: nil,
+                queue: .main
+            ) { [weak r] _ in
+                try? r?.runOnce()
+            }
+        )
+
+        // First run at startup
+        try? r.runOnce()
     }
 
     var body: some Scene {
