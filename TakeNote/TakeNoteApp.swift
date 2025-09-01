@@ -78,7 +78,8 @@ struct TakeNoteApp: App {
             container: container,
             vm: takeNoteVM,
             runOnStartup: true,
-            listenForLocalSaves: true  // flip to true if you want the old behavior
+            listenForLocalSaves: true,
+            searchIndexService: search
         )
 
     }
