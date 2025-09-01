@@ -9,9 +9,16 @@ import CoreData
 import SwiftData
 import SwiftUI
 import os
+import CloudKit   // ← added
 
 private let onboardingVersionCurrent = 1
 private let onboardingVersionKey = "onboarding.version.seen"
+
+// DEBUG-only schema bootstrap gating (so we don't run every launch)
+#if DEBUG
+private let ckBootstrapVersionCurrent = 1
+private let ckBootstrapVersionKey = "takenote.ck.bootstrap.version"
+#endif
 
 @main
 struct TakeNoteApp: App {
@@ -80,77 +87,90 @@ struct TakeNoteApp: App {
             // The trick: create a *temporary* Core Data stack that points to THE SAME FILE URL
             // that SwiftData will use, ask it to initialize the CloudKit schema, then tear it down.
             //
-            // You typically run this when:
-            //  - First enabling CloudKit, or
-            //  - After you change your SwiftData models (properties/relationships).
-            //
             // It’s harmless if it runs multiple times, but you don’t need it *every* launch,
             // so feel free to gate it behind a version flag in UserDefaults if you want.
             #if DEBUG
-                try autoreleasepool {
-                    // Use autoreleasepool so the temporary Core Data container is deallocated
-                    // before we create the real SwiftData ModelContainer.
-                    // (Avoids “two frameworks syncing the same store at once” overlap.)
+                do {
+                    let alreadyRan = UserDefaults.standard.integer(forKey: ckBootstrapVersionKey)
+                    if alreadyRan < ckBootstrapVersionCurrent {
+                        try autoreleasepool {
+                            // Use autoreleasepool so the temporary Core Data container is deallocated
+                            // before we create the real SwiftData ModelContainer.
+                            // (Avoids “two frameworks syncing the same store at once” overlap.)
 
-                    // Get the exact on-disk location SwiftData will use:
-                    let storeURL = config.url
+                            // Get the exact on-disk location SwiftData will use:
+                            let storeURL = config.url
 
-                    // Describe a Core Data store that points to that same file:
-                    let desc = NSPersistentStoreDescription(url: storeURL)
+                            // Describe a Core Data store that points to that same file:
+                            let desc = NSPersistentStoreDescription(url: storeURL)
 
-                    // Force synchronous load; initializeCloudKitSchema() must happen *after* load finishes:
-                    desc.shouldAddStoreAsynchronously = false
+                            // Force synchronous load; initializeCloudKitSchema() must happen *after* load finishes:
+                            desc.shouldAddStoreAsynchronously = false
 
-                    // Tell Core Data which iCloud container to target:
-                    desc.cloudKitContainerOptions = .init(
-                        containerIdentifier: "iCloud.com.adamdrew.takenote"  // <-- your container ID
-                    )
+                            // Tell Core Data which iCloud container to target:
+                            desc.cloudKitContainerOptions = .init(
+                                containerIdentifier: "iCloud.com.adamdrew.takenote"  // <-- your container ID
+                            )
 
-                    // Build an NSManagedObjectModel from your SwiftData Schema.
-                    // (This API is provided by Apple to bridge SwiftData models to Core Data.)
-                    let schema = Schema([
-                        Note.self, NoteContainer.self, NoteLink.self,
-                    ])
+                            // Build an NSManagedObjectModel from your SwiftData Schema.
+                            // (This API is provided by Apple to bridge SwiftData models to Core Data.)
+                            let schema = Schema([
+                                Note.self, NoteContainer.self, NoteLink.self,
+                            ])
 
-                    guard
-                        let mom = NSManagedObjectModel.makeManagedObjectModel(
-                            for: schema
-                        )
-                    else {
-                        // If this fails, it usually means a model problem (e.g., non-optional relationship,
-                        // no inverse, or a SwiftData type wasn’t included in the schema array above).
-                        throw NSError(
-                            domain: "TakeNote.CloudKitInit",
-                            code: 2,
-                            userInfo: [
-                                NSLocalizedDescriptionKey:
-                                    "Failed to synthesize NSManagedObjectModel from SwiftData schema"
-                            ]
-                        )
+                            guard
+                                let mom = NSManagedObjectModel.makeManagedObjectModel(
+                                    for: schema
+                                )
+                            else {
+                                // If this fails, it usually means a model problem (e.g., non-optional relationship,
+                                // no inverse, or a SwiftData type wasn’t included in the schema array above).
+                                throw NSError(
+                                    domain: "TakeNote.CloudKitInit",
+                                    code: 2,
+                                    userInfo: [
+                                        NSLocalizedDescriptionKey:
+                                            "Failed to synthesize NSManagedObjectModel from SwiftData schema"
+                                    ]
+                                )
+                            }
+
+                            // Create a temporary Core Data + CloudKit container purely to perform schema init:
+                            let temp = NSPersistentCloudKitContainer(
+                                name: "TakeNoteCoreData",
+                                managedObjectModel: mom
+                            )
+                            temp.persistentStoreDescriptions = [desc]
+
+                            // Load the store (synchronously, because of desc.shouldAddStoreAsynchronously = false):
+                            var loadErr: Error?
+                            temp.loadPersistentStores { _, err in loadErr = err }
+                            if let loadErr { throw loadErr }
+
+                            // This publishes/updates the *Development* schema for your container based on the model:
+                            try temp.initializeCloudKitSchema()
+
+                            // IMPORTANT: remove/unload the temporary Core Data store BEFORE creating the SwiftData container.
+                            // This ensures only *one* framework is managing CloudKit syncing (SwiftData) after init.
+                            if let store = temp.persistentStoreCoordinator
+                                .persistentStores.first
+                            {
+                                try temp.persistentStoreCoordinator.remove(store)
+                            }
+                        }
+
+                        UserDefaults.standard.set(ckBootstrapVersionCurrent, forKey: ckBootstrapVersionKey)
+                        logger.debug("CloudKit dev schema bootstrap completed (v\(ckBootstrapVersionCurrent)).")
+                    } else {
+                        logger.debug("CloudKit dev schema bootstrap skipped (already ran v\(alreadyRan)).")
                     }
-
-                    // Create a temporary Core Data + CloudKit container purely to perform schema init:
-                    let temp = NSPersistentCloudKitContainer(
-                        name: "TakeNoteCoreData",
-                        managedObjectModel: mom
-                    )
-                    temp.persistentStoreDescriptions = [desc]
-
-                    // Load the store (synchronously, because of desc.shouldAddStoreAsynchronously = false):
-                    var loadErr: Error?
-                    temp.loadPersistentStores { _, err in loadErr = err }
-                    if let loadErr { throw loadErr }
-
-                    // This publishes/updates the *Development* schema for your container based on the model:
-                    try temp.initializeCloudKitSchema()
-
-                    // IMPORTANT: remove/unload the temporary Core Data store BEFORE creating the SwiftData container.
-                    // This ensures only *one* framework is managing CloudKit syncing (SwiftData) after init.
-                    if let store = temp.persistentStoreCoordinator
-                        .persistentStores.first
-                    {
-                        try temp.persistentStoreCoordinator.remove(store)
+                } catch {
+                    if Self.shouldIgnoreBootstrapError(error) {
+                        logger.info("CloudKit schema bootstrap skipped due to expected condition: \(String(describing: error))")
+                    } else {
+                        logger.warning("CloudKit schema bootstrap failed: \(String(describing: error))")
                     }
+                    // Swallow in DEBUG to allow startup in offline / signed-out states.
                 }
             #endif
 
@@ -171,6 +191,25 @@ struct TakeNoteApp: App {
             //  - Wrong/missing iCloud container entitlement
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
+    }
+
+    // Classify errors we expect in DEBUG (offline, not signed in, etc.)
+    private static func shouldIgnoreBootstrapError(_ error: Error) -> Bool {
+        if let ck = error as? CKError {
+            switch ck.code {
+            case .networkUnavailable, .networkFailure, .serviceUnavailable,
+                 .notAuthenticated, .requestRateLimited, .internalError:
+                return true
+            default:
+                break
+            }
+        }
+        let nsErr = error as NSError
+        if nsErr.domain == NSCocoaErrorDomain {
+            // Core Data wraps CK auth/network errors in NSCocoaErrorDomain
+            return true
+        }
+        return false
     }
 
     @MainActor
