@@ -15,6 +15,13 @@ extension UTType {
     static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
 }
 
+// Hey!
+// Hey you!
+// If you change model schema remember to bump ckBootstrapVersionCurrent
+// in TakeNoteApp.swift
+//
+// And don't forget to promote to prod!!!
+
 struct NoteIDWrapper: Hashable, Codable, Transferable {
     let id: PersistentIdentifier
     private let snapshot: Data  // eager bytes to avoid work-at-quit

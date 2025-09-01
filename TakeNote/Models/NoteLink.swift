@@ -8,6 +8,13 @@
 import SwiftData
 import SwiftUI
 
+// Hey!
+// Hey you!
+// If you change model schema remember to bump ckBootstrapVersionCurrent
+// in TakeNoteApp.swift
+//
+// And don't forget to promote to prod!!!
+
 @Model
 class NoteLink {
     @Relationship(inverse: \Note.outgoingLinks)

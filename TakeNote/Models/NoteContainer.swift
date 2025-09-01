@@ -14,6 +14,13 @@ import UIKit
 #endif
 
 
+// Hey!
+// Hey you!
+// If you change model schema remember to bump ckBootstrapVersionCurrent
+// in TakeNoteApp.swift
+//
+// And don't forget to promote to prod!!!
+
 @Model
 class NoteContainer: Identifiable {
     var name: String = ""
