@@ -259,6 +259,7 @@ struct NoteList: View {
                         NoteLinkManager(modelContext: modelContext)
                             .generateLinksFor(note)
                     }
+                    
                 }
 
             }
