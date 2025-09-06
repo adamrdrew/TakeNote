@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6602CB572E683E54005A4D38 /* ObjectBox.xcframework in Frameworks */ = {isa = PBXBuildFile; productRef = 6602CB562E683E54005A4D38 /* ObjectBox.xcframework */; };
+		6602CB632E6AF792005A4D38 /* EntityInfo-TakeNote.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6602CB622E6AF792005A4D38 /* EntityInfo-TakeNote.generated.swift */; };
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
 		66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 66B616EC2E4CC2B6009A1857 /* SQLite */; };
@@ -14,6 +16,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6602CB622E6AF792005A4D38 /* EntityInfo-TakeNote.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = "EntityInfo-TakeNote.generated.swift"; path = "generated/EntityInfo-TakeNote.generated.swift"; sourceTree = "<group>"; };
 		66B6907A2E3FCDF20013519B /* TakeNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TakeNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -47,6 +50,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */,
+				6602CB572E683E54005A4D38 /* ObjectBox.xcframework in Frameworks */,
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
 				66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */,
@@ -59,6 +63,7 @@
 		66B690712E3FCDF20013519B = {
 			isa = PBXGroup;
 			children = (
+				6602CB622E6AF792005A4D38 /* EntityInfo-TakeNote.generated.swift */,
 				66B6907C2E3FCDF20013519B /* TakeNote */,
 				66B6907B2E3FCDF20013519B /* Products */,
 			);
@@ -96,6 +101,7 @@
 				66AC246E2E4609FB009B0C3F /* CodeEditorView */,
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
 				66B616EC2E4CC2B6009A1857 /* SQLite */,
+				6602CB562E683E54005A4D38 /* ObjectBox.xcframework */,
 			);
 			productName = TakeNote;
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
@@ -129,6 +135,7 @@
 				66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
 				66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */,
+				6602CB552E683E54005A4D38 /* XCRemoteSwiftPackageReference "objectbox-swift-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66B6907B2E3FCDF20013519B /* Products */;
@@ -155,6 +162,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6602CB632E6AF792005A4D38 /* EntityInfo-TakeNote.generated.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,6 +437,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		6602CB552E683E54005A4D38 /* XCRemoteSwiftPackageReference "objectbox-swift-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/objectbox/objectbox-swift-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.4.1;
+			};
+		};
 		66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mchakravarty/CodeEditorView";
@@ -456,6 +472,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		6602CB562E683E54005A4D38 /* ObjectBox.xcframework */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6602CB552E683E54005A4D38 /* XCRemoteSwiftPackageReference "objectbox-swift-spm" */;
+			productName = ObjectBox.xcframework;
+		};
 		66AC246E2E4609FB009B0C3F /* CodeEditorView */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */;
