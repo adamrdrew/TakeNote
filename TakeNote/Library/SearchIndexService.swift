@@ -12,9 +12,9 @@ import os
 @Observable
 class SearchIndexService {
     #if DEBUG
-    let index = try! OBSearchIndex(inMemory: true)
+    let index = VectorSearchIndex(inMemory: true)
     #else
-    let index = try! VectorSearchIndex()
+    let index = VectorSearchIndex()
     #endif
     
     // Explicitly use the top-level SearchHit type to avoid the macro qualifying it as SearchIndex.SearchHit
@@ -23,7 +23,7 @@ class SearchIndexService {
     var lastReindexAllDate: Date = .distantPast
     var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
 
-    var chatEnabled : Bool {
+    var chatFeatureFlagEnabled : Bool {
         return Bundle.main.object(forInfoDictionaryKey: "MagicChatenabled") as? Bool ?? false
     }
     
@@ -33,12 +33,12 @@ class SearchIndexService {
     }
     
     func reindex(note: Note) {
-        if !chatEnabled { return }
+        if !chatFeatureFlagEnabled { return }
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
     func reindexAll(_ noteData: [(UUID, String)]) {
-        if !chatEnabled { return }
+        if !chatFeatureFlagEnabled { return }
         if !canReindexAllNotes() { return }
         logger.info("RAG search reindex running.")
         lastReindexAllDate = Date()
@@ -50,7 +50,7 @@ class SearchIndexService {
     }
     
     func dropAll() {
-        if !chatEnabled { return }
+        if !chatFeatureFlagEnabled { return }
         Task { index.dropAll() }
     }
     
