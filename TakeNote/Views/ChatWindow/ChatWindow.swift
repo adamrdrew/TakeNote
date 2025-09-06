@@ -31,7 +31,7 @@ struct ChatWindow: View {
 
     @State private var conversation: [ConversationEntry] = []
     @State private var userQuery: String = ""
-    @State private var searchResults: [SearchIndex.SearchHit] = []
+    @State private var searchResults: [SearchHit] = []
     @State private var responseIsGenerating: Bool = false
 
     var context: String?
@@ -58,7 +58,7 @@ struct ChatWindow: View {
 
         // Prepare retrieval
         if searchEnabled {
-            self.searchResults = search.index.searchNatural(trimmed)
+            self.searchResults = search.index.searchNatural(trimmed) 
         }
 
         // Clear the field & keep focus
