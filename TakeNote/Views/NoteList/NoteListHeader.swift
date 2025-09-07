@@ -50,10 +50,12 @@ struct NoteListHeader: View {
                     nameInputFocused = false
                 }
             }
+            #if os(macOS)
             .onExitCommand {
                 inEditMode = false
                 nameInputFocused = false
             }
+            #endif
             .onSubmit {
                 guard let container = takeNoteVM.selectedContainer
                 else {
@@ -112,7 +114,7 @@ struct NoteListHeader: View {
             Spacer()
         }
         .padding()
-        .onTapGesture(count: 2) {
+        .onTapGesture(count: 1) {
            toggleEditMode()
         }
         .contextMenu {

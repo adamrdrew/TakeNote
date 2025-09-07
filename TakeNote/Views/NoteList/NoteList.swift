@@ -163,7 +163,7 @@ struct NoteList: View {
             }
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
-                    .frame(maxHeight: 80)
+                .frame(maxHeight: 80)
             }
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
