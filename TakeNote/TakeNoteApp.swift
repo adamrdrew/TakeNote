@@ -5,7 +5,7 @@ import SwiftUI
 import os
 
 // Bump this to get the welcome screen to show for users on next launch
-private let onboardingVersionCurrent = 1
+private let onboardingVersionCurrent = 2
 private let onboardingVersionKey = "onboarding.version.seen"
 
 #if DEBUG
