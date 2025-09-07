@@ -92,25 +92,30 @@ struct MainWindow: View {
                         }
                         .help("Add Note")
                     }
-                    #if os(macOS)
-                        if chatEnabled {
-                            Button(action: openChatWindow) {
-                                Label("Chat", systemImage: "message")
+                    if chatFeatureFlagEnabled {
+                        #if os(macOS)
+                            if chatEnabled {
+                                Button(action: openChatWindow) {
+                                    Label("Chat", systemImage: "message")
+                                }
+                                .help("AI Chat")
                             }
-                            .help("AI Chat")
-                        }
-                    #endif
-                    #if os(iOS)
-                        if chatEnabled {
-                            Button(action: doShowChatPopover) {
-                                Label("Chat", systemImage: "message")
+                        #endif
+                        #if os(iOS)
+                            if chatEnabled {
+                                Button(action: doShowChatPopover) {
+                                    Label("Chat", systemImage: "message")
+                                }
+                                .help("AI Chat")
+                                .popover(
+                                    isPresented: $showChatPopover,
+                                    arrowEdge: .trailing
+                                ) {
+                                    ChatWindow()
+                                }
                             }
-                            .help("AI Chat")
-                            .popover(isPresented: $showChatPopover, arrowEdge: .trailing) {
-                                ChatWindow()
-                            }
-                        }
-                    #endif
+                        #endif
+                    }
                     if takeNoteVM.canEmptyTrash {
                         Button(action: takeNoteVM.showEmptyTrashAlert) {
                             Label("Empty Trash", systemImage: "trash.slash")

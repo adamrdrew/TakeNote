@@ -40,13 +40,15 @@ struct WindowCommands: Commands {
             let placement = CommandGroupPlacement.toolbar
         #endif
         CommandGroup(after: .windowArrangement) {
-            Button("Open Chat", systemImage: "message") {
-                if let ocw = openChatWindow {
-                    ocw()
+            if chatFeatureFlagEnabled {
+                Button("Open Chat", systemImage: "message") {
+                    if let ocw = openChatWindow {
+                        ocw()
+                    }
                 }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(chatDisabled)
             }
-            .keyboardShortcut("c", modifiers: [.command, .shift])
-            .disabled(chatDisabled)
 
             Button("Open Editor Window", systemImage: "macwindow.badge.plus") {
                 guard let sn = selectedNotes, sn.count == 1 else {

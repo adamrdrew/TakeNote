@@ -8,6 +8,13 @@
 import SwiftUI
 import os
 
+// MARK: Result type
+struct SearchHit: Identifiable {
+    public let id: Int64  // rowid inside FTS table
+    public let noteID: UUID
+    public let chunk: String  // the stored chunk text
+}
+
 @MainActor
 @Observable
 class SearchIndexService {
@@ -17,7 +24,7 @@ class SearchIndexService {
     let index = try! SearchIndex()
     #endif
     
-    var hits: [SearchIndex.SearchHit] = []
+    var hits: [SearchHit] = []
     var isIndexing: Bool = false
     var lastReindexAllDate: Date = .distantPast
     var logger = Logger(subsystem: "com.adammdrew.takenote", category: "SearchIndexService")

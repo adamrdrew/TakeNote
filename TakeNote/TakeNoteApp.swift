@@ -110,7 +110,7 @@ struct TakeNoteApp: App {
         .environment(takeNoteVM)
         .environment(search)
         #if os(macOS)
-        .windowToolbarStyle(.automatic)
+            .windowToolbarStyle(.automatic)
         #endif
         .commands {
             CommandGroup(replacing: .newItem) { EmptyView() }
@@ -129,11 +129,15 @@ struct TakeNoteApp: App {
         }
         .modelContainer(container)
 
-        WindowGroup("TakeNote - AI Chat", id: "chat-window") {
-            ChatWindow()
-                .environment(search)
-                .environment(TakeNoteVM())  // intentional
-        }
-        .modelContainer(container)
+            WindowGroup("TakeNote - AI Chat", id: "chat-window") {
+                if chatFeatureFlagEnabled {
+                    ChatWindow()
+                        .environment(search)
+                        .environment(TakeNoteVM())  // intentional
+                } else {
+                    Text("You shouldn't be seeing this. Please report the bug to adamrdrew@live.com")
+                }
+            }
+            .modelContainer(container)
     }
 }
