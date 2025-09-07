@@ -7,6 +7,6 @@
 import SwiftUI
 
 var chatFeatureFlagEnabled: Bool {
-    return Bundle.main.object(forInfoDictionaryKey: "MagicChatenabled") as? Bool
+    return Bundle.main.object(forInfoDictionaryKey: "MagicChatEnabled") as? Bool
         ?? false
 }

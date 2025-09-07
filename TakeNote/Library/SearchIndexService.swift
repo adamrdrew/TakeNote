@@ -30,15 +30,18 @@ class SearchIndexService {
     var logger = Logger(subsystem: "com.adammdrew.takenote", category: "SearchIndexService")
 
     func canReindexAllNotes() -> Bool {
+        if chatFeatureFlagEnabled == false { return false }
         if isIndexing { return false }
         return Date().timeIntervalSince(lastReindexAllDate) >= 10 * 60
     }
     
     func reindex(note: Note) {
+        if chatFeatureFlagEnabled == false { return }
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
     func reindexAll(_ noteData: [(UUID, String)]) {
+        if chatFeatureFlagEnabled == false { return }
         if !canReindexAllNotes() { return }
         logger.info("RAG search reindex running.")
         lastReindexAllDate = Date()
@@ -50,6 +53,7 @@ class SearchIndexService {
     }
     
     func dropAll() {
+        if chatFeatureFlagEnabled == false { return }
         Task { index.dropAll() }
     }
     
