@@ -60,5 +60,6 @@ struct NoteListHeader: View {
             Spacer()
         }
         .padding()
+        
     }
 }

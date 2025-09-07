@@ -131,9 +131,6 @@ struct NoteList: View {
         @Bindable var takeNoteVM = takeNoteVM
 
         VStack {
-            if takeNoteVM.selectedContainer != nil {
-                NoteListHeader()
-            }
 
             List(selection: $takeNoteVM.selectedNotes) {
 
@@ -163,6 +160,11 @@ struct NoteList: View {
                     }
                 }
 
+            }
+            .safeAreaInset(edge: .top) {
+                if takeNoteVM.selectedContainer != nil {
+                    NoteListHeader()
+                }
             }
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
@@ -210,7 +212,7 @@ struct NoteList: View {
                         NoteLinkManager(modelContext: modelContext)
                             .generateLinksFor(note)
                     }
-                    
+
                 }
 
             }
