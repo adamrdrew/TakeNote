@@ -84,34 +84,49 @@ struct TakeNoteApp: App {
 
     }
 
-    var body: some Scene {
-        WindowGroup(id: "main-window") {
-            MainWindow()
-                .sheet(isPresented: $showOnboarding) {
-                    WelcomeView {
-                        onboardingVersionSeen = onboardingVersionCurrent
-                        #if DEBUG
-                            onboardingVersionSeen = 0
-                        #endif
-                        showOnboarding = false
-                    }
+    private var MainAppWindow: some View {
+        MainWindow()
+            .sheet(isPresented: $showOnboarding) {
+                WelcomeView {
+                    onboardingVersionSeen = onboardingVersionCurrent
+                    #if DEBUG
+                        onboardingVersionSeen = 0
+                    #endif
+                    showOnboarding = false
                 }
-                .task {
-                    showOnboarding =
-                        onboardingVersionSeen < onboardingVersionCurrent
-                }
-                .handlesExternalEvents(
-                    preferring: ["takenote://"],
-                    allowing: ["*"]
-                )
-                .focusedSceneValue(takeNoteVM)
-                .focusedSceneValue(search)
-        }
-        .environment(takeNoteVM)
-        .environment(search)
+            }
+            .task {
+                showOnboarding =
+                    onboardingVersionSeen < onboardingVersionCurrent
+            }
+            .handlesExternalEvents(
+                preferring: ["takenote://"],
+                allowing: ["*"]
+            )
+            .focusedSceneValue(takeNoteVM)
+            .focusedSceneValue(search)
+            .environment(takeNoteVM)
+            .environment(search)
+    }
+    
+    /// We need this helper and MainAppWindow because we want Window on macOS and WindowGroup everywhere else,
+    /// because other platforms don't support Window. If we use WindowGroup on macOS we get all kinds of undesired effects.
+    /// So we kind of have to jump through hoops to get the per-platform setup we want without duplication
+    private var MainSceneCore: some Scene {
         #if os(macOS)
-            .windowToolbarStyle(.automatic)
+        Window("", id: "main-window") {
+            MainAppWindow
+        }
+        .windowToolbarStyle(.automatic)
+        #else
+        WindowGroup(id: "main-window") {
+            MainAppWindow
+        }
         #endif
+    }
+
+    var body: some Scene {
+        MainSceneCore
         .commands {
             CommandGroup(replacing: .newItem) { EmptyView() }
             FileCommands()
@@ -129,15 +144,17 @@ struct TakeNoteApp: App {
         }
         .modelContainer(container)
 
-            WindowGroup("TakeNote - AI Chat", id: "chat-window") {
-                if chatFeatureFlagEnabled {
-                    ChatWindow()
-                        .environment(search)
-                        .environment(TakeNoteVM())  // intentional
-                } else {
-                    Text("You shouldn't be seeing this. Please report the bug to adamrdrew@live.com")
-                }
+        WindowGroup("TakeNote - AI Chat", id: "chat-window") {
+            if chatFeatureFlagEnabled {
+                ChatWindow()
+                    .environment(search)
+                    .environment(TakeNoteVM())  // intentional
+            } else {
+                Text(
+                    "You shouldn't be seeing this. Please report the bug to adamrdrew@live.com"
+                )
             }
-            .modelContainer(container)
+        }
+        .modelContainer(container)
     }
 }
