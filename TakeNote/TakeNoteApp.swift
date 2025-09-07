@@ -4,11 +4,13 @@ import SwiftData
 import SwiftUI
 import os
 
-private let onboardingVersionCurrent = 1
+// Bump this to get the welcome screen to show for users on next launch
+private let onboardingVersionCurrent = 2
 private let onboardingVersionKey = "onboarding.version.seen"
 
 #if DEBUG
-    private let ckBootstrapVersionCurrent = 1
+    // Bump this to get the schema to update, for example if there have been model changes
+    private let ckBootstrapVersionCurrent = 3
     private let ckBootstrapVersionKey = "takenote.ck.bootstrap.version"
 #endif
 
@@ -43,6 +45,7 @@ struct TakeNoteApp: App {
     }
 
     init() {
+
         // 1) Config (dev/prod)
         let config = AppBootstrapper.makeModelConfiguration(
             debugStoreURL: Self.debugStoreURL()
@@ -50,9 +53,13 @@ struct TakeNoteApp: App {
 
         // 2) DEBUG-only: initialize CloudKit Dev schema if needed
         #if DEBUG
+            let tempBootstrapURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent(
+                    "CKBootstrap-\(UUID().uuidString).sqlite"
+                )
             AppBootstrapper.bootstrapDevSchemaIfNeeded(
                 modelTypes: [Note.self, NoteContainer.self, NoteLink.self],
-                storeURL: config.url,
+                storeURL: tempBootstrapURL,
                 containerID: "iCloud.com.adamdrew.takenote",
                 userDefaultsKey: ckBootstrapVersionKey,
                 currentVersion: ckBootstrapVersionCurrent,
@@ -105,37 +112,37 @@ struct TakeNoteApp: App {
             .environment(takeNoteVM)
             .environment(search)
     }
-    
+
     /// We need this helper and MainAppWindow because we want Window on macOS and WindowGroup everywhere else,
     /// because other platforms don't support Window. If we use WindowGroup on macOS we get all kinds of undesired effects.
     /// So we kind of have to jump through hoops to get the per-platform setup we want without duplication
     private var MainSceneCore: some Scene {
         #if os(macOS)
-        Window("TakeNote", id: "main-window") {
-            MainAppWindow
-        }
-        
-        .windowToolbarStyle(.automatic)
+            Window("TakeNote", id: "main-window") {
+                MainAppWindow
+            }
+
+            .windowToolbarStyle(.automatic)
         #else
-        WindowGroup(id: "main-window") {
-            MainAppWindow
-        }
+            WindowGroup(id: "main-window") {
+                MainAppWindow
+            }
         #endif
     }
 
     var body: some Scene {
         MainSceneCore
-        .commands {
-            CommandGroup(replacing: .newItem) { EmptyView() }
-            FileCommands()
-            EditCommands()
-            WindowCommands()
-            ViewCommands()
-        }
-        .modelContainer(container)
-        .handlesExternalEvents(
-            matching: ["takenote://"]
-        )
+            .commands {
+                CommandGroup(replacing: .newItem) { EmptyView() }
+                FileCommands()
+                EditCommands()
+                WindowCommands()
+                ViewCommands()
+            }
+            .modelContainer(container)
+            .handlesExternalEvents(
+                matching: ["takenote://"]
+            )
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
