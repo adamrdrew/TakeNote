@@ -30,6 +30,7 @@ struct FileCommands: Commands {
     var body: some Commands {
 
         CommandGroup(after: .newItem) {
+            #if DEBUG && os(macOS)
             Button("Delete Everything", systemImage: "flame") {
                 guard let sde = showDeleteEverything else {
                     return
@@ -39,6 +40,8 @@ struct FileCommands: Commands {
             .disabled(
                 showDeleteEverything == nil
             )
+            #endif
+            
             /// Create a new note
             Button("New Note", systemImage: "note.text.badge.plus") {
                 if let vm = takeNoteVM, let mc = modelContext {
