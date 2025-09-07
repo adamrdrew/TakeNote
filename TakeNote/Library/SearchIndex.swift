@@ -8,6 +8,8 @@ import SQLite  // SQLite.swift
 import os
 import NaturalLanguage
 
+
+
 /// Minimal full-text index for your notes.
 /// FTS5 table with two columns: note_id (UNINDEXED), chunk (searchable).
 internal final class SearchIndex {
@@ -29,13 +31,6 @@ internal final class SearchIndex {
     "all", "any", "both", "each", "few", "more", "most", "other", "some", "such",
     "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s",
     "t", "can", "will", "just", "don", "should", "now"]
-
-    // MARK: Result type
-    struct SearchHit: Identifiable {
-        public let id: Int64  // rowid inside FTS table
-        public let noteID: UUID
-        public let chunk: String  // the stored chunk text
-    }
 
     // MARK: Schema (DSL handles)
     private let fts = VirtualTable("fts")
