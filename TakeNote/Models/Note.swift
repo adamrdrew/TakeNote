@@ -54,6 +54,7 @@ class Note: Identifiable {
     var starred: Bool = false
     var aiSummary: String = ""
     var contentHash: String = ""
+    @Transient
     var aiSummaryIsGenerating: Bool = false
     var isEmpty: Bool { return content.isEmpty }
     // This odd syntax makes the setter private to the instance
