@@ -53,7 +53,9 @@ struct EditCommands: Commands {
     var noteIsInTrash: Bool {
         if let sn = selectedNotes {
             if let note = sn.first {
-                return note.folder!.isTrash
+                if let folder = note.folder {
+                    return folder.isTrash
+                }
             }
         }
         return false
