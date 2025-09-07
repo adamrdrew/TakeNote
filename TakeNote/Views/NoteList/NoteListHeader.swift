@@ -10,6 +10,10 @@ import SwiftUI
 struct NoteListHeader: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
 
+    @State var inEditMode: Bool = false
+    @State var newName : String = ""
+    @FocusState var nameInputFocused: Bool
+
     var folderSymbol: String {
         guard let container = takeNoteVM.selectedContainer else {
             return "folder"
@@ -22,7 +26,7 @@ struct NoteListHeader: View {
         }
         return "folder"
     }
-    
+
     var noteCountLabel: String {
         let noNotes = "No notes"
         guard let container = takeNoteVM.selectedContainer else {
@@ -36,22 +40,43 @@ struct NoteListHeader: View {
         }
         return "\(String(describing: container.notes.count)) notes"
     }
-    
+
     var body: some View {
         HStack {
             VStack(alignment: .leading) {
-
-                Label {
-                    Text(
-                        takeNoteVM.selectedContainer?.name
-                            ?? "No folder selected",
-                    )
-                } icon: {
-                    Image(systemName: folderSymbol)
-                        .foregroundColor(.takeNotePink)
+                if inEditMode {
+                    TextField("Rename...", text: $newName)
+                        .focused($nameInputFocused)
+                        .onChange(of: nameInputFocused) { newValue in
+                            if !newValue {
+                                inEditMode = false
+                                nameInputFocused = false
+                            }
+                        }
+                        .onExitCommand {
+                            inEditMode = false
+                            nameInputFocused = false
+                        }
+                        .onSubmit {
+                            guard let container = takeNoteVM.selectedContainer else {
+                                return
+                            }
+                            container.name = newName
+                            inEditMode.toggle()
+                        }
+                } else {
+                    Label {
+                        Text(
+                            takeNoteVM.selectedContainer?.name
+                                ?? "No folder selected",
+                        )
+                    } icon: {
+                        Image(systemName: folderSymbol)
+                            .foregroundColor(.takeNotePink)
+                    }
+                    .font(.title)
+                    .fontWeight(.bold)
                 }
-                .font(.title)
-                .fontWeight(.bold)
 
                 Text(noteCountLabel)
                     .font(.headline)
@@ -60,6 +85,15 @@ struct NoteListHeader: View {
             Spacer()
         }
         .padding()
-        
+        .contextMenu {
+            if !inEditMode {
+                Button("Rename") {
+                    inEditMode.toggle()
+                    nameInputFocused = inEditMode
+                    newName = takeNoteVM.selectedContainer?.name ?? ""
+                }
+            }
+        }
+
     }
 }
