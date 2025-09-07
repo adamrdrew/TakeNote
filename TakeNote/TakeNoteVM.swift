@@ -63,6 +63,14 @@ class TakeNoteVM {
         return selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
     }
+    
+    var canRenameSelectedContainer: Bool {
+        guard let sc = selectedContainer else { return false }
+        if sc.isInbox || sc.isTrash {
+            return false
+        }
+        return true
+    }
 
     var bufferIsEmpty: Bool {
         return bufferFolder?.notes.isEmpty ?? true

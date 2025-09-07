@@ -11,7 +11,7 @@ struct NoteListHeader: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
 
     @State var inEditMode: Bool = false
-    @State var newName : String = ""
+    @State var newName: String = ""
     @FocusState var nameInputFocused: Bool
 
     var folderSymbol: String {
@@ -41,59 +41,90 @@ struct NoteListHeader: View {
         return "\(String(describing: container.notes.count)) notes"
     }
 
-    var body: some View {
+    var ContainerNameEditor: some View {
+        TextField("Rename...", text: $newName)
+            .focused($nameInputFocused)
+            .onChange(of: nameInputFocused) { _, newValue in
+                if !newValue {
+                    inEditMode = false
+                    nameInputFocused = false
+                }
+            }
+            .onExitCommand {
+                inEditMode = false
+                nameInputFocused = false
+            }
+            .onSubmit {
+                guard let container = takeNoteVM.selectedContainer
+                else {
+                    return
+                }
+                container.name = newName
+                inEditMode.toggle()
+            }
+    }
+
+    var NoteCountLabel: some View {
+        Text(noteCountLabel)
+            .font(.headline)
+            .foregroundStyle(.secondary)
+    }
+
+    var ContainerNameLabel: some View {
+        Label {
+            Text(
+                takeNoteVM.selectedContainer?.name
+                    ?? "No folder selected",
+            )
+        } icon: {
+            Image(systemName: folderSymbol)
+                .foregroundColor(.takeNotePink)
+        }
+        .font(.title)
+        .fontWeight(.bold)
+    }
+    
+    func toggleEditMode() {
+        if !takeNoteVM.canRenameSelectedContainer {
+            return
+        }
+        inEditMode.toggle()
+        nameInputFocused = inEditMode
+        newName = takeNoteVM.selectedContainer?.name ?? ""
+    }
+
+    var RenameButton: some View {
+        Button("Rename") {
+            toggleEditMode()
+        }
+    }
+
+    var Header: some View {
         HStack {
             VStack(alignment: .leading) {
                 if inEditMode {
-                    TextField("Rename...", text: $newName)
-                        .focused($nameInputFocused)
-                        .onChange(of: nameInputFocused) { newValue in
-                            if !newValue {
-                                inEditMode = false
-                                nameInputFocused = false
-                            }
-                        }
-                        .onExitCommand {
-                            inEditMode = false
-                            nameInputFocused = false
-                        }
-                        .onSubmit {
-                            guard let container = takeNoteVM.selectedContainer else {
-                                return
-                            }
-                            container.name = newName
-                            inEditMode.toggle()
-                        }
+                    ContainerNameEditor
                 } else {
-                    Label {
-                        Text(
-                            takeNoteVM.selectedContainer?.name
-                                ?? "No folder selected",
-                        )
-                    } icon: {
-                        Image(systemName: folderSymbol)
-                            .foregroundColor(.takeNotePink)
-                    }
-                    .font(.title)
-                    .fontWeight(.bold)
+                    ContainerNameLabel
                 }
-
-                Text(noteCountLabel)
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
+                NoteCountLabel
             }
             Spacer()
         }
         .padding()
+        .onTapGesture(count: 2) {
+           toggleEditMode()
+        }
         .contextMenu {
-            if !inEditMode {
-                Button("Rename") {
-                    inEditMode.toggle()
-                    nameInputFocused = inEditMode
-                    newName = takeNoteVM.selectedContainer?.name ?? ""
-                }
+            if !inEditMode && takeNoteVM.canRenameSelectedContainer {
+                RenameButton
             }
         }
+    }
 
+    var body: some View {
+        if takeNoteVM.selectedContainer != nil {
+            Header
+        }
     }
 }
