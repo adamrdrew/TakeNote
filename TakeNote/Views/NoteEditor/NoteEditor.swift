@@ -35,15 +35,15 @@ struct NoteEditor: View {
     @State private var openNoteHasBacklinks: Bool = false
 
     @StateObject private var magicFormatter = MagicFormatter()
-    
+
     @FocusState var isInputActive: Bool
     @Binding var openNote: Note?
-    
+
     #if os(macOS)
-    let toolbarPosition = ToolbarItemPlacement.secondaryAction
+        let toolbarPosition = ToolbarItemPlacement.secondaryAction
     #endif
     #if os(iOS) || os(visionOS)
-    let toolbarPosition = ToolbarItemPlacement.automatic
+        let toolbarPosition = ToolbarItemPlacement.automatic
     #endif
 
     let logger = Logger(
@@ -53,6 +53,7 @@ struct NoteEditor: View {
 
     func togglePreview() {
         showPreview.toggle()
+        isInputActive = !showPreview
     }
 
     func showBacklinks() {
@@ -217,7 +218,7 @@ struct NoteEditor: View {
             ).notesLinkToDestination(on)
         }
     }
-    
+
     var body: some View {
         if let note = openNote {
             ZStack {
@@ -238,11 +239,11 @@ struct NoteEditor: View {
                             )
                         )
                         #if os(macOS)
-                        .onExitCommand(perform: {
-                            withAnimation {
-                                showPreview.toggle()
-                            }
-                        })
+                            .onExitCommand(perform: {
+                                withAnimation {
+                                    showPreview.toggle()
+                                }
+                            })
                         #endif
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
@@ -276,13 +277,13 @@ struct NoteEditor: View {
 
                         }
                         #if os(macOS)
-                        .onExitCommand(perform: {
-                            showPreview.toggle()
-                        })
+                            .onExitCommand(perform: {
+                                showPreview.toggle()
+                            })
                         #endif
                         .onTapGesture {
                             withAnimation {
-                                showPreview.toggle()
+                                togglePreview()
                             }
                         }
                     }
@@ -293,7 +294,7 @@ struct NoteEditor: View {
                 showPreview = true
                 setShowBacklinks()
             }
-            .onAppear() {
+            .onAppear {
                 setShowBacklinks()
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
@@ -319,7 +320,7 @@ struct NoteEditor: View {
                 ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
-                            showPreview.toggle()
+                            togglePreview()
                         }
                     }) {
                         Image(
