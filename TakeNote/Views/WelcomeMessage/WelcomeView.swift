@@ -10,19 +10,18 @@ struct WelcomeView: View {
                 .bold()
 
             // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
-
+            WelcomeRow(
+                title: "Rich Links",
+                text: "Create links between notes and see note backlinks.",
+                systemImage: "link"
+            )
             WelcomeRow(
                 title: "Magic Format",
                 text: "Turn messy plaintext into clean Markdown instantly with AI.",
                 systemImage: "wand.and.stars"
             )
             WelcomeRow(
-                title: "Magic Chat",
-                text: "On device AI chat bot powered by your notes.",
-                systemImage: "message"
-            )
-            WelcomeRow(
-                title: "Markdown Assistant",
+                title: "Magic Assistant",
                 text: "AI Helps you write and format rich markdown.",
                 systemImage: "brain"
             )
