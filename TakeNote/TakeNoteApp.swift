@@ -99,10 +99,7 @@ struct TakeNoteApp: App {
                 showOnboarding =
                     onboardingVersionSeen < onboardingVersionCurrent
             }
-            .handlesExternalEvents(
-                preferring: ["takenote://"],
-                allowing: ["*"]
-            )
+
             .focusedSceneValue(takeNoteVM)
             .focusedSceneValue(search)
             .environment(takeNoteVM)
@@ -114,9 +111,10 @@ struct TakeNoteApp: App {
     /// So we kind of have to jump through hoops to get the per-platform setup we want without duplication
     private var MainSceneCore: some Scene {
         #if os(macOS)
-        Window("", id: "main-window") {
+        Window("TakeNote", id: "main-window") {
             MainAppWindow
         }
+        
         .windowToolbarStyle(.automatic)
         #else
         WindowGroup(id: "main-window") {
@@ -135,6 +133,9 @@ struct TakeNoteApp: App {
             ViewCommands()
         }
         .modelContainer(container)
+        .handlesExternalEvents(
+            matching: ["takenote://"]
+        )
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
