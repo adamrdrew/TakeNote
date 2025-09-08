@@ -62,6 +62,11 @@ struct MainWindow: View {
         @Bindable var takeNoteVM = takeNoteVM
         NavigationSplitView {
             Sidebar()
+            #if os(iOS)
+                .navigationTitle(
+                    Text("TakeNote")
+                )
+            #endif
                 .toolbar {
                     ToolbarItem(placement: .primaryAction) {
                         Button(action: {

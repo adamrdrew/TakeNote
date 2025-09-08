@@ -134,6 +134,20 @@ struct FolderListEntry: View {
             _ in
             dropNoteToFolder(wrappedIDs)
         }
+        #if os(iOS)
+        .swipeActions(edge: .trailing) {
+            if folder.canBeDeleted {
+                Button(
+                    role: .destructive,
+                    action: {
+                        deleteFolder()
+                    }
+                ) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        #endif
         .contextMenu {
             if folder.canBeDeleted {
                 Button(

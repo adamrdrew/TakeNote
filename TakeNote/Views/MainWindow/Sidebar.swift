@@ -128,9 +128,6 @@ struct Sidebar: View {
                             folder: folder
                         )
                     }
-                },
-                header: {
-                    Text("TakeNote")
                 }
             )
 
@@ -189,20 +186,5 @@ struct Sidebar: View {
             }
         }
         .listStyle(.sidebar)
-        /*
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button(action: {
-                    takeNoteVM.addFolder(modelContext)
-                }) {
-                    Label("Add Folder", systemImage: "folder.badge.plus")
-                }
-                .help("Add Folder")
-                AddTagButton(action: {
-                    takeNoteVM.addTag(modelContext: modelContext)
-                })
-            }
-        
-        }*/
     }
 }
