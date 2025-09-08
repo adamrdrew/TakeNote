@@ -15,6 +15,46 @@ import SwiftUI
     import UIKit
 #endif
 
+struct MovePopoverContent: View {
+    @Environment(TakeNoteVM.self) var takeNoteVM
+    @State var selectedContainer : NoteContainer?
+
+    var note : Note
+    var onSelect : () -> Void
+
+    var body : some View {
+        List(selection: $selectedContainer) {
+            Section(
+                content: {
+                    FolderList()
+                },
+                header: {
+                    Text("Folders")
+                }
+            )
+            .headerProminence(.increased)
+            Section(
+                content: {
+                    TagList()
+                },
+                header: {
+                    Text("Tags")
+                }
+            ).headerProminence(.increased)
+        }
+        .onChange(of: selectedContainer) { _, newValue in
+            guard let container = newValue else { return }
+            if container.isTag {
+                note.tag = container
+            } else {
+                note.folder = container
+            }
+            takeNoteVM.selectedContainer = container
+            onSelect()
+        }
+    }
+}
+
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
@@ -30,6 +70,7 @@ struct NoteListEntry: View {
     var note: Note
     @State private var inRenameMode: Bool = false
     @State private var inMoveToTrashMode: Bool = false
+    @State private var inMoveToContainerMode: Bool = false
     @State private var newName: String = ""
     @State private var showExportDialog: Bool = false
     @State private var exportError: String? = nil
@@ -230,14 +271,18 @@ struct NoteListEntry: View {
             .tint(.yellow)
         }
         // leading = right swipe
+        #if os(iOS)
         .swipeActions(edge: .leading) {
-            Button(action: { inMoveToTrashMode = true }) {
-                Label("Move…", systemImage: "folder")
-            }
-            Button(action: { inMoveToTrashMode = true }) {
-                Label("Tag…", systemImage: "tag")
+            Button(action: { inMoveToContainerMode = true }) {
+                Label("Move", systemImage: "arrow.down.app")
             }
         }
+        .popover(isPresented: $inMoveToContainerMode) {
+            MovePopoverContent(note: note, onSelect: {
+                inMoveToContainerMode = false
+            })
+        }
+        #endif
         .draggable(NoteIDWrapper(id: note.persistentModelID)) {
             ZStack {
                 RoundedRectangle(cornerRadius: 1.0, style: .continuous)
@@ -396,3 +441,4 @@ struct NoteListEntry: View {
         }
     }
 }
+
