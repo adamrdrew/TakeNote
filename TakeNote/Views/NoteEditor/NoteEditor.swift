@@ -21,6 +21,45 @@ extension FocusedValues {
     @Entry var openNoteHasBacklinks: Bool?
 }
 
+struct EditorCard: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .background(.thinMaterial.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .stroke(.white.opacity(0.06), lineWidth: 1)
+            )
+    }
+}
+
+struct MarkdownShortcutBar: View {
+    let insert: (String) -> Void
+    var body: some View {
+        HStack(spacing: 12) {
+            Spacer()
+            Group {
+                Button("#") { insert("# ") }
+                    .glassEffect()
+                Button("*") { insert("*") }
+                    .glassEffect()
+                Button("_") { insert("_") }
+                    .glassEffect()
+                Button("```") { insert("```\n\n```") }
+                    .glassEffect()
+                Button("[ ]") { insert("- [ ] ") }
+                    .glassEffect()
+            }
+            .buttonStyle(.bordered)
+            Spacer()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        //.background(.ultraThickMaterial)
+        .glassEffect()
+    }
+}
+
 struct NoteEditor: View {
     @Environment(\.modelContext) var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
@@ -100,6 +139,23 @@ struct NoteEditor: View {
             return
         }
 
+    }
+
+    private func insertAtCaret(_ s: String) {
+        guard var note = openNote else { return }
+        let ns = note.content as NSString
+        let range =
+            position.selections.first ?? NSRange(location: ns.length, length: 0)
+        let clamped = clamp(range, toLength: ns.length)
+
+        var new = note.content
+        if let r = Range(clamped, in: new) {
+            new.replaceSubrange(r, with: s)
+            note.content = new
+            // place caret after the inserted text
+            let newLoc = clamped.location + (s as NSString).length
+            position.selections = [NSRange(location: newLoc, length: 0)]
+        }
     }
 
     var selectedText: String {
@@ -245,6 +301,9 @@ struct NoteEditor: View {
                                 }
                             })
                         #endif
+                        #if os(iOS)
+                            .modifier(EditorCard())
+                        #endif
                         .disabled(magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
                         .focused($isInputActive)
@@ -307,6 +366,7 @@ struct NoteEditor: View {
                     .padding()
                 }
             }
+
             .alert(
                 magicFormatterErrorMessage,
                 isPresented: $magicFormatterErrorIsPresented
@@ -316,7 +376,19 @@ struct NoteEditor: View {
                     magicFormatterErrorIsPresented = false
                 }
             }
+            #if os(iOS)
+                .safeAreaInset(edge: .bottom) {
+                    if isInputActive && !showPreview {
+                        MarkdownShortcutBar(insert: insertAtCaret)
+                        .transition(
+                            .move(edge: .bottom).combined(with: .opacity)
+                        )
+                    }
+                }
+                .safeAreaPadding(.bottom, (isInputActive && !showPreview) ? 8 : 0)
+            #endif
             .toolbar {
+
                 ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
