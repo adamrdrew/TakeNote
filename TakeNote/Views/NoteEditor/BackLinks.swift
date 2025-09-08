@@ -5,6 +5,7 @@ struct BackLinks: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(\.dismiss) private var dismiss
 
     @State private var linkManager: NoteLinkManager?
     @State private var backLinkedNotes: [Note] = []
@@ -51,21 +52,25 @@ struct BackLinks: View {
                         ForEach(backLinkedNotes) { note in
                             BacklinkRow(note: note) {
                                 if let url = URL(string: note.getURL()) {
+                                    #if os(iOS)
+                                    dismiss()
+                                    #endif
                                     openURL(url)
                                 }
                             }
                             #if os(macOS)
-                            .contextMenu {
-                                Button("Copy Link") {
-                                    if let url = URL(string: note.getURL()) {
-                                        NSPasteboard.general.clearContents()
-                                        NSPasteboard.general.setString(
-                                            url.absoluteString,
-                                            forType: .string
-                                        )
+                                .contextMenu {
+                                    Button("Copy Link") {
+                                        if let url = URL(string: note.getURL())
+                                        {
+                                            NSPasteboard.general.clearContents()
+                                            NSPasteboard.general.setString(
+                                                url.absoluteString,
+                                                forType: .string
+                                            )
+                                        }
                                     }
                                 }
-                            }
                             #endif
                         }
                     }
@@ -74,7 +79,14 @@ struct BackLinks: View {
                 }
             }
         }
-        .frame(width: 280, height: 320)
+        #if os(macOS)
+            .frame(width: 280, height: 320)  // nice compact popover
+        #else
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .padding(.horizontal)
+            .presentationDetents([.medium, .large])  // optional, feels native
+            .presentationDragIndicator(.visible)  // optional
+        #endif
         .onAppear {
             linkManager = NoteLinkManager(modelContext: modelContext)
             refresh()
