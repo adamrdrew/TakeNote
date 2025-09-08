@@ -48,6 +48,7 @@ struct NoteIDWrapper: Hashable, Codable, Transferable {
 
 @Model
 class Note: Identifiable {
+    let defaultTitle: String = "New Note"
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()
@@ -72,7 +73,7 @@ class Note: Identifiable {
     @Relationship var incomingLinks: [NoteLink]? = []
 
     init(folder: NoteContainer) {
-        self.title = "New Note"
+        self.title = self.defaultTitle
         self.content = ""
         self.createdDate = Date()
         self.folder = folder
@@ -131,6 +132,24 @@ class Note: Identifiable {
         let response = try? await session.respond(to: prompt)
         aiSummary = response?.content ?? ""
         aiSummaryIsGenerating = false
+    }
+    
+    func setTitle() {
+        if title != defaultTitle {
+            return
+        }
+        if content.isEmpty {
+            return
+        }
+        let lines = content.components(separatedBy: "\n")
+        
+        if let firstLine = lines.first, !firstLine.isEmpty {
+            if let attributed = try? AttributedString(markdown: firstLine) {
+                let plain = String(attributed.characters)
+                title = plain
+            }
+        }
+        return
     }
 
 }

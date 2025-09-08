@@ -210,6 +210,7 @@ struct NoteList: View {
                         search.reindex(note: note)
                         NoteLinkManager(modelContext: modelContext)
                             .generateLinksFor(note)
+                        note.setTitle()
                     }
 
                 }
