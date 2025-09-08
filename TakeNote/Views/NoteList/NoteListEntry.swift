@@ -115,7 +115,7 @@ struct NoteListEntry: View {
 
     func finishRename() {
         inRenameMode = false
-        note.title = newName
+        note.setTitle(newName)
         try? modelContext.save()
     }
     

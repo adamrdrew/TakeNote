@@ -104,8 +104,8 @@ func fileImport(items: [URL], modelContext: ModelContext, searchIndex: SearchInd
             continue
         }
         let newNote = Note(folder: folder)
-        newNote.title = url.lastPathComponent
-        newNote.content = fileContents
+        newNote.setTitle(url.lastPathComponent)
+        newNote.setContent(fileContents)
         modelContext.insert(newNote)
         Task { await newNote.generateSummary() }
         searchIndex.reindex(note: newNote)

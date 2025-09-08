@@ -157,7 +157,7 @@ struct NoteEditor: View {
         var new = note.content
         if let r = Range(clamped, in: new) {
             new.replaceSubrange(r, with: s)
-            note.content = new
+            note.setContent(new)
             // place caret after the inserted text
             let newLoc = clamped.location + (s as NSString).length
             position.selections = [NSRange(location: newLoc, length: 0)]
@@ -188,7 +188,7 @@ struct NoteEditor: View {
 
         var s = note.content
         s.replaceSubrange(swiftRange, with: replacement)
-        note.content = s
+        note.setContent(s)
 
         // place caret after the inserted text
         let newLoc = nsRange.location + (replacement as NSString).length
@@ -358,6 +358,9 @@ struct NoteEditor: View {
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
                 setShowBacklinks()
+            }
+            .onChange(of: openNote?.content) { _,_ in
+                openNote?.updatedDate = Date()
             }
             .onAppear {
                 setShowBacklinks()
