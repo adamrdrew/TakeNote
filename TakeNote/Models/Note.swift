@@ -144,7 +144,10 @@ class Note: Identifiable {
         let lines = content.components(separatedBy: "\n")
         
         if let firstLine = lines.first, !firstLine.isEmpty {
-            self.title = firstLine
+            if let attributed = try? AttributedString(markdown: firstLine) {
+                let plain = String(attributed.characters)
+                title = plain
+            }
         }
         return
     }
