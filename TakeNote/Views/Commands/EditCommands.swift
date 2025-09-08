@@ -166,7 +166,7 @@ struct EditCommands: Commands {
             .keyboardShortcut("f", modifiers: [.command, .option])
             .disabled(doMagicFormat == nil)
 
-            Button("Markdown Assistant", systemImage: "apple.intelligence") {
+            Button("Magic Assistant", systemImage: "apple.intelligence") {
                 if let sap = showAssistantPopover {
                     sap()
                 }

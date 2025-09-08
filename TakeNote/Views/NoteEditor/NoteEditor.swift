@@ -459,7 +459,7 @@ struct NoteEditor: View {
                                 systemName: "apple.intelligence"
                             )
                         }
-                        .help("AI Markdown Assistant")
+                        .help("Magic Assistant")
                         .popover(
                             isPresented: $isAssistantPopoverPresented,
                             attachmentAnchor: .point(.center),
