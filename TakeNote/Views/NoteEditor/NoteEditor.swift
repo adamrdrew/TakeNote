@@ -49,6 +49,12 @@ struct MarkdownShortcutBar: View {
                     .glassEffect()
                 Button("[ ]") { insert("- [ ] ") }
                     .glassEffect()
+                /*
+                Button("Done") {
+                    
+                }
+                .glassEffect()
+                 */
             }
             .buttonStyle(.bordered)
             Spacer()
