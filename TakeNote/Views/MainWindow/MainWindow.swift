@@ -25,6 +25,9 @@ struct MainWindow: View {
 
     @State var notesInBufferMessagePresented: Bool = false
     @State var showDeleteEverythingAlert: Bool = false
+    
+    @State private var preferredColumn = NavigationSplitViewColumn.sidebar
+
 
     @State var showChatPopover: Bool = false
 
@@ -60,7 +63,7 @@ struct MainWindow: View {
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
-        NavigationSplitView {
+        NavigationSplitView(preferredCompactColumn: $preferredColumn) {
             Sidebar()
             #if os(iOS)
                 .navigationTitle(
