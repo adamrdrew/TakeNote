@@ -108,6 +108,7 @@ struct NoteList: View {
                 newNote.title = note.title
                 newNote.aiSummary = note.aiSummary
                 newNote.createdDate = note.createdDate
+                newNote.updatedDate = note.updatedDate
                 newNote.starred = note.starred
                 newNote.contentHash = note.contentHash
                 newNote.aiSummaryIsGenerating = note.aiSummaryIsGenerating

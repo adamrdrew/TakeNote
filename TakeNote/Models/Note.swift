@@ -52,6 +52,7 @@ class Note: Identifiable {
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()
+    var updatedDate: Date = Date()
     var starred: Bool = false
     var aiSummary: String = ""
     var contentHash: String = ""
@@ -76,9 +77,31 @@ class Note: Identifiable {
         self.title = self.defaultTitle
         self.content = ""
         self.createdDate = Date()
+        self.updatedDate = Date()
+
         self.folder = folder
         self.starred = false
         self.uuid = UUID()
+    }
+
+    func setTitle(_ newTitle: String) {
+        self.title = newTitle
+        self.updatedDate = Date()
+    }
+
+    func setContent(_ newContent: String) {
+        self.content = newContent
+        self.updatedDate = Date()
+    }
+
+    func setFolder(_ folder: NoteContainer) {
+        self.folder = folder
+        self.updatedDate = Date()
+    }
+
+    func setTag(_ tag: NoteContainer) {
+        self.tag = tag
+        self.updatedDate = Date()
     }
 
     func getURL() -> String {
@@ -133,7 +156,7 @@ class Note: Identifiable {
         aiSummary = response?.content ?? ""
         aiSummaryIsGenerating = false
     }
-    
+
     func setTitle() {
         if title != defaultTitle {
             return
@@ -142,11 +165,11 @@ class Note: Identifiable {
             return
         }
         let lines = content.components(separatedBy: "\n")
-        
+
         if let firstLine = lines.first, !firstLine.isEmpty {
             if let attributed = try? AttributedString(markdown: firstLine) {
                 let plain = String(attributed.characters)
-                title = plain
+                setTitle(plain)
             }
         }
         return
