@@ -367,7 +367,7 @@ struct NoteEditor: View {
             }
             .sheet(isPresented: $magicFormatter.formatterIsBusy) {
                 VStack {
-                    AIMessage(message: "Magic Formatting...", font: .headline)
+                    AIMessage(message: "Magic Format", font: .headline)
                         .padding()
                     Button("Cancel", role: .cancel) {
                         magicFormatter.cancel()
