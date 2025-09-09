@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>MagicChatEnabled</key>
-	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -17,23 +15,23 @@
 			</array>
 		</dict>
 	</array>
+	<key>MagicChatEnabled</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
 	</array>
-	<key>UILaunchStoryboardName</key>
-	<string>Launch Screen</string>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>
-			<key>UTTypeIdentifier</key>
-			<string>com.adamdrew.takenote.noteid</string>
-			<key>UTTypeDescription</key>
-			<string>Note ID</string>
 			<key>UTTypeConformsTo</key>
 			<array>
 				<string>public.data</string>
 			</array>
+			<key>UTTypeDescription</key>
+			<string>Note ID</string>
+			<key>UTTypeIdentifier</key>
+			<string>com.adamdrew.takenote.noteid</string>
 			<key>UTTypeTagSpecification</key>
 			<dict/>
 		</dict>
