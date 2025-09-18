@@ -122,6 +122,20 @@ internal struct TagListEntry: View {
                 id: tag.id
             )
         }
+        #if os(iOS)
+        .swipeActions(edge: .trailing) {
+            if tag.canBeDeleted {
+                Button(
+                    role: .destructive,
+                    action: {
+                        deleteTag()
+                    }
+                ) {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+        }
+        #endif
         .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Tag Color").font(.headline)
