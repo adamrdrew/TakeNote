@@ -136,7 +136,7 @@ struct NoteList: View {
             List(selection: $takeNoteVM.selectedNotes) {
 
                 if folderHasStarredNotes() {
-                    Section(header: Text("Favorites").font(.headline)) {
+                    Section(header: Text("Starred").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
                             if note.starred {
                                 NoteListEntry(

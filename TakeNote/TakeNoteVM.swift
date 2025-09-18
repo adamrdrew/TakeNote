@@ -38,6 +38,7 @@ class TakeNoteVM {
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
     var bufferFolder: NoteContainer?
+    var starredFolder: NoteContainer?
     
     var navigationTitle : String {
         var title = ""
@@ -160,8 +161,31 @@ class TakeNoteVM {
             canBeDeleted: false,
             isTrash: false,
             isInbox: true,
+            isStarred: false,
             name: TakeNoteVM.inboxFolderName,
             symbol: "tray",
+            isTag: false,
+        )
+        modelContext.insert(inboxFolder)
+        self.inboxFolder = inboxFolder
+        do {
+            try modelContext.save()
+            self.selectedContainer = inboxFolder
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
+    
+    func createStarredFolder(_ modelContext: ModelContext) {
+        if self.starredFolder != nil { return }
+        let inboxFolder = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: false,
+            isStarred: true,
+            name: "Starred",
+            symbol: "star.fill",
             isTag: false,
         )
         modelContext.insert(inboxFolder)
@@ -181,6 +205,7 @@ class TakeNoteVM {
             canBeDeleted: false,
             isTrash: true,
             isInbox: false,
+            isStarred: false,
             name: TakeNoteVM.trashFolderName,
             symbol: "trash",
             isTag: false,
@@ -201,6 +226,7 @@ class TakeNoteVM {
             canBeDeleted: false,
             isTrash: false,
             isInbox: false,
+            isStarred: false,
             name: "Buffer",
             symbol: "shippingbox",
             isTag: false,
@@ -264,6 +290,7 @@ class TakeNoteVM {
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
         createBufferFolder(modelContext)
+        createStarredFolder(modelContext)
         #if os(macOS)
         selectedContainer = inboxFolder
         #endif

@@ -24,7 +24,7 @@ struct NoteListHeader: View {
         if container.isTag {
             return "tag"
         }
-        return "folder"
+        return container.symbol
     }
 
     var noteCountLabel: String {

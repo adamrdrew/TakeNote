@@ -167,6 +167,7 @@ struct MainWindow: View {
                     takeNoteVM.trashFolder = nil
                     takeNoteVM.inboxFolder = nil
                     takeNoteVM.bufferFolder = nil
+                    takeNoteVM.starredFolder = nil
 
                     takeNoteVM.folderInit(modelContext)
                 }
