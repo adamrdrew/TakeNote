@@ -17,12 +17,12 @@ import SwiftUI
 
 struct MovePopoverContent: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
-    @State var selectedContainer : NoteContainer?
+    @State var selectedContainer: NoteContainer?
 
-    var note : Note
-    var onSelect : () -> Void
+    var note: Note
+    var onSelect: () -> Void
 
-    var body : some View {
+    var body: some View {
         List(selection: $selectedContainer) {
             Section(
                 content: {
@@ -118,144 +118,172 @@ struct NoteListEntry: View {
         note.setTitle(newName)
         try? modelContext.save()
     }
-    
-    var iconColor : Color {
+
+    var iconColor: Color {
         if note == takeNoteVM.openNote {
             return .primary
         }
         return .takeNotePink
     }
 
-    var body: some View {
-        @Bindable var takeNoteVM = takeNoteVM
-        VStack(alignment: .leading, spacing: vSpacing) {
-            // Title row
-            HStack(alignment: .firstTextBaseline, spacing: hSpacing) {
-                if inRenameMode {
-                    TextField("New Note Name", text: $newName)
-                        .focused($nameInputFocused)
+    var TitleRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: hSpacing) {
+            if inRenameMode {
+                TextField("New Note Name", text: $newName)
+                    .focused($nameInputFocused)
+                    .font(.headline.weight(.semibold))
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit { finishRename() }
+                    .onChange(of: nameInputFocused) { _, focused in
+                        if !focused {
+                            finishRename()
+                        }
+                    }
+            } else {
+                Label {
+                    Text(note.title)
                         .font(.headline.weight(.semibold))
-                        .textFieldStyle(.roundedBorder)
-                        .onSubmit { finishRename() }
-                        .onChange(of: nameInputFocused) { _, focused in
-                            if !focused {
-                                finishRename()
-                            }
-                        }
-                } else {
-                    Label {
-                        Text(note.title)
-                            .font(.headline.weight(.semibold))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    } icon: {
-                        Image(systemName: "note.text")
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(iconColor)
-                    }
-                    .labelStyle(.titleAndIcon)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "note.text")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(iconColor)
                 }
-
-                if let noteLabel = note.tag {
-                    NoteLabelBadge(noteLabel: noteLabel)
-                        .alignmentGuide(.firstTextBaseline) { d in
-                            d[.firstTextBaseline]
-                        }
-                }
-
-                Spacer(minLength: 0)
-                #if os(macOS)
-                    Button("", systemImage: note.starred ? "star.fill" : "star")
-                    {
-                        note.starred.toggle()
-                        try? modelContext.save()
-                    }
-                    .buttonStyle(.plain)
-                    .imageScale(.medium)
-                    .foregroundStyle(note.starred ? .yellow : .secondary)
-                    .help(note.starred ? "Unstar" : "Star")
-                #else
-                    if note.starred {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(Color(.yellow))
-                    }
-
-                #endif
+                .labelStyle(.titleAndIcon)
             }
 
-            // Metadata row
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(note.createdDate, style: .date)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-
-                Spacer(minLength: 0)
-
-                if takeNoteVM.selectedContainer?.isTag == true {
-                    Label {
-                        Text(note.folder!.name)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    } icon: {
-                        Image(systemName: "folder")
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(iconColor)
+            if let noteLabel = note.tag {
+                NoteLabelBadge(noteLabel: noteLabel)
+                    .alignmentGuide(.firstTextBaseline) { d in
+                        d[.firstTextBaseline]
                     }
-
-                }
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Spacer(minLength: 0)
+            #if os(macOS)
+                Button("", systemImage: note.starred ? "star.fill" : "star") {
+                    note.starred.toggle()
+                    try? modelContext.save()
+                }
+                .buttonStyle(.plain)
+                .imageScale(.medium)
+                .foregroundStyle(note.starred ? .yellow : .secondary)
+                .help(note.starred ? "Unstar" : "Star")
+            #else
+                if note.starred {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(Color(.yellow))
+                }
 
-                if note.aiSummaryIsGenerating {
-                    AIMessage(
-                        message: "AI Summary Generating...",
-                        font: .callout
-                    )
+            #endif
+        }
+    }
 
-                } else {
-                    if !note.aiSummary.isEmpty {
-                        Label {
-                            Text(note.aiSummary)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(2)
-                                .truncationMode(.tail)
-                        } icon: {
-                            Image(systemName: "apple.intelligence")
-                                .symbolRenderingMode(.hierarchical)
-                                .foregroundStyle(
-                                    .linearGradient(
-                                        colors: [
-                                            .orange, .pink, .blue, .purple,
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
+    var MetadataRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(note.createdDate, style: .date)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
 
-                                )
-                        }
-                    } else {
-                        Label {
-                            Text(
-                                note.content.replacingOccurrences(
-                                    of: "\n",
-                                    with: " "
-                                )
-                            )
+            Spacer(minLength: 0)
+
+            if takeNoteVM.selectedContainer?.isTag == true {
+                Label {
+                    Text(note.folder!.name)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "folder")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundColor(iconColor)
+                }
+
+            }
+        }
+    }
+
+    var SummaryRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if note.aiSummaryIsGenerating {
+                AIMessage(
+                    message: "AI Summary Generating...",
+                    font: .callout
+                )
+            } else {
+                if !note.aiSummary.isEmpty {
+                    Label {
+                        Text(note.aiSummary)
                             .font(.callout)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                             .truncationMode(.tail)
-                        } icon: {
-                            Image(systemName: "text.magnifyingglass")
-                                .foregroundStyle(.secondary)
-                        }
+                    } icon: {
+                        Image(systemName: "apple.intelligence")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(
+                                .linearGradient(
+                                    colors: [
+                                        .orange, .pink, .blue, .purple,
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                ),
+
+                            )
+                    }
+                } else {
+                    Label {
+                        Text(
+                            note.content.replacingOccurrences(
+                                of: "\n",
+                                with: " "
+                            )
+                        )
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                    } icon: {
+                        Image(systemName: "text.magnifyingglass")
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
+        }
+    }
+
+    var DragRepresentation: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 1.0, style: .continuous)
+                .frame(width: 24, height: 32)
+                .foregroundColor(.white)
+                .border(.gray, width: 1)
+            VStack {
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundColor(.gray)
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundColor(.gray)
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundColor(.gray)
+            }
+        }
+    }
+
+    var body: some View {
+        @Bindable var takeNoteVM = takeNoteVM
+        VStack(alignment: .leading, spacing: vSpacing) {
+            TitleRow
+                .allowsHitTesting(false)
+            MetadataRow
+                .allowsHitTesting(false)
+            SummaryRow
+                .allowsHitTesting(false)
         }
         // trailing = left swipe
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -270,42 +298,29 @@ struct NoteListEntry: View {
             }
             .tint(.yellow)
         }
-        // leading = right swipe
         #if os(iOS)
-        .swipeActions(edge: .leading) {
-            Button(action: { inMoveToContainerMode = true }) {
-                Label("Move", systemImage: "arrow.down.app")
-            }
-        }
-        .popover(isPresented: $inMoveToContainerMode) {
-            MovePopoverContent(note: note, onSelect: {
-                inMoveToContainerMode = false
-            })
-        }
-        #endif
-        .draggable(NoteIDWrapper(id: note.persistentModelID)) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 1.0, style: .continuous)
-                    .frame(width: 24, height: 32)
-                    .foregroundColor(.white)
-                    .border(.gray, width: 1)
-                VStack {
-                    Rectangle()
-                        .frame(width: 12, height: 2)
-                        .foregroundColor(.gray)
-                    Rectangle()
-                        .frame(width: 12, height: 2)
-                        .foregroundColor(.gray)
-                    Rectangle()
-                        .frame(width: 12, height: 2)
-                        .foregroundColor(.gray)
+            // leading = right swipe
+            .swipeActions(edge: .leading) {
+                Button(action: { inMoveToContainerMode = true }) {
+                    Label("Move", systemImage: "arrow.down.app")
                 }
             }
-
+            .popover(isPresented: $inMoveToContainerMode) {
+                MovePopoverContent(
+                    note: note,
+                    onSelect: {
+                        inMoveToContainerMode = false
+                    }
+                )
+            }
+        #endif
+        .draggable(NoteIDWrapper(id: note.persistentModelID)) {
+            DragRepresentation
         }
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, horizontalPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // I had this in here but I'm not sure it is doing anything
+        //.frame(maxWidth: .infinity, alignment: .leading)
         .highPriorityGesture(
             TapGesture(count: 2)
                 .onEnded { openEditorWindow() }
@@ -328,13 +343,13 @@ struct NoteListEntry: View {
                 }
             }
             #if os(macOS)
-            Button(
-                action: {
-                    openEditorWindow()
+                Button(
+                    action: {
+                        openEditorWindow()
+                    }
+                ) {
+                    Label("Open Editor Window", systemImage: "macwindow")
                 }
-            ) {
-                Label("Open Editor Window", systemImage: "macwindow")
-            }
             #endif
             if !note.isEmpty {
                 Button(
@@ -441,4 +456,3 @@ struct NoteListEntry: View {
         }
     }
 }
-
