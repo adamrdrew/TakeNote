@@ -347,8 +347,7 @@ struct NoteListEntry: View {
                 }
             }
 
-            if takeNoteVM.selectedContainer?.isTrash == true
-                || takeNoteVM.selectedContainer?.isTag == true
+            if takeNoteVM.selectedContainer?.isTag == true
                 || takeNoteVM.selectedContainer?.isStarred == true
             {
                 Button(action: {
