@@ -66,7 +66,12 @@ final class SystemFolderReconciler {
         // Move notes off duplicates, then delete the dupes
         for dup in candidates {
             let dupNotes = Array(dup.notes)       // copy
-            for n in dupNotes { n.folder = canonical }
+            if dup.isStarred {
+                for n in dupNotes { n.starredFolder = canonical }
+            } else {
+                for n in dupNotes { n.folder = canonical }
+            }
+            
 
             if let sel = vm.selectedContainer,
                sel.persistentModelID == dup.persistentModelID {   // compare by ID

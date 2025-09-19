@@ -267,13 +267,8 @@ class TakeNoteVM {
         folders: [NoteContainer],
         modelContext: ModelContext
     ) {
-        guard let trash = trashFolder else {
-            errorAlertMessage = "Could not find trash folder"
-            errorAlertIsVisible = true
-            return
-        }
         for note in deletedFolder.notes {
-            note.folder = trash
+            moveNoteToTrash(note, modelContext: modelContext)
         }
         do {
             try modelContext.save()
