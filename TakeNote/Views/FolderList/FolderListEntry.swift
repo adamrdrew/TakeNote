@@ -63,7 +63,7 @@ struct FolderListEntry: View {
             }
             if folder.isStarred {
                 if note.starred {
-                    return
+                    continue
                 }
                 takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
             } else {

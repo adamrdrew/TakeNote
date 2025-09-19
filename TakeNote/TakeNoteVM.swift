@@ -308,6 +308,9 @@ class TakeNoteVM {
             return
         }
         noteToTrash.folder = trash
+        if noteToTrash.starred {
+            noteStarredToggle(noteToTrash, modelContext: modelContext)
+        }
         do {
             try modelContext.save()
         } catch {
@@ -348,7 +351,9 @@ class TakeNoteVM {
         } else {
             note.starred = true
             if sf.starredNotes == nil { sf.starredNotes = [] }
-            sf.starredNotes?.append(note)
+            if !(sf.starredNotes ?? []).contains(note) {
+                sf.starredNotes?.append(note)
+            }
         }
 
         try? modelContext.save()

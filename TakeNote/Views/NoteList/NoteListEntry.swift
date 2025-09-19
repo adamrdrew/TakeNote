@@ -351,7 +351,7 @@ struct NoteListEntry: View {
                 || takeNoteVM.selectedContainer?.isStarred == true
             {
                 Button(action: {
-                    takeNoteVM.selectedContainer = note.folder
+                    if let f = note.folder { takeNoteVM.selectedContainer = f }
                 }) {
                     Label(
                         "Go to Note Folder",
