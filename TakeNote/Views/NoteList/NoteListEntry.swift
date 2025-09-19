@@ -103,9 +103,16 @@ struct NoteListEntry: View {
     }
 
     func moveToTrash() {
-        takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
-        noteDeleteRegistry.unregisterCommand(id: note.id)
-        noteRenameRegistry.unregisterCommand(id: note.id)
+        for sn in takeNoteVM.selectedNotes {
+            takeNoteVM.moveNoteToTrash(sn, modelContext: modelContext)
+            if sn.id == note.id {
+                noteDeleteRegistry.unregisterCommand(id: note.id)
+                noteRenameRegistry.unregisterCommand(id: note.id)
+            }
+            if sn.id == takeNoteVM.openNote?.id {
+                takeNoteVM.openNote = nil
+            }
+        }
     }
 
     func startRename() {
@@ -192,7 +199,9 @@ struct NoteListEntry: View {
 
             Spacer(minLength: 0)
 
-            if takeNoteVM.selectedContainer?.isTag == true || takeNoteVM.selectedContainer?.isStarred == true {
+            if takeNoteVM.selectedContainer?.isTag == true
+                || takeNoteVM.selectedContainer?.isStarred == true
+            {
                 HStack(spacing: 6) {
                     Text(note.folder?.name ?? "Folder")
                         .lineLimit(1)
