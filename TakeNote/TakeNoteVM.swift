@@ -251,6 +251,9 @@ class TakeNoteVM {
             return
         }
         for note in trash.notes {
+            if openNote == note {
+                openNote = nil
+            }
             modelContext.delete(note)
         }
         do {
