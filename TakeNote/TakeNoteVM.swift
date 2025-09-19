@@ -66,7 +66,7 @@ class TakeNoteVM {
 
     var canRenameSelectedContainer: Bool {
         guard let sc = selectedContainer else { return false }
-        if sc.isInbox || sc.isTrash {
+        if sc.isInbox || sc.isTrash || sc.isStarred {
             return false
         }
         return true
