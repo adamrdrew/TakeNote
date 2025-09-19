@@ -80,6 +80,16 @@ struct NoteList: View {
         }
     }
 
+    var showUnstarredNoteList: Bool {
+        if filteredNotes.isEmpty {
+            return false
+        }
+        if filteredNotes.contains(where: { !$0.starred }) {
+            return true
+        }
+        return false
+    }
+    
     @Environment(SearchIndexService.self) private var search
 
     func playSystemErrorSound() {
@@ -157,7 +167,7 @@ struct NoteList: View {
                     }
 
                 }
-                if filteredNotes.isEmpty == false {
+                if showUnstarredNoteList {
                     Section(header: Text("Notes").font(.headline)) {
                         ForEach(filteredNotes, id: \.self) { note in
                             if !note.starred {
