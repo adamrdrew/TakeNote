@@ -192,19 +192,19 @@ struct NoteListEntry: View {
 
             Spacer(minLength: 0)
 
-            if takeNoteVM.selectedContainer?.isTag == true {
-                Label {
-                    Text(note.folder!.name)
+            if takeNoteVM.selectedContainer?.isTag == true || takeNoteVM.selectedContainer?.isStarred == true {
+                HStack(spacing: 6) {
+                    Text(note.folder?.name ?? "Folder")
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                } icon: {
+
                     Image(systemName: "folder")
                         .symbolRenderingMode(.hierarchical)
                         .foregroundColor(iconColor)
+                        .imageScale(.medium)
                 }
-
             }
         }
     }
