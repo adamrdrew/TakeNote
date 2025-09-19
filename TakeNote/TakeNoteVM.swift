@@ -61,6 +61,7 @@ class TakeNoteVM {
     var canAddNote: Bool {
         return selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
+            && selectedContainer?.isStarred == false
     }
 
     var canRenameSelectedContainer: Bool {
