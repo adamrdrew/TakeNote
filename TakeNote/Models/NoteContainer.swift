@@ -36,13 +36,9 @@ class NoteContainer: Identifiable {
     var colorRGBA: UInt32 = 0xE5E5E5FF
     var symbol: String = "folder"
     var notes: [Note] {
-        if isTag {
-            return tagNotes!
-        }
-        if isStarred {
-            return starredNotes!
-        }
-        return folderNotes!
+        if isTag { return tagNotes ?? [] }
+        if isStarred { return starredNotes ?? [] }
+        return folderNotes ?? []
     }
 
     init(
