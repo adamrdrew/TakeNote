@@ -27,8 +27,16 @@ struct NewNoteIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         takeNoteVM.selectedContainer = takeNoteVM.inboxFolder
         let note = takeNoteVM.addNote(modelContainer.mainContext)
-        takeNoteVM.openNote = note
-        
+
+        if let note {
+            takeNoteVM.openNote = note
+            takeNoteVM.selectedNotes = [note]
+        } else {
+            // If addNote failed to create a note, clear current selection to avoid stale state
+            takeNoteVM.openNote = nil
+            takeNoteVM.selectedNotes = []
+        }
+
         return .result()
     }
     
