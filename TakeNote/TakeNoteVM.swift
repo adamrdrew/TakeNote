@@ -181,7 +181,7 @@ class TakeNoteVM {
 
     func createStarredFolder(_ modelContext: ModelContext) {
         if self.starredFolder != nil { return }
-        let inboxFolder = NoteContainer(
+        let starredFolder = NoteContainer(
             canBeDeleted: false,
             isTrash: false,
             isInbox: false,
@@ -190,11 +190,10 @@ class TakeNoteVM {
             symbol: "star.fill",
             isTag: false,
         )
-        modelContext.insert(inboxFolder)
-        self.inboxFolder = inboxFolder
+        modelContext.insert(starredFolder)
+        self.starredFolder = starredFolder
         do {
             try modelContext.save()
-            self.selectedContainer = inboxFolder
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
