@@ -181,6 +181,7 @@ struct NoteList: View {
                 }
 
             }
+            .id(filteredNotes.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
                 .frame(maxHeight: 80)
