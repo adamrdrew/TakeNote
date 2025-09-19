@@ -26,19 +26,26 @@ class NoteContainer: Identifiable {
     var name: String = ""
     var folderNotes: [Note]? = []
     var tagNotes: [Note]? = []
+    var starredNotes: [Note]? = []
     internal var canBeDeleted: Bool = true
     internal var isTrash: Bool = false
     internal var isInbox: Bool = false
+    internal var isStarred: Bool = false
     internal var isTag: Bool = false
     internal var isBuffer: Bool = false
     var colorRGBA: UInt32 = 0xE5E5E5FF
     var symbol: String = "folder"
-    var notes: [Note] { isTag ? tagNotes! : folderNotes! }
+    var notes: [Note] {
+        if isTag { return tagNotes ?? [] }
+        if isStarred { return starredNotes ?? [] }
+        return folderNotes ?? []
+    }
 
     init(
         canBeDeleted: Bool = true,
         isTrash: Bool = false,
         isInbox: Bool = false,
+        isStarred: Bool = false,
         name: String = "New Folder",
         symbol: String = "folder",
         isTag: Bool = false
@@ -47,6 +54,7 @@ class NoteContainer: Identifiable {
         self.canBeDeleted = canBeDeleted
         self.isTrash = isTrash
         self.isInbox = isInbox
+        self.isStarred = isStarred
         self.symbol = symbol
         self.isTag = isTag
     }

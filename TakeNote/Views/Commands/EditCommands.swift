@@ -13,6 +13,7 @@ struct EditCommands: Commands {
         CommandRegistry?
     @FocusedValue(\.containerRenameRegistry) var containerRenameRegistry:
         CommandRegistry?
+    
     @FocusedValue(\.selectedNoteContainer) var selectedNoteContainer:
         NoteContainer?
 
@@ -22,6 +23,9 @@ struct EditCommands: Commands {
     @FocusedValue(\.noteRenameRegistry) var noteRenameRegistry: CommandRegistry?
     @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
 
+    @FocusedValue(\.noteStarToggleRegistry) var noteStarToggleRegistry: CommandRegistry?
+
+    
     @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
         CommandRegistry?
 
@@ -176,9 +180,12 @@ struct EditCommands: Commands {
 
             Button("Toggle Star", systemImage: "star") {
                 if let sn = selectedNotes {
-                    for note in sn {
-                        note.starred.toggle()
+                    if let nstr = noteStarToggleRegistry {
+                        for note in sn {
+                            nstr.runCommand(id: note.id)
+                        }
                     }
+
                 }
             }
             .disabled(selectedNotes == nil || selectedNotes!.isEmpty)

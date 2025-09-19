@@ -27,12 +27,14 @@ final class SystemFolderReconciler {
         let inbox  = try reconcile(match: #Predicate { $0.isInbox })
         let trash  = try reconcile(match: #Predicate { $0.isTrash })
         let buffer = try reconcile(match: #Predicate { $0.isBuffer })
+        let starred = try reconcile(match: #Predicate { $0.isStarred })
 
         // Even if reconcile() returned nil (because count == 0 or 1),
         // we still want the VM to hold the current canonical (if one exists).
         vm.inboxFolder  = inbox  ?? fetchSingle(#Predicate { $0.isInbox })
         vm.trashFolder  = trash  ?? fetchSingle(#Predicate { $0.isTrash })
         vm.bufferFolder = buffer ?? fetchSingle(#Predicate { $0.isBuffer })
+        vm.starredFolder = starred ?? fetchSingle(#Predicate { $0.isStarred })
     }
     
     private func fetchSingle(_ p: Predicate<NoteContainer>) -> NoteContainer? {
@@ -64,7 +66,12 @@ final class SystemFolderReconciler {
         // Move notes off duplicates, then delete the dupes
         for dup in candidates {
             let dupNotes = Array(dup.notes)       // copy
-            for n in dupNotes { n.folder = canonical }
+            if dup.isStarred {
+                for n in dupNotes { n.starredFolder = canonical }
+            } else {
+                for n in dupNotes { n.folder = canonical }
+            }
+            
 
             if let sel = vm.selectedContainer,
                sel.persistentModelID == dup.persistentModelID {   // compare by ID

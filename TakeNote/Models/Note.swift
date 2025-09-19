@@ -67,6 +67,8 @@ class Note: Identifiable {
     var folder: NoteContainer?
     @Relationship(deleteRule: .nullify, inverse: \NoteContainer.tagNotes)
     var tag: NoteContainer?
+    @Relationship(deleteRule: .nullify, inverse: \NoteContainer.starredNotes)
+    var starredFolder: NoteContainer?
 
     // Keep these as relationships but DO NOT specify inverses here
     // (we'll specify inverses on NoteLink to avoid macro circularity).

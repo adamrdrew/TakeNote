@@ -101,7 +101,7 @@ struct Sidebar: View {
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in
-            folder.isTrash || folder.isInbox
+            folder.isTrash || folder.isInbox || folder.isStarred
         }
     ) var systemFolders: [NoteContainer]
 

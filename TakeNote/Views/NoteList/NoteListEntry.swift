@@ -64,6 +64,7 @@ struct NoteListEntry: View {
     @Environment(\.noteCopyMarkdownLinkRegistry) private
         var noteCopyMarkdownLinkRegistry
     @Environment(\.noteRenameRegistry) private var noteRenameRegistry
+    @Environment(\.noteStarToggleRegistry) private var noteStarToggleRegistry
     @Environment(\.noteOpenEditorWindowRegistry) private
         var noteOpenEditorWindowRegistry
 
@@ -119,6 +120,10 @@ struct NoteListEntry: View {
         try? modelContext.save()
     }
 
+    func noteStarToggle() {
+        takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
+    }
+
     var iconColor: Color {
         if note == takeNoteVM.openNote {
             return .primary
@@ -163,8 +168,7 @@ struct NoteListEntry: View {
             Spacer(minLength: 0)
             #if os(macOS)
                 Button("", systemImage: note.starred ? "star.fill" : "star") {
-                    note.starred.toggle()
-                    try? modelContext.save()
+                    noteStarToggle()
                 }
                 .buttonStyle(.plain)
                 .imageScale(.medium)
@@ -188,19 +192,19 @@ struct NoteListEntry: View {
 
             Spacer(minLength: 0)
 
-            if takeNoteVM.selectedContainer?.isTag == true {
-                Label {
-                    Text(note.folder!.name)
+            if takeNoteVM.selectedContainer?.isTag == true || takeNoteVM.selectedContainer?.isStarred == true {
+                HStack(spacing: 6) {
+                    Text(note.folder?.name ?? "Folder")
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                } icon: {
+
                     Image(systemName: "folder")
                         .symbolRenderingMode(.hierarchical)
                         .foregroundColor(iconColor)
+                        .imageScale(.medium)
                 }
-
             }
         }
     }
@@ -279,7 +283,7 @@ struct NoteListEntry: View {
         @Bindable var takeNoteVM = takeNoteVM
         VStack(alignment: .leading, spacing: vSpacing) {
             TitleRow
-                .allowsHitTesting(false)
+                .allowsHitTesting(true)
             MetadataRow
                 .allowsHitTesting(false)
             SummaryRow
@@ -290,7 +294,7 @@ struct NoteListEntry: View {
             Button(role: .destructive, action: { moveToTrash() }) {
                 Label("Trash", systemImage: "trash")
             }
-            Button(action: { note.starred.toggle() }) {
+            Button(action: { noteStarToggle() }) {
                 Label(
                     note.starred ? "Unstar" : "Star",
                     systemImage: note.starred ? "star.slash" : "star"
@@ -342,6 +346,20 @@ struct NoteListEntry: View {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
             }
+
+            if takeNoteVM.selectedContainer?.isTag == true
+                || takeNoteVM.selectedContainer?.isStarred == true
+            {
+                Button(action: {
+                    if let f = note.folder { takeNoteVM.selectedContainer = f }
+                }) {
+                    Label(
+                        "Go to Note Folder",
+                        systemImage: "arrow.forward.folder"
+                    )
+                }
+            }
+
             #if os(macOS)
                 Button(
                     action: {
@@ -416,6 +434,10 @@ struct NoteListEntry: View {
                 id: note.persistentModelID,
                 command: startRename
             )
+            noteStarToggleRegistry.registerCommand(
+                id: note.persistentModelID,
+                command: noteStarToggle
+            )
             noteOpenEditorWindowRegistry.registerCommand(
                 id: note.persistentModelID,
                 command: openEditorWindow
@@ -428,6 +450,7 @@ struct NoteListEntry: View {
         .onDisappear {
             noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
             noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
+            noteStarToggleRegistry.unregisterCommand(id: note.persistentModelID)
             noteCopyMarkdownLinkRegistry.unregisterCommand(
                 id: note.persistentModelID
             )
