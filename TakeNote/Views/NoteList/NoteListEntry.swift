@@ -163,8 +163,7 @@ struct NoteListEntry: View {
             Spacer(minLength: 0)
             #if os(macOS)
                 Button("", systemImage: note.starred ? "star.fill" : "star") {
-                    note.starred.toggle()
-                    try? modelContext.save()
+                    takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
                 }
                 .buttonStyle(.plain)
                 .imageScale(.medium)
@@ -279,7 +278,7 @@ struct NoteListEntry: View {
         @Bindable var takeNoteVM = takeNoteVM
         VStack(alignment: .leading, spacing: vSpacing) {
             TitleRow
-                .allowsHitTesting(false)
+                .allowsHitTesting(true)
             MetadataRow
                 .allowsHitTesting(false)
             SummaryRow
@@ -290,7 +289,7 @@ struct NoteListEntry: View {
             Button(role: .destructive, action: { moveToTrash() }) {
                 Label("Trash", systemImage: "trash")
             }
-            Button(action: { note.starred.toggle() }) {
+            Button(action: { takeNoteVM.noteStarredToggle(note, modelContext: modelContext) }) {
                 Label(
                     note.starred ? "Unstar" : "Star",
                     systemImage: note.starred ? "star.slash" : "star"
@@ -342,6 +341,15 @@ struct NoteListEntry: View {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
             }
+            
+            if takeNoteVM.selectedContainer?.isTrash == true || takeNoteVM.selectedContainer?.isTag == true || takeNoteVM.selectedContainer?.isStarred == true {
+                Button(action: {
+                    takeNoteVM.selectedContainer = note.folder
+                }) {
+                    Label("Open Note Folder", systemImage: "arrow.forward.folder")
+                }
+            }
+            
             #if os(macOS)
                 Button(
                     action: {

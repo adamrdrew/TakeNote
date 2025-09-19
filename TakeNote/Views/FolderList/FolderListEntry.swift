@@ -61,8 +61,15 @@ struct FolderListEntry: View {
             guard let note = modelContext.model(for: id) as? Note else {
                 continue
             }
-            // Add the destination folder to the note and save
-            note.folder = folder
+            if folder.isStarred {
+                if note.starred {
+                    return
+                }
+                takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
+            } else {
+                // Add the destination folder to the note and save
+                note.folder = folder
+            }
         }
         do {
             try modelContext.save()

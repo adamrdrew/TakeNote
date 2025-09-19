@@ -5,9 +5,9 @@
 //  Created by Adam Drew on 8/21/25.
 //
 
-import SwiftUI
 import FoundationModels
 import SwiftData
+import SwiftUI
 
 @Observable
 @MainActor
@@ -15,8 +15,7 @@ class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     static let chatWindowID = "chat-window"
-    
-    
+
     // The note currently open in the editor
     var openNote: Note?
     // The folder or tag the user is viewing
@@ -25,7 +24,7 @@ class TakeNoteVM {
     var selectedNotes = Set<Note>()
     // The LLM we use throughout the app
     let languageModel = SystemLanguageModel.default
-    
+
     var emptyTrashAlertIsPresented: Bool = false
     var linkToNoteErrorIsPresented: Bool = false
     var linkToNoteErrorMessage: String = ""
@@ -34,26 +33,26 @@ class TakeNoteVM {
     var errorAlertMessage: String = ""
     var errorAlertIsVisible: Bool = false
     var showMultiNoteView: Bool = false
-    
+
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
     var bufferFolder: NoteContainer?
     var starredFolder: NoteContainer?
-    
-    var navigationTitle : String {
+
+    var navigationTitle: String {
         var title = ""
         if let selectedContainerName = selectedContainer?.name {
-            title =  "\(selectedContainerName)"
+            title = "\(selectedContainerName)"
         }
         if let openNoteTitle = openNote?.title {
-            title =  "\(title) / \(openNoteTitle)"
+            title = "\(title) / \(openNoteTitle)"
         }
         #if DEBUG
             return "TakeNote (DEBUG)"
         #endif
         return "TakeNote"
     }
-    
+
     var aiIsAvailable: Bool {
         return languageModel.availability == .available
     }
@@ -63,7 +62,7 @@ class TakeNoteVM {
         return selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
     }
-    
+
     var canRenameSelectedContainer: Bool {
         guard let sc = selectedContainer else { return false }
         if sc.isInbox || sc.isTrash {
@@ -75,11 +74,11 @@ class TakeNoteVM {
     var bufferIsEmpty: Bool {
         return bufferFolder?.notes.isEmpty ?? true
     }
-    
-    var bufferNotesCount : Int {
+
+    var bufferNotesCount: Int {
         return bufferFolder?.notes.count ?? 0
     }
-    
+
     var canEmptyTrash: Bool {
         return trashFolderSelected && !selectedContainerIsEmpty
     }
@@ -135,9 +134,11 @@ class TakeNoteVM {
         }
     }
 
-
-    
-    func addTag(_ name: String = "New Tag", color: Color = Color(.blue), modelContext: ModelContext) {
+    func addTag(
+        _ name: String = "New Tag",
+        color: Color = Color(.blue),
+        modelContext: ModelContext
+    ) {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
@@ -176,7 +177,7 @@ class TakeNoteVM {
             errorAlertIsVisible = true
         }
     }
-    
+
     func createStarredFolder(_ modelContext: ModelContext) {
         if self.starredFolder != nil { return }
         let inboxFolder = NoteContainer(
@@ -219,7 +220,7 @@ class TakeNoteVM {
             errorAlertIsVisible = true
         }
     }
-    
+
     func createBufferFolder(_ modelContext: ModelContext) {
         if self.bufferFolder != nil { return }
         let bufferFolder = NoteContainer(
@@ -258,10 +259,14 @@ class TakeNoteVM {
             errorAlertMessage = "Updating DB after emptying trash failed"
             errorAlertIsVisible = true
         }
-        
+
     }
 
-    func folderDelete(_ deletedFolder: NoteContainer, folders: [NoteContainer], modelContext: ModelContext) {
+    func folderDelete(
+        _ deletedFolder: NoteContainer,
+        folders: [NoteContainer],
+        modelContext: ModelContext
+    ) {
         guard let trash = trashFolder else {
             errorAlertMessage = "Could not find trash folder"
             errorAlertIsVisible = true
@@ -292,7 +297,7 @@ class TakeNoteVM {
         createBufferFolder(modelContext)
         createStarredFolder(modelContext)
         #if os(macOS)
-        selectedContainer = inboxFolder
+            selectedContainer = inboxFolder
         #endif
     }
 
@@ -326,12 +331,29 @@ class TakeNoteVM {
         guard let ibx = inboxFolder else {
             return
         }
-        for note : Note in Array(bf.notes) {
+        for note: Note in Array(bf.notes) {
             note.folder = ibx
         }
         try? modelContext.save()
     }
-    
+
+    func noteStarredToggle(_ note: Note, modelContext: ModelContext) {
+        guard let sf = starredFolder else { return }
+
+        if note.starred {
+            note.starred = false
+            if let idx = sf.starredNotes?.firstIndex(where: { $0 == note }) {
+                sf.starredNotes?.remove(at: idx)
+            }
+        } else {
+            note.starred = true
+            if sf.starredNotes == nil { sf.starredNotes = [] }
+            sf.starredNotes?.append(note)
+        }
+
+        try? modelContext.save()
+    }
+
     func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 
@@ -374,7 +396,7 @@ class TakeNoteVM {
         selectedNotes.removeAll()
         openNote = nil
     }
-    
+
     func onNoteSelect(_ note: Note) {
         openNote = note
     }
@@ -389,6 +411,5 @@ class TakeNoteVM {
             selectedNotes = []
         }
     }
-    
 
 }
