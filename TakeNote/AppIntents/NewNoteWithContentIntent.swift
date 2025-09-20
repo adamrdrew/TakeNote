@@ -18,6 +18,8 @@ struct NewNoteWithContentIntent: AppIntent {
     
     @Parameter(title: "Note Content", description: "The content you want in the new note")
     var content: String
+    @Parameter(title: "Note Title", description: "The title you want for the new note")
+    var noteTitle: String
     
     static var title: LocalizedStringResource = "Create a new note with content"
 
@@ -33,6 +35,7 @@ struct NewNoteWithContentIntent: AppIntent {
 
         if let note {
             note.content = content
+            note.title = noteTitle
             takeNoteVM.openNote = note
             takeNoteVM.selectedNotes = [note]
         } else {

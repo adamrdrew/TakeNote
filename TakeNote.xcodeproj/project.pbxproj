@@ -10,11 +10,42 @@
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
 		66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 66B616EC2E4CC2B6009A1857 /* SQLite */; };
+		66DEFBFB2E7EB4ED00BBA401 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */; };
+		66DEFBFD2E7EB4ED00BBA401 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */; };
+		66DEFC0A2E7EB4EE00BBA401 /* NewNoteControlExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 66EEDE102E3FFBDD00A899AE /* MarkdownUI */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		66DEFC082E7EB4EE00BBA401 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 66B690722E3FCDF20013519B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 66DEFBF72E7EB4ED00BBA401;
+			remoteInfo = NewNoteControlExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		66DEFC0F2E7EB4EE00BBA401 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				66DEFC0A2E7EB4EE00BBA401 /* NewNoteControlExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		66B6907A2E3FCDF20013519B /* TakeNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TakeNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NewNoteControlExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = /System/Library/Frameworks/WidgetKit.framework; sourceTree = "<absolute>"; };
+		66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
+		66DEFC182E7EBE7700BBA401 /* NewNoteControlExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewNoteControlExtension.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -28,6 +59,25 @@
 			};
 			target = 66B690792E3FCDF20013519B /* TakeNote */;
 		};
+		66DEFC0E2E7EB4EE00BBA401 /* Exceptions for "NewNoteControl" folder in "NewNoteControlExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */;
+		};
+		66DEFC112E7EB64100BBA401 /* Exceptions for "TakeNote" folder in "NewNoteControlExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				AppIntents/NewNoteIntent.swift,
+				Library/SnapshotController.swift,
+				Models/Note.swift,
+				Models/NoteContainer.swift,
+				Models/NoteLink.swift,
+				TakeNoteVM.swift,
+			);
+			target = 66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -35,8 +85,17 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				66D0A7522E44D623003569BC /* Exceptions for "TakeNote" folder in "TakeNote" target */,
+				66DEFC112E7EB64100BBA401 /* Exceptions for "TakeNote" folder in "NewNoteControlExtension" target */,
 			);
 			path = TakeNote;
+			sourceTree = "<group>";
+		};
+		66DEFBFE2E7EB4ED00BBA401 /* NewNoteControl */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				66DEFC0E2E7EB4EE00BBA401 /* Exceptions for "NewNoteControl" folder in "NewNoteControlExtension" target */,
+			);
+			path = NewNoteControl;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -53,13 +112,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		66DEFBF52E7EB4ED00BBA401 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				66DEFBFD2E7EB4ED00BBA401 /* SwiftUI.framework in Frameworks */,
+				66DEFBFB2E7EB4ED00BBA401 /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		66B690712E3FCDF20013519B = {
 			isa = PBXGroup;
 			children = (
+				66DEFC182E7EBE7700BBA401 /* NewNoteControlExtension.entitlements */,
 				66B6907C2E3FCDF20013519B /* TakeNote */,
+				66DEFBFE2E7EB4ED00BBA401 /* NewNoteControl */,
+				66DEFBF92E7EB4ED00BBA401 /* Frameworks */,
 				66B6907B2E3FCDF20013519B /* Products */,
 			);
 			sourceTree = "<group>";
@@ -68,8 +139,18 @@
 			isa = PBXGroup;
 			children = (
 				66B6907A2E3FCDF20013519B /* TakeNote.app */,
+				66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		66DEFBF92E7EB4ED00BBA401 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */,
+				66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -82,10 +163,12 @@
 				66B690762E3FCDF20013519B /* Sources */,
 				66B690772E3FCDF20013519B /* Frameworks */,
 				66B690782E3FCDF20013519B /* Resources */,
+				66DEFC0F2E7EB4EE00BBA401 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				66DEFC092E7EB4EE00BBA401 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				66B6907C2E3FCDF20013519B /* TakeNote */,
@@ -101,6 +184,28 @@
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
 			productType = "com.apple.product-type.application";
 		};
+		66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 66DEFC0B2E7EB4EE00BBA401 /* Build configuration list for PBXNativeTarget "NewNoteControlExtension" */;
+			buildPhases = (
+				66DEFBF42E7EB4ED00BBA401 /* Sources */,
+				66DEFBF52E7EB4ED00BBA401 /* Frameworks */,
+				66DEFBF62E7EB4ED00BBA401 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				66DEFBFE2E7EB4ED00BBA401 /* NewNoteControl */,
+			);
+			name = NewNoteControlExtension;
+			packageProductDependencies = (
+			);
+			productName = NewNoteControlExtension;
+			productReference = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -108,11 +213,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1640;
+				LastSwiftUpdateCheck = 2600;
 				LastUpgradeCheck = 2600;
 				TargetAttributes = {
 					66B690792E3FCDF20013519B = {
 						CreatedOnToolsVersion = 16.4;
+					};
+					66DEFBF72E7EB4ED00BBA401 = {
+						CreatedOnToolsVersion = 26.0;
 					};
 				};
 			};
@@ -136,12 +244,20 @@
 			projectRoot = "";
 			targets = (
 				66B690792E3FCDF20013519B /* TakeNote */,
+				66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		66B690782E3FCDF20013519B /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		66DEFBF62E7EB4ED00BBA401 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -158,7 +274,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		66DEFBF42E7EB4ED00BBA401 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		66DEFC092E7EB4EE00BBA401 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */;
+			targetProxy = 66DEFC082E7EB4EE00BBA401 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		66B690842E3FCDF30013519B /* Debug */ = {
@@ -405,6 +536,94 @@
 			};
 			name = Release;
 		};
+		66DEFC0C2E7EB4EE00BBA401 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P8645Z2MB8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NewNoteControl/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NewNoteControl;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote.NewNoteControl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Debug;
+		};
+		66DEFC0D2E7EB4EE00BBA401 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = P8645Z2MB8;
+				ENABLE_APP_SANDBOX = YES;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NewNoteControl/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NewNoteControl;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.8;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote.NewNoteControl;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = auto;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2,7";
+				XROS_DEPLOYMENT_TARGET = 26.0;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -422,6 +641,15 @@
 			buildConfigurations = (
 				66B690872E3FCDF30013519B /* Debug */,
 				66B690882E3FCDF30013519B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		66DEFC0B2E7EB4EE00BBA401 /* Build configuration list for PBXNativeTarget "NewNoteControlExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				66DEFC0C2E7EB4EE00BBA401 /* Debug */,
+				66DEFC0D2E7EB4EE00BBA401 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
