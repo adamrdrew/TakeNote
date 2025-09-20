@@ -49,8 +49,9 @@ class TakeNoteVM {
         }
         #if DEBUG
             return "TakeNote (DEBUG)"
+        #else
+            return "TakeNote"
         #endif
-        return "TakeNote"
     }
 
     var aiIsAvailable: Bool {
@@ -119,10 +120,10 @@ class TakeNoteVM {
         }
     }
 
-    func addNote(_ modelContext: ModelContext) {
+    func addNote(_ modelContext: ModelContext) -> Note? {
         guard let folder = selectedContainer else {
             print("Adding note failed, no folder selected")
-            return
+            return nil
         }
         let note = Note(folder: folder)
         modelContext.insert(note)
@@ -133,6 +134,7 @@ class TakeNoteVM {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
         }
+        return note
     }
 
     func addTag(

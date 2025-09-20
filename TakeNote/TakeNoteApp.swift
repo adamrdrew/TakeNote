@@ -3,6 +3,7 @@ import CoreData
 import SwiftData
 import SwiftUI
 import os
+import AppIntents
 
 // Bump this to get the welcome screen to show for users on next launch
 private let onboardingVersionCurrent = 2
@@ -78,7 +79,21 @@ struct TakeNoteApp: App {
         } catch {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
+        
+        // Capture values in locals to avoid capturing `self` in escaping closures
+        let modelContainer = container
+        let viewModel = takeNoteVM
 
+        // Got this from here: https://www.malcolmhall.com/2024/07/22/how-to-use-swiftdata-with-appintents/
+        let asyncModelContainerDep: @Sendable () async -> ModelContainer = { @MainActor in
+            return modelContainer
+        }
+        AppDependencyManager.shared.add(key: "ModelContainer", dependency: asyncModelContainerDep)
+        let asyncViewModelDep: @Sendable () async -> TakeNoteVM = { @MainActor in
+            return viewModel
+        }
+        AppDependencyManager.shared.add(key: "TakeNoteVM", dependency: asyncViewModelDep)
+        
         // 4) Reconciler + observers (remote changes only by default)
 
         reconcilerHarness = AppBootstrapper.installReconciler(

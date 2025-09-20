@@ -103,6 +103,19 @@ struct NoteListEntry: View {
     }
 
     func moveToTrash() {
+        if takeNoteVM.selectedNotes.isEmpty == false {
+            moveSelectedNotesToTrash()
+            return
+        }
+        takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
+        noteDeleteRegistry.unregisterCommand(id: note.id)
+        noteRenameRegistry.unregisterCommand(id: note.id)
+        if takeNoteVM.openNote == note {
+            takeNoteVM.openNote = nil
+        }
+    }
+    
+    func moveSelectedNotesToTrash() {
         for sn in takeNoteVM.selectedNotes {
             takeNoteVM.moveNoteToTrash(sn, modelContext: modelContext)
             if sn.id == note.id {
