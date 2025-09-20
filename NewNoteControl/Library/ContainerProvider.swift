@@ -34,12 +34,16 @@ struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
         NoteListEntry(
             date: .now,
             rows: [
-                .init(
-                    id: .init(),
-                    title: "Example note",
-                    excerpt: "This is an example note",
-                    url: "takenote://note/placeholder"
-                )
+                .init(id: .init(), title: "Grocery list", excerpt: "Eggs, spinach, oat milk, ground coffee, salmon fillet…", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Meeting with Sarah", excerpt: "Discuss Q4 roadmap, confirm budget allocations, and set deadlines for design review.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Book to read", excerpt: "Started ‘The Unknown River’—bookmark key quotes and impressions for later.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Workout plan", excerpt: "Push/pull/legs split — focus on progressive overload and consistent cardio.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Weekend trip ideas", excerpt: "Asheville hike, brewery tour, Airbnb cabin stay near downtown", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Code snippet", excerpt: "Refactor the data fetch into async/await, wrap in Task, handle errors cleanly.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Birthday gift ideas", excerpt: "Jane: vinyl player stand. Bob: new drill set. Don: concert tickets.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Recipe: Chicken curry", excerpt: "Marinate chicken in yogurt + spices, simmer with coconut milk, ginger, garlic.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Dream journal", excerpt: "Strange train ride, glowing sky, felt calm but uncertain—write more details later.", url: "takenote://note/placeholder"),
+                .init(id: .init(), title: "Movies to watch", excerpt: "Hereditary, Past Lives, and the new Dune sequel when it comes out.", url: "takenote://note/placeholder")
             ],
             isPlaceholder: true,
             name: Spec.placeholderName,
