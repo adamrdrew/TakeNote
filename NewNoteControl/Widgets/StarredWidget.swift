@@ -25,7 +25,7 @@ struct StarredWidget: Widget {
             NoteContainerWidgetView(entry: entry, showNewButton: false)
         }
         .configurationDisplayName("Starred")
-        .description("Shows your starred notes")
-        .supportedFamilies([.systemSmall /*, .systemMedium */])
+        .description("Recently updated Starred notes in TakeNote.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }

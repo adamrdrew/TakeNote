@@ -37,6 +37,7 @@ struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
                 .init(
                     id: .init(),
                     title: "Example note",
+                    excerpt: "This is an example note",
                     url: "takenote://note/placeholder"
                 )
             ],
@@ -70,7 +71,7 @@ struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
         }
 
         let rows: [NoteRow] = container.notes.map {
-            NoteRow(id: $0.uuid, title: $0.title, url: $0.url)
+            NoteRow(id: $0.uuid, title: $0.title, excerpt: $0.excerpt, url: $0.url)
         }
 
         let entry = NoteListEntry(

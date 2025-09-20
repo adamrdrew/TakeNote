@@ -31,8 +31,8 @@ struct InboxWidget: Widget {
             NoteContainerWidgetView(entry: entry, showNewButton: true)
         }
         .configurationDisplayName("Inbox")
-        .description("Shows your inbox")
-        .supportedFamilies([.systemSmall /*, .systemMedium */])
+        .description("Recently updated notes from your TakeNote Inbox.")
+        .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
 

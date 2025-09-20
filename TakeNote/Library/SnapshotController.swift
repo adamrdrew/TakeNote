@@ -13,6 +13,7 @@ struct NoteSnapshot: Codable, Identifiable, Hashable {
     var id: PersistentIdentifier
     var uuid: UUID
     var title: String
+    var excerpt: String
     var url: String
 }
 
@@ -90,6 +91,7 @@ class SnapshotController {
                     id: note.id,
                     uuid: note.uuid,
                     title: note.title,
+                    excerpt: note.aiSummary,
                     url: note.getURL()
                 )
             }
@@ -119,4 +121,3 @@ class SnapshotController {
     }
 
 }
-

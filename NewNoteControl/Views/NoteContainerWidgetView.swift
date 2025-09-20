@@ -11,53 +11,44 @@ import WidgetKit
 struct NoteContainerWidgetView: View {
     let entry: NoteListEntry
     let showNewButton: Bool
+    @Environment(\.widgetFamily) private var family
 
     var body: some View {
-        VStack {
-            // Title row + actions
-            HStack(alignment: .firstTextBaseline) {
-                Image(systemName: entry.symbol)
-                Text(entry.name)
-                    .font(.headline).bold()
-                    .foregroundStyle(.primary)
-                Spacer()
-                Text("\(entry.totalNoteCount)")
-                    .font(.headline).bold()
-                    .foregroundStyle(.primary)
-            }
-            //.frame(maxHeight: .infinity, alignment: .top)
-
-            // Note list
+        VStack(spacing: 0) {
+            // --- Top content: header + list ---
             VStack(alignment: .leading, spacing: 6) {
-                ForEach(entry.rows.prefix(3)) { row in
-                    if let url = URL(string: row.url) {
-                        Link(destination: url) {
-                            Text(row.title.isEmpty ? "Untitled" : row.title)
-                                .font(.callout)
-                                .lineLimit(1)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                // Title row + actions
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Image(systemName: entry.symbol)
+                    Text(entry.name)
+                        .font(.subheadline).bold()
+                        .foregroundStyle(.primary)
+                    Spacer()
+                    Text("\(entry.totalNoteCount)")
+                        .font(.subheadline).bold()
+                        .foregroundStyle(.primary)
+                }
+
+                // Content varies by family
+                Group {
+                    switch family {
+                    case .systemMedium:
+                        mediumList
+                    case .systemLarge:
+                        largeList
+                    default: // .systemSmall
+                        smallList
                     }
                 }
-
-                if !entry.isPlaceholder && entry.rows.isEmpty {
-                    Text("No notes")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                }
-
-                Spacer()
             }
-            .frame(
-                maxWidth: .infinity,
-                maxHeight: .infinity,
-                alignment: .topLeading
-            )
+            .frame(maxWidth: .infinity, alignment: .topLeading)
 
+            Spacer(minLength: 0) // pushes button to bottom
+
+            // --- Bottom content: new note button ---
             HStack {
                 Spacer()
                 if showNewButton {
-                    // Create a new note via your AppIntent
                     Button(intent: NewNoteIntent()) {
                         Image(systemName: "plus.circle.fill")
                             .font(.title3)
@@ -69,15 +60,92 @@ struct NoteContainerWidgetView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
-            // Your custom brand color (exists in your asset catalog)
             ZStack {
                 Color(.takeNotePink)
                 LinearGradient(
-                    colors: [.clear, .black.opacity(0.50)],
+                    colors: [.clear, .black.opacity(0.5)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
+            }
+        }
+    }
+
+    // MARK: - Small (4 titles)
+    private var smallList: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ForEach(entry.rows.prefix(4)) { row in
+                if let url = URL(string: row.url) {
+                    Link(destination: url) {
+                        Text(row.title.isEmpty ? "Untitled" : row.title)
+                            .font(.footnote)
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            if !entry.isPlaceholder && entry.rows.isEmpty {
+                Text("No notes")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Medium (3 items: smaller title + excerpt)
+    private var mediumList: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(entry.rows.prefix(3)) { row in
+                if let url = URL(string: row.url) {
+                    Link(destination: url) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row.title.isEmpty ? "Untitled" : row.title)
+                                .font(.footnote).bold()
+                                .lineLimit(1)
+                            Text(row.excerpt)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            if !entry.isPlaceholder && entry.rows.isEmpty {
+                Text("No notes")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    // MARK: - Large (5 items: larger title + excerpt)
+    private var largeList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(entry.rows.prefix(5)) { row in
+                if let url = URL(string: row.url) {
+                    Link(destination: url) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(row.title.isEmpty ? "Untitled" : row.title)
+                                .font(.callout).bold()
+                                .lineLimit(1)
+                            Text(row.excerpt)
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+            }
+            if !entry.isPlaceholder && entry.rows.isEmpty {
+                Text("No notes")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
             }
         }
     }

@@ -12,6 +12,7 @@ import WidgetKit
 struct NoteRow: Identifiable, Hashable {
     let id: UUID
     let title: String
+    let excerpt: String
     let url: String
 }
 
