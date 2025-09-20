@@ -10,6 +10,7 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
+import WidgetKit
 
 extension UTType {
     static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
@@ -84,26 +85,32 @@ class Note: Identifiable {
         self.folder = folder
         self.starred = false
         self.uuid = UUID()
+        
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func setTitle(_ newTitle: String) {
         self.title = newTitle
         self.updatedDate = Date()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func setContent(_ newContent: String) {
         self.content = newContent
         self.updatedDate = Date()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func setFolder(_ folder: NoteContainer) {
         self.folder = folder
         self.updatedDate = Date()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func setTag(_ tag: NoteContainer) {
         self.tag = tag
         self.updatedDate = Date()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 
     func getURL() -> String {

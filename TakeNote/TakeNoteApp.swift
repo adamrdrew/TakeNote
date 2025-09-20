@@ -1,9 +1,9 @@
+import AppIntents
 import CloudKit
 import CoreData
 import SwiftData
 import SwiftUI
 import os
-import AppIntents
 
 // Bump this to get the welcome screen to show for users on next launch
 private let onboardingVersionCurrent = 2
@@ -18,8 +18,10 @@ private let onboardingVersionKey = "onboarding.version.seen"
 @main
 struct TakeNoteApp: App {
     @Environment(\.modelContext) var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false
+    @State private var refreshTask: Task<Void, Never>?
     private var reconcilerHarness: AppBootstrapper.ReconcilerHarness?
     var takeNoteVM = TakeNoteVM()
 
@@ -30,6 +32,18 @@ struct TakeNoteApp: App {
         category: "App"
     )
 
+    private func startActiveRefreshLoop(ctx: ModelContext) {
+        // cancel previous loop if any
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor in
+            // iOS will suspend timers when the app is backgrounded; this only runs while active
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 10 * 60 * 1_000_000_000) // 10 min
+                SnapshotController.takeSnapshot(modelContext: ctx)
+            }
+        }
+    }
+    
     static func debugStoreURL() -> URL {
         let base = try! FileManager.default.url(
             for: .applicationSupportDirectory,
@@ -79,21 +93,29 @@ struct TakeNoteApp: App {
         } catch {
             fatalError("Failed to initialize ModelContainer: \(error)")
         }
-        
+
         // Capture values in locals to avoid capturing `self` in escaping closures
         let modelContainer = container
         let viewModel = takeNoteVM
 
         // Got this from here: https://www.malcolmhall.com/2024/07/22/how-to-use-swiftdata-with-appintents/
-        let asyncModelContainerDep: @Sendable () async -> ModelContainer = { @MainActor in
+        let asyncModelContainerDep: @Sendable () async -> ModelContainer = {
+            @MainActor in
             return modelContainer
         }
-        AppDependencyManager.shared.add(key: "ModelContainer", dependency: asyncModelContainerDep)
-        let asyncViewModelDep: @Sendable () async -> TakeNoteVM = { @MainActor in
+        AppDependencyManager.shared.add(
+            key: "ModelContainer",
+            dependency: asyncModelContainerDep
+        )
+        let asyncViewModelDep: @Sendable () async -> TakeNoteVM = {
+            @MainActor in
             return viewModel
         }
-        AppDependencyManager.shared.add(key: "TakeNoteVM", dependency: asyncViewModelDep)
-        
+        AppDependencyManager.shared.add(
+            key: "TakeNoteVM",
+            dependency: asyncViewModelDep
+        )
+
         // 4) Reconciler + observers (remote changes only by default)
 
         reconcilerHarness = AppBootstrapper.installReconciler(
@@ -155,6 +177,24 @@ struct TakeNoteApp: App {
                 ViewCommands()
             }
             .modelContainer(container)
+            .onChange(of: scenePhase) { _, newPhase in
+                Task { @MainActor in
+                    let ctx = ModelContext(container)
+                    switch newPhase {
+                    case .active:
+                        // write at launch/foreground
+                        SnapshotController.takeSnapshot(modelContext: ctx)
+                        // kick off a lightweight refresh loop while active
+                        startActiveRefreshLoop(ctx: ctx)
+                    case .inactive, .background:
+                        // write a final snapshot on background
+                        SnapshotController.takeSnapshot(modelContext: ctx)
+                    // loop auto-cancels when scene goes inactive/background
+                    @unknown default:
+                        break
+                    }
+                }
+            }
             .handlesExternalEvents(
                 matching: ["takenote://"]
             )

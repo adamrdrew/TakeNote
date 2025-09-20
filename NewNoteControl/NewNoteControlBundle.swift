@@ -12,5 +12,7 @@ import SwiftUI
 struct NewNoteControlBundle: WidgetBundle {
     var body: some Widget {
         NewNoteControl()
+        InboxWidget()
+        StarredWidget()
     }
 }

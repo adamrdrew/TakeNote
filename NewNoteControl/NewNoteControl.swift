@@ -15,7 +15,7 @@ struct NewNoteControl: ControlWidget {
             kind: "com.adamdrew.takenote.newNoteControl"
         ) {
             ControlWidgetButton(action: NewNoteIntent()) {
-                Label("New Note", systemImage: "document.badge.plus")
+                Label("New Note", systemImage: "text.pad.header.badge.plus")
             }
         }
         .displayName("New Note")
