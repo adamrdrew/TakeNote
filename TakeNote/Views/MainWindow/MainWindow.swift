@@ -25,11 +25,18 @@ struct MainWindow: View {
 
     @State var notesInBufferMessagePresented: Bool = false
     @State var showDeleteEverythingAlert: Bool = false
-    
+
     @State private var preferredColumn = NavigationSplitViewColumn.sidebar
 
-
     @State var showChatPopover: Bool = false
+
+    var toolbarPlacement: ToolbarItemPlacement {
+        #if os(iOS)
+        return UIDevice.current.userInterfaceIdiom == .phone ? .bottomBar : .automatic
+        #else
+        return .automatic
+        #endif
+    }
 
     func showDeleteEverything() {
         showDeleteEverythingAlert = true
@@ -61,15 +68,56 @@ struct MainWindow: View {
         try? modelContext.save()
     }
 
+    var NoteListToolbar: some ToolbarContent {
+        ToolbarItemGroup(placement: toolbarPlacement) {
+            if takeNoteVM.canAddNote {
+                Button(action: {
+                    _ = takeNoteVM.addNote(modelContext)
+                }) {
+                    Image(systemName: "note.text.badge.plus")
+                }
+                .help("Add Note")
+            }
+            if chatFeatureFlagEnabled && chatEnabled {
+                #if os(macOS)
+                    Button(action: openChatWindow) {
+                        Label("Chat", systemImage: "message")
+                    }
+                    .help("AI Chat")
+                #endif
+                #if os(iOS)
+                    Button(action: doShowChatPopover) {
+                        Label("Chat", systemImage: "message")
+                    }
+                    .help("AI Chat")
+                    .popover(
+                        isPresented: $showChatPopover,
+                        arrowEdge: .trailing
+                    ) {
+                        ChatWindow()
+                    }
+                #endif
+            }
+            if takeNoteVM.canEmptyTrash {
+                Button(action: takeNoteVM.showEmptyTrashAlert) {
+                    Label("Empty Trash", systemImage: "trash.slash")
+                }
+                .help("Empty Trash")
+            }
+        }
+    }
+
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
+
         NavigationSplitView(preferredCompactColumn: $preferredColumn) {
             Sidebar()
                 .navigationTitle(
                     Text("TakeNote")
                 )
                 .toolbar {
-                    ToolbarItem(placement: .primaryAction) {
+                    ToolbarItem(placement: toolbarPlacement) {
+
                         Button(action: {
                             takeNoteVM.addFolder(modelContext)
                         }) {
@@ -80,7 +128,7 @@ struct MainWindow: View {
                         }
                         .help("Add Folder")
                     }
-                    ToolbarItem(placement: .primaryAction) {
+                    ToolbarItem(placement: toolbarPlacement) {
                         AddTagButton(action: {
                             takeNoteVM.addTag(modelContext: modelContext)
                         })
@@ -90,46 +138,9 @@ struct MainWindow: View {
         } content: {
             NoteList()
                 .toolbar {
-                    if takeNoteVM.canAddNote {
-                        Button(action: {
-                            takeNoteVM.addNote(modelContext)
-                        }) {
-                            Image(systemName: "note.text.badge.plus")
-                        }
-                        .help("Add Note")
-                    }
-                    if chatFeatureFlagEnabled {
-                        #if os(macOS)
-                            if chatEnabled {
-                                Button(action: openChatWindow) {
-                                    Label("Chat", systemImage: "message")
-                                }
-                                .help("AI Chat")
-                            }
-                        #endif
-                        #if os(iOS)
-                            if chatEnabled {
-                                Button(action: doShowChatPopover) {
-                                    Label("Chat", systemImage: "message")
-                                }
-                                .help("AI Chat")
-                                .popover(
-                                    isPresented: $showChatPopover,
-                                    arrowEdge: .trailing
-                                ) {
-                                    ChatWindow()
-                                }
-                            }
-                        #endif
-                    }
-                    if takeNoteVM.canEmptyTrash {
-                        Button(action: takeNoteVM.showEmptyTrashAlert) {
-                            Label("Empty Trash", systemImage: "trash.slash")
-                        }
-                        .help("Empty Trash")
-                    }
-
+                    NoteListToolbar
                 }
+
         } detail: {
             if takeNoteVM.showMultiNoteView {
                 MultiNoteViewer()
