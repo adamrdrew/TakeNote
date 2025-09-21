@@ -9,6 +9,16 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 
+enum SortBy {
+    case created
+    case updated
+}
+
+enum SortOrder {
+    case oldestFirst
+    case newestFirst
+}
+
 @Observable
 @MainActor
 class TakeNoteVM {
@@ -33,6 +43,9 @@ class TakeNoteVM {
     var errorAlertMessage: String = ""
     var errorAlertIsVisible: Bool = false
     var showMultiNoteView: Bool = false
+    
+    public var sortBy: SortBy = .created
+    public var sortOrder: SortOrder = .newestFirst
 
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
