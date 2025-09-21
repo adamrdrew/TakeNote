@@ -224,7 +224,7 @@ struct NoteEditor: View {
                         CodeEditor(
                             text: Binding(
                                 get: { note.content },
-                                set: { openNote?.content = $0 }
+                                set: { openNote?.content = $0 ; openNote?.updatedDate = Date() }
                             ),
                             position: $position,
                             messages: $messages,
@@ -293,9 +293,7 @@ struct NoteEditor: View {
                 showPreview = true
                 setShowBacklinks()
             }
-            .onChange(of: openNote?.content) { _, _ in
-                openNote?.updatedDate = Date()
-            }
+
             .onAppear {
                 setShowBacklinks()
             }

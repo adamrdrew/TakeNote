@@ -26,6 +26,12 @@ struct WelcomeView: View {
                 systemImage: "gear"
             )
             WelcomeRow(
+                title: "Note Sort",
+                text:
+                    "Sort the note list by created and updated dates.",
+                systemImage: "arrow.up.arrow.down"
+            )
+            WelcomeRow(
                 title: "iPad Support",
                 text:
                     "Use TakeNote on your iPad!",
