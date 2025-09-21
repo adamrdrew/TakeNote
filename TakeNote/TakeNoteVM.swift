@@ -9,14 +9,14 @@ import FoundationModels
 import SwiftData
 import SwiftUI
 
-enum SortBy {
-    case created
-    case updated
+enum SortBy : Int {
+    case created = 0
+    case updated =  1
 }
 
-enum SortOrder {
-    case oldestFirst
-    case newestFirst
+enum SortOrder : Int {
+    case oldestFirst = 0
+    case newestFirst = 1
 }
 
 @Observable
@@ -44,9 +44,35 @@ class TakeNoteVM {
     var errorAlertIsVisible: Bool = false
     var showMultiNoteView: Bool = false
     
-    public var sortBy: SortBy = .created
-    public var sortOrder: SortOrder = .newestFirst
+    let userDefaults = UserDefaults.standard
+    
+    public var sortBy: SortBy {
+            get {
+                access(keyPath: \.sortBy)
+                let raw = userDefaults.object(forKey: "SortBy") as? Int
+                return SortBy(rawValue: raw ?? SortBy.created.rawValue) ?? .created
+            }
+            set {
+                withMutation(keyPath: \.sortBy) {
+                    userDefaults.set(newValue.rawValue, forKey: "SortBy")
+                }
+            }
+        }
 
+        public var sortOrder: SortOrder {
+            get {
+                access(keyPath: \.sortOrder)
+                let raw = userDefaults.object(forKey: "SortOrder") as? Int
+                return SortOrder(rawValue: raw ?? SortOrder.newestFirst.rawValue) ?? .newestFirst
+            }
+            set {
+                withMutation(keyPath: \.sortOrder) {
+                    userDefaults.set(newValue.rawValue, forKey: "SortOrder")
+                }
+            }
+        }
+    
+    
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
     var bufferFolder: NoteContainer?
