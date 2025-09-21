@@ -12,6 +12,7 @@ struct NoteContainerWidgetView: View {
     let entry: NoteListEntry
     let showNewButton: Bool
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) var colorScheme
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,13 +63,24 @@ struct NoteContainerWidgetView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
-            ZStack {
-                Color(.takeNotePink)
-                LinearGradient(
-                    colors: [.clear, .black.opacity(0.5)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
+            if colorScheme == .dark {
+                ZStack {
+                    Color(.takeNotePink)
+                    LinearGradient(
+                        colors: [.clear, .black.opacity(0.6)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            } else {
+                ZStack {
+                    Color(.takeNotePink)
+                    LinearGradient(
+                        colors: [.white.opacity(0.9), .white.opacity(0.3)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
             }
         }
     }
