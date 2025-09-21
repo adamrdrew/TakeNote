@@ -29,6 +29,7 @@ struct MainWindow: View {
     @State private var preferredColumn = NavigationSplitViewColumn.sidebar
 
     @State var showChatPopover: Bool = false
+    @State var showSortPopover: Bool = false
 
     var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
@@ -45,6 +46,10 @@ struct MainWindow: View {
 
     func doShowChatPopover() {
         showChatPopover.toggle()
+    }
+
+    func doShowSortPopover() {
+        showSortPopover.toggle()
     }
 
     @MainActor
@@ -79,6 +84,19 @@ struct MainWindow: View {
                 }
                 .help("Add Note")
             }
+            if !(takeNoteVM.selectedContainer?.notes.isEmpty ?? false) {
+                Button(action: doShowSortPopover) {
+                    Image(systemName: "arrow.up.arrow.down")
+                }
+                .help("Sort Notes")
+                .popover(
+                    isPresented: $showSortPopover,
+                    attachmentAnchor: .point(.center),
+                    arrowEdge: .bottom
+                ) {
+                    NoteSortPopover()
+                }
+            }
             if chatFeatureFlagEnabled && chatEnabled {
                 #if os(macOS)
                     Button(action: openChatWindow) {
@@ -110,17 +128,15 @@ struct MainWindow: View {
 
     var navTitle: String {
         #if os(iOS)
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            return "TakeNote"
-        } else {
-            return ""
-        }
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                return "TakeNote"
+            } else {
+                return ""
+            }
         #else
             return ""
         #endif
     }
-    
-    
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
@@ -261,4 +277,3 @@ struct MainWindow: View {
 #Preview {
     MainWindow()
 }
-

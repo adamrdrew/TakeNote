@@ -69,22 +69,15 @@ struct NoteList: View {
     @State var noteStarToggleRegistry: CommandRegistry = CommandRegistry()
     @State var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
-    @State var showChatPopover: Bool = false
 
     var searchBarPlacement: SearchFieldPlacement {
         #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .phone ? .navigationBarDrawer(displayMode: .automatic) : .toolbarPrincipal
+            return UIDevice.current.userInterfaceIdiom == .phone
+                ? .navigationBarDrawer(displayMode: .automatic)
+                : .toolbarPrincipal
         #else
-        return .toolbar
+            return .toolbar
         #endif
-    }
-
-    func doShowChatPopover() {
-        showChatPopover.toggle()
-    }
-
-    var chatEnabled: Bool {
-        return takeNoteVM.aiIsAvailable && notes.count > 0
     }
 
     var filteredNotes: [Note] {
@@ -98,11 +91,30 @@ struct NoteList: View {
         }
     }
 
+    var sortedNotes: [Note] {
+        filteredNotes.sorted { lhs, rhs in
+            switch takeNoteVM.sortBy {
+            case .created:
+                if takeNoteVM.sortOrder == .newestFirst {
+                    return lhs.createdDate > rhs.createdDate
+                } else {
+                    return lhs.createdDate < rhs.createdDate
+                }
+            case .updated:
+                if takeNoteVM.sortOrder == .newestFirst {
+                    return lhs.updatedDate > rhs.updatedDate
+                } else {
+                    return lhs.updatedDate < rhs.updatedDate
+                }
+            }
+        }
+    }
+
     var showUnstarredNoteList: Bool {
-        if filteredNotes.isEmpty {
+        if sortedNotes.isEmpty {
             return false
         }
-        if filteredNotes.contains(where: { !$0.starred }) {
+        if sortedNotes.contains(where: { !$0.starred }) {
             return true
         }
         return false
@@ -164,7 +176,7 @@ struct NoteList: View {
         return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
             ?? false
     }
-    
+
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
 
@@ -174,7 +186,7 @@ struct NoteList: View {
 
                 if folderHasStarredNotes() {
                     Section(header: Text("Starred").font(.headline)) {
-                        ForEach(filteredNotes, id: \.self) { note in
+                        ForEach(sortedNotes, id: \.self) { note in
                             if note.starred {
                                 NoteListEntry(
                                     note: note,
@@ -187,7 +199,7 @@ struct NoteList: View {
                 }
                 if showUnstarredNoteList {
                     Section(header: Text("Notes").font(.headline)) {
-                        ForEach(filteredNotes, id: \.self) { note in
+                        ForEach(sortedNotes, id: \.self) { note in
                             if !note.starred {
                                 NoteListEntry(
                                     note: note,
@@ -199,7 +211,7 @@ struct NoteList: View {
                 }
 
             }
-            .id(filteredNotes.isEmpty ? "empty" : "populated")
+            .id(sortedNotes.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
                     .frame(maxHeight: 80)
