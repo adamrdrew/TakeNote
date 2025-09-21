@@ -14,7 +14,7 @@ internal struct TagListEntry: View {
     @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) private var takeNoteVM
     @State var inDeleteMode: Bool = false
-    
+
     @Environment(\.containerRenameRegistry) var containerRenameRegistry
     @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
     @Environment(\.tagSetColorRegistry) var tagSetColorRegistry
@@ -25,7 +25,7 @@ internal struct TagListEntry: View {
     @FocusState private var nameInputFocused: Bool
 
     @State var newTagColor: Color = Color(.blue)
-    
+
     func startDelete() {
         inDeleteMode = true
     }
@@ -85,7 +85,9 @@ internal struct TagListEntry: View {
                 Text(tag.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundStyle(colorScheme == .light ? Color.primary : Color.white)
+                    .foregroundStyle(
+                        colorScheme == .light ? Color.primary : Color.white
+                    )
                 Spacer()
                 HStack {
                     Text("\(tag.notes.count)")
@@ -123,41 +125,28 @@ internal struct TagListEntry: View {
             )
         }
         #if os(iOS)
-        .swipeActions(edge: .trailing) {
-            if tag.canBeDeleted {
-                Button(
-                    role: .destructive,
-                    action: {
-                        deleteTag()
+            .swipeActions(edge: .trailing) {
+                if tag.canBeDeleted {
+                    Button(
+                        role: .destructive,
+                        action: {
+                            deleteTag()
+                        }
+                    ) {
+                        Label("Delete", systemImage: "trash")
                     }
-                ) {
-                    Label("Delete", systemImage: "trash")
                 }
             }
-        }
         #endif
-        .popover(isPresented: $showColorPopover, arrowEdge: .trailing) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Tag Color").font(.headline)
-                ColorPicker(
-                    "Color",
-                    selection: $newTagColor,
-                    supportsOpacity: true
-                )
-                .labelsHidden()
-                HStack {
-                    Spacer()
-                    Button("Cancel") { showColorPopover = false }
-                    Button("Save") {
-                        tag.setColor(newTagColor)
-                        try? modelContext.save()
-                        showColorPopover = false
-                    }
-                    .keyboardShortcut(.defaultAction)
-                }
-            }
-            .padding()
-            .frame(width: 260)
+        .popover(
+            isPresented: $showColorPopover,
+            attachmentAnchor: .point(.center),
+            arrowEdge: .bottom
+        ) {
+            NoteContainerColorPicker(
+                showColorPopover: $showColorPopover,
+                noteContainer: tag
+            )
         }
         .contentShape(Rectangle())
         .padding(.vertical, 2)
