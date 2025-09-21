@@ -148,7 +148,7 @@ struct NoteEditor: View {
     }
 
     private func insertAtCaret(_ s: String) {
-        guard var note = openNote else { return }
+        guard let note = openNote else { return }
         let ns = note.content as NSString
         let range =
             position.selections.first ?? NSRange(location: ns.length, length: 0)

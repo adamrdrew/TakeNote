@@ -114,7 +114,7 @@ struct NoteListEntry: View {
             takeNoteVM.openNote = nil
         }
     }
-    
+
     func moveSelectedNotesToTrash() {
         for sn in takeNoteVM.selectedNotes {
             takeNoteVM.moveNoteToTrash(sn, modelContext: modelContext)
@@ -144,8 +144,22 @@ struct NoteListEntry: View {
         takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
     }
 
+    var isOpenNote: Bool {
+        #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                return false
+            }
+        #endif
+        return note == takeNoteVM.openNote
+    }
+
     var iconColor: Color {
-        if note == takeNoteVM.openNote {
+        #if os(iOS)
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                return .takeNotePink
+            }
+        #endif
+        if isOpenNote {
             return .primary
         }
         return .takeNotePink
@@ -172,7 +186,7 @@ struct NoteListEntry: View {
                         .truncationMode(.tail)
                 } icon: {
                     Image(systemName: "note.text")
-                        .symbolRenderingMode(.hierarchical)
+                        .symbolRenderingMode(.monochrome)
                         .foregroundColor(iconColor)
                 }
                 .labelStyle(.titleAndIcon)
@@ -208,7 +222,7 @@ struct NoteListEntry: View {
         HStack(alignment: .firstTextBaseline, spacing: 12) {
             Text(note.createdDate, style: .date)
                 .font(.subheadline)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(isOpenNote ? .primary : .secondary)
 
             Spacer(minLength: 0)
 
@@ -220,7 +234,7 @@ struct NoteListEntry: View {
                         .lineLimit(1)
                         .truncationMode(.tail)
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(isOpenNote ? .primary : .secondary)
 
                     Image(systemName: "folder")
                         .symbolRenderingMode(.hierarchical)
@@ -243,20 +257,27 @@ struct NoteListEntry: View {
                     Label {
                         Text(note.aiSummary)
                             .font(.callout)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(isOpenNote ? .primary : .secondary)
                             .lineLimit(2)
                             .truncationMode(.tail)
                     } icon: {
                         Image(systemName: "apple.intelligence")
                             .symbolRenderingMode(.hierarchical)
+                            // This looks nutso, I know
                             .foregroundStyle(
-                                .linearGradient(
-                                    colors: [
-                                        .orange, .pink, .blue, .purple,
-                                    ],
-                                    startPoint: .leading,
-                                    endPoint: .trailing
-                                ),
+                                isOpenNote
+                                    ? .linearGradient(
+                                        colors: [.primary, .primary],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                    : .linearGradient(
+                                        colors: [
+                                            .orange, .pink, .blue, .purple,
+                                        ],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    ),
 
                             )
                     }

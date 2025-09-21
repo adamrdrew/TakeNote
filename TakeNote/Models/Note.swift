@@ -49,7 +49,7 @@ struct NoteIDWrapper: Hashable, Codable, Transferable {
 
 @Model
 class Note: Identifiable {
-    let defaultTitle: String = "New Note"
+    var defaultTitle: String = "New Note"
     var title: String = ""
     var content: String = ""
     var createdDate: Date = Date()

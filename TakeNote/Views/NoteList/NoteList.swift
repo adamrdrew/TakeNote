@@ -73,9 +73,9 @@ struct NoteList: View {
 
     var searchBarPlacement: SearchFieldPlacement {
         #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .phone ? .navigationBarDrawer(displayMode: .automatic) : .automatic
+        return UIDevice.current.userInterfaceIdiom == .phone ? .navigationBarDrawer(displayMode: .automatic) : .toolbarPrincipal
         #else
-        return .automatic
+        return .toolbar
         #endif
     }
 

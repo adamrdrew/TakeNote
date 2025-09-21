@@ -32,9 +32,10 @@ struct MainWindow: View {
 
     var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
-        return UIDevice.current.userInterfaceIdiom == .phone ? .bottomBar : .automatic
+            return UIDevice.current.userInterfaceIdiom == .phone
+                ? .bottomBar : .automatic
         #else
-        return .automatic
+            return .automatic
         #endif
     }
 
@@ -107,14 +108,30 @@ struct MainWindow: View {
         }
     }
 
+    var navTitle: String {
+        #if os(iOS)
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            return "TakeNote"
+        } else {
+            return ""
+        }
+        #else
+            return ""
+        #endif
+    }
+    
+    
+
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
 
         NavigationSplitView(preferredCompactColumn: $preferredColumn) {
             Sidebar()
-                .navigationTitle(
-                    Text("TakeNote")
-                )
+                #if os(iOS)
+                    .navigationTitle(
+                        Text(navTitle)
+                    )
+                #endif
                 .toolbar {
                     ToolbarItem(placement: toolbarPlacement) {
 
@@ -244,3 +261,4 @@ struct MainWindow: View {
 #Preview {
     MainWindow()
 }
+

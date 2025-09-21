@@ -45,7 +45,7 @@ struct FileCommands: Commands {
             /// Create a new note
             Button("New Note", systemImage: "note.text.badge.plus") {
                 if let vm = takeNoteVM, let mc = modelContext {
-                    vm.addNote(mc)
+                    _ = vm.addNote(mc)
                 }
             }
             .disabled(
