@@ -51,10 +51,10 @@ struct NoteListHeader: View {
                 }
             }
             #if os(macOS)
-            .onExitCommand {
-                inEditMode = false
-                nameInputFocused = false
-            }
+                .onExitCommand {
+                    inEditMode = false
+                    nameInputFocused = false
+                }
             #endif
             .onSubmit {
                 guard let container = takeNoteVM.selectedContainer
@@ -85,7 +85,7 @@ struct NoteListHeader: View {
         .font(.title)
         .fontWeight(.bold)
     }
-    
+
     func toggleEditMode() {
         if !takeNoteVM.canRenameSelectedContainer {
             return
@@ -115,7 +115,7 @@ struct NoteListHeader: View {
         }
         .padding()
         .onTapGesture(count: 1) {
-           toggleEditMode()
+            toggleEditMode()
         }
         .contextMenu {
             if !inEditMode && takeNoteVM.canRenameSelectedContainer {
@@ -127,6 +127,10 @@ struct NoteListHeader: View {
     var body: some View {
         if takeNoteVM.selectedContainer != nil {
             Header
+                .background(
+                    .regularMaterial
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 0))
         }
     }
 }

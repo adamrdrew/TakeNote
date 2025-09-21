@@ -40,13 +40,6 @@ class TakeNoteVM {
     var starredFolder: NoteContainer?
 
     var navigationTitle: String {
-        var title = ""
-        if let selectedContainerName = selectedContainer?.name {
-            title = "\(selectedContainerName)"
-        }
-        if let openNoteTitle = openNote?.title {
-            title = "\(title) / \(openNoteTitle)"
-        }
         #if DEBUG
             return "TakeNote (DEBUG)"
         #else
@@ -298,6 +291,13 @@ class TakeNoteVM {
         createStarredFolder(modelContext)
         #if os(macOS)
             selectedContainer = inboxFolder
+        #endif
+        #if os(iOS)
+        // on iphone we don't want a selected container on start so that it starts on the note container list page
+        // we want ipad however to work more like a mac
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                selectedContainer = inboxFolder
+            }
         #endif
     }
 

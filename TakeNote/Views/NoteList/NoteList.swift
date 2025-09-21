@@ -62,12 +62,30 @@ struct NoteList: View {
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
     @State var noteSearchText: String = ""
+    @Query() var notes: [Note]
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
     @State var noteStarToggleRegistry: CommandRegistry = CommandRegistry()
     @State var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
+    @State var showChatPopover: Bool = false
+
+    var searchBarPlacement: SearchFieldPlacement {
+        #if os(iOS)
+        return UIDevice.current.userInterfaceIdiom == .phone ? .navigationBarDrawer(displayMode: .automatic) : .toolbarPrincipal
+        #else
+        return .toolbar
+        #endif
+    }
+
+    func doShowChatPopover() {
+        showChatPopover.toggle()
+    }
+
+    var chatEnabled: Bool {
+        return takeNoteVM.aiIsAvailable && notes.count > 0
+    }
 
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
@@ -89,7 +107,7 @@ struct NoteList: View {
         }
         return false
     }
-    
+
     @Environment(SearchIndexService.self) private var search
 
     func playSystemErrorSound() {
@@ -146,7 +164,7 @@ struct NoteList: View {
         return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
             ?? false
     }
-
+    
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
 
@@ -184,7 +202,7 @@ struct NoteList: View {
             .id(filteredNotes.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
-                .frame(maxHeight: 80)
+                    .frame(maxHeight: 80)
             }
             /// Add the command registries to the environment so that the list entries can access them
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
@@ -218,7 +236,7 @@ struct NoteList: View {
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
             )
-            .searchable(text: $noteSearchText, prompt: "Search")
+            .searchable(text: $noteSearchText, placement: searchBarPlacement)
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {

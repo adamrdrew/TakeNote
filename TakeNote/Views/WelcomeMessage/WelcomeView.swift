@@ -5,31 +5,31 @@ struct WelcomeView: View {
 
     var body: some View {
         VStack(spacing: 24) {
-            Text("Welcome to TakeNote!")
+            Text("What's New in TakeNote")
                 .font(.largeTitle)
                 .bold()
 
             // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
             WelcomeRow(
-                title: "Rich Links",
-                text: "Create links between notes and see note backlinks.",
-                systemImage: "link"
+                title: "Widgets",
+                text: "Add widgets to your home screen to keep your notes handy.",
+                systemImage: "widget.small"
             )
             WelcomeRow(
-                title: "Magic Format",
-                text: "Turn messy plaintext into clean Markdown instantly with AI.",
-                systemImage: "wand.and.stars"
+                title: "Control Center",
+                text: "Create a new note from the Control Center",
+                systemImage: "switch.2"
             )
             WelcomeRow(
-                title: "Magic Assistant",
-                text: "AI Helps you write and format rich markdown.",
-                systemImage: "brain"
+                title: "Shortcuts Integration",
+                text: "Create notes from Shortcuts",
+                systemImage: "gear"
             )
             WelcomeRow(
-                title: "Private by Design",
+                title: "iPad Support",
                 text:
-                    "AI features run directly on your device.",
-                systemImage: "lock.shield"
+                    "Use TakeNote on your iPad!",
+                systemImage: "ipad"
             )
 
             Button("Continue", action: onDone)

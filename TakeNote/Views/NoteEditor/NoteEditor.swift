@@ -6,6 +6,7 @@
 //
 
 import CodeEditorView
+import GameController
 import LanguageSupport
 import MarkdownUI
 import SwiftData
@@ -38,25 +39,32 @@ struct MarkdownShortcutBar: View {
     var body: some View {
         HStack(spacing: 12) {
             Spacer()
-            Group {
-                Button("#") { insert("# ") }
-                    .glassEffect()
-                Button("*") { insert("*") }
-                    .glassEffect()
-                Button("_") { insert("_") }
-                    .glassEffect()
-                Button("```") { insert("```\n\n```") }
-                    .glassEffect()
-                Button("[ ]") { insert("- [ ] ") }
-                    .glassEffect()
-                /*
-                Button("Done") {
-                    
-                }
-                .glassEffect()
-                 */
+            Button("#") { insert("#") }
+                .padding()
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            Button("*") { insert("*") }
+                .padding()
+
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            Button("_") { insert("_") }
+                .padding()
+
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            Button("```") { insert("```\n\n```") }
+                .padding()
+
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            Button("[ ]") { insert("- [ ] ") }
+                .padding()
+
+                .glassEffect(in: .rect(cornerRadius: 16.0))
+            /*
+            Button("Done") {
+            
             }
-            .buttonStyle(.bordered)
+            .glassEffect()
+             */
+
             Spacer()
         }
         .padding(.horizontal, 12)
@@ -90,6 +98,10 @@ struct NoteEditor: View {
     #if os(iOS) || os(visionOS)
         let toolbarPosition = ToolbarItemPlacement.automatic
     #endif
+
+    var hardwareKeyboardConnected: Bool {
+        return GCKeyboard.coalesced != nil
+    }
 
     let logger = Logger(
         subsystem: "com.adamdrew.takenote",
@@ -148,7 +160,7 @@ struct NoteEditor: View {
     }
 
     private func insertAtCaret(_ s: String) {
-        guard var note = openNote else { return }
+        guard let note = openNote else { return }
         let ns = note.content as NSString
         let range =
             position.selections.first ?? NSRange(location: ns.length, length: 0)
@@ -194,8 +206,6 @@ struct NoteEditor: View {
         let newLoc = nsRange.location + (replacement as NSString).length
         position.selections = [NSRange(location: newLoc, length: 0)]
     }
-
-
 
     fileprivate func setShowBacklinks() {
         if let on = openNote {
@@ -283,7 +293,7 @@ struct NoteEditor: View {
                 showPreview = true
                 setShowBacklinks()
             }
-            .onChange(of: openNote?.content) { _,_ in
+            .onChange(of: openNote?.content) { _, _ in
                 openNote?.updatedDate = Date()
             }
             .onAppear {
@@ -311,14 +321,21 @@ struct NoteEditor: View {
             }
             #if os(iOS)
                 .safeAreaInset(edge: .bottom) {
-                    if isInputActive && !showPreview {
+                    if isInputActive && !showPreview
+                        && !hardwareKeyboardConnected
+                    {
                         MarkdownShortcutBar(insert: insertAtCaret)
                         .transition(
-                            .move(edge: .bottom).combined(with: .opacity)
+                            .move(edge: .bottom).combined(
+                                with: .opacity
+                            )
                         )
                     }
                 }
-                .safeAreaPadding(.bottom, (isInputActive && !showPreview) ? 8 : 0)
+                .safeAreaPadding(
+                    .bottom,
+                    (isInputActive && !showPreview) ? 8 : 0
+                )
             #endif
             .toolbar {
 
