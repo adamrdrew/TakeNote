@@ -40,6 +40,10 @@ class NoteContainer: Identifiable {
         if isStarred { return starredNotes ?? [] }
         return folderNotes ?? []
     }
+    
+    var isSystemFolder: Bool {
+        isTrash || isInbox || isStarred
+    }
 
     init(
         canBeDeleted: Bool = true,
