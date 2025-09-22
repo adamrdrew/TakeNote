@@ -90,6 +90,9 @@ class NoteContainer: Identifiable {
     }
     
     func getColor() -> Color {
+        if colorRGBA == 0xE5E5E5FF {
+            setColor(.takeNotePink)
+        }
         let r = Double((colorRGBA >> 24) & 0xFF) / 255.0
         let g = Double((colorRGBA >> 16) & 0xFF) / 255.0
         let b = Double((colorRGBA >>  8) & 0xFF) / 255.0

@@ -80,7 +80,7 @@ struct NoteListHeader: View {
             )
         } icon: {
             Image(systemName: folderSymbol)
-                .foregroundColor(.takeNotePink)
+                .foregroundColor(takeNoteVM.selectedContainer?.getColor() ?? .takeNotePink)
         }
         .font(.title)
         .fontWeight(.bold)

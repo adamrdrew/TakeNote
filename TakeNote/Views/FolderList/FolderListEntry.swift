@@ -109,8 +109,8 @@ struct FolderListEntry: View {
                                     ? Color.primary : Color.white
                             )
                     } icon: {
-                        Image(systemName: folder.getSystemImageName())
-                            .foregroundColor(iconColor)
+                            Image(systemName: folder.getSystemImageName())
+                            .foregroundColor(folder.getColor())
                     }
                     Spacer()
                     HStack {

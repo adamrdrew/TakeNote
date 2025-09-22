@@ -79,7 +79,8 @@ internal struct TagListEntry: View {
                         }
                     }
             } else {
-                NoteLabelBadge(noteLabel: tag)
+                Image(systemName: "tag")
+                    .foregroundColor(tag.getColor())
                 Text(tag.name)
                     .lineLimit(1)
                     .truncationMode(.tail)

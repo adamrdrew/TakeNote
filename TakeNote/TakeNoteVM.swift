@@ -178,6 +178,7 @@ class TakeNoteVM {
             isTrash: false,
             isInbox: false,
             name: name,
+            symbol: "tag",
             isTag: true
         )
         newTag.setColor(color)
