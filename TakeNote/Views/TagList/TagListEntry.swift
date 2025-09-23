@@ -79,7 +79,7 @@ internal struct TagListEntry: View {
                         }
                     }
             } else {
-                Image(systemName: "tag")
+                Image(systemName: "tag.fill")
                     .foregroundColor(tag.getColor())
                 Text(tag.name)
                     .lineLimit(1)

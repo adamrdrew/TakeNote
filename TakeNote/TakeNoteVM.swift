@@ -178,7 +178,7 @@ class TakeNoteVM {
             isTrash: false,
             isInbox: false,
             name: name,
-            symbol: "tag",
+            symbol: "tag.fill",
             isTag: true
         )
         modelContext.insert(newTag)
