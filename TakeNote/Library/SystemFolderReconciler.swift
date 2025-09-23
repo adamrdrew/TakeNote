@@ -49,6 +49,14 @@ final class SystemFolderReconciler {
         )
         // No matching folder? bail
         guard !candidates.isEmpty else { return nil }
+        
+        for candidate in candidates {
+            if candidate.isSystemFolder && candidate.getColor() != .takeNotePink {
+                candidate.setColor(.takeNotePink)
+                try? ctx.save()
+            }
+        }
+        
         // Only one folder? bail
         guard candidates.count  > 1 else { return nil }
         

@@ -110,7 +110,7 @@ struct FolderListEntry: View {
                             )
                     } icon: {
                             Image(systemName: folder.getSystemImageName())
-                            .foregroundColor(folder.getColor())
+                            .foregroundColor(folder.isSystemFolder ? .takeNotePink :  folder.getColor())
                     }
                     Spacer()
                     HStack {
