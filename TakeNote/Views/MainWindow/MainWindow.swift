@@ -142,32 +142,38 @@ struct MainWindow: View {
         @Bindable var takeNoteVM = takeNoteVM
 
         NavigationSplitView(preferredCompactColumn: $preferredColumn) {
-            Sidebar()
-                #if os(iOS)
-                    .navigationTitle(
-                        Text(navTitle)
-                    )
-                #endif
-                .toolbar {
-                    ToolbarItem(placement: toolbarPlacement) {
+            VStack {
+                Sidebar()
+                    #if os(iOS)
+                        .navigationTitle(
+                            Text(navTitle)
+                        )
+                    #endif
+                    .toolbar {
+                        ToolbarItem(placement: toolbarPlacement) {
 
-                        Button(action: {
-                            takeNoteVM.addFolder(modelContext)
-                        }) {
-                            Label(
-                                "Add Folder",
-                                systemImage: "folder.badge.plus"
-                            )
+                            Button(action: {
+                                takeNoteVM.addFolder(modelContext)
+                            }) {
+                                Label(
+                                    "Add Folder",
+                                    systemImage: "folder.badge.plus"
+                                )
+                            }
+                            .help("Add Folder")
                         }
-                        .help("Add Folder")
-                    }
-                    ToolbarItem(placement: toolbarPlacement) {
-                        AddTagButton(action: {
-                            takeNoteVM.addTag(modelContext: modelContext)
-                        })
-                    }
+                        ToolbarItem(placement: toolbarPlacement) {
+                            AddTagButton(action: {
+                                takeNoteVM.addTag(modelContext: modelContext)
+                            })
+                        }
 
-                }
+                    }
+                /*
+                Spacer()
+                HistoryPanel()
+            */
+            }
         } content: {
             NoteList()
                 .toolbar {
