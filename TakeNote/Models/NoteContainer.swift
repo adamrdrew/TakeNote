@@ -33,12 +33,16 @@ class NoteContainer: Identifiable {
     internal var isStarred: Bool = false
     internal var isTag: Bool = false
     internal var isBuffer: Bool = false
-    var colorRGBA: UInt32 = 0xE5E5E5FF
+    var colorRGBA: UInt32 = 0xFF26B9FF
     var symbol: String = "folder"
     var notes: [Note] {
         if isTag { return tagNotes ?? [] }
         if isStarred { return starredNotes ?? [] }
         return folderNotes ?? []
+    }
+    
+    var isSystemFolder: Bool {
+        isTrash || isInbox || isStarred
     }
 
     init(
@@ -86,6 +90,7 @@ class NoteContainer: Identifiable {
     }
     
     func getColor() -> Color {
+        if isSystemFolder { return .takeNotePink }
         let r = Double((colorRGBA >> 24) & 0xFF) / 255.0
         let g = Double((colorRGBA >> 16) & 0xFF) / 255.0
         let b = Double((colorRGBA >>  8) & 0xFF) / 255.0

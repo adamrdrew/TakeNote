@@ -22,7 +22,7 @@ struct NoteListHeader: View {
             return "trash"
         }
         if container.isTag {
-            return "tag"
+            return "tag.fill"
         }
         return container.symbol
     }
@@ -80,7 +80,7 @@ struct NoteListHeader: View {
             )
         } icon: {
             Image(systemName: folderSymbol)
-                .foregroundColor(.takeNotePink)
+                .foregroundColor(takeNoteVM.selectedContainer?.getColor() ?? .takeNotePink)
         }
         .font(.title)
         .fontWeight(.bold)

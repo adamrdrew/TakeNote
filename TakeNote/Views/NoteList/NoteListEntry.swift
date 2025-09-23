@@ -156,17 +156,17 @@ struct NoteListEntry: View {
     var iconColor: Color {
         #if os(iOS)
             if UIDevice.current.userInterfaceIdiom == .phone {
-                return .takeNotePink
+                return note.folder?.getColor() ?? .takeNotePink
             }
         #endif
         if isOpenNote {
             return .primary
         }
-        return .takeNotePink
+        return note.folder?.getColor() ?? .takeNotePink
     }
 
     var TitleRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: hSpacing) {
+        HStack(alignment: .lastTextBaseline, spacing: hSpacing) {
             if inRenameMode {
                 TextField("New Note Name", text: $newName)
                     .focused($nameInputFocused)
@@ -174,9 +174,7 @@ struct NoteListEntry: View {
                     .textFieldStyle(.roundedBorder)
                     .onSubmit { finishRename() }
                     .onChange(of: nameInputFocused) { _, focused in
-                        if !focused {
-                            finishRename()
-                        }
+                        if !focused { finishRename() }
                     }
             } else {
                 Label {
@@ -192,29 +190,28 @@ struct NoteListEntry: View {
                 .labelStyle(.titleAndIcon)
             }
 
-            if let noteLabel = note.tag {
-                NoteLabelBadge(noteLabel: noteLabel)
-                    .alignmentGuide(.firstTextBaseline) { d in
-                        d[.firstTextBaseline]
-                    }
-            }
-
             Spacer(minLength: 0)
-            #if os(macOS)
-                Button("", systemImage: note.starred ? "star.fill" : "star") {
-                    noteStarToggle()
-                }
-                .buttonStyle(.plain)
-                .imageScale(.medium)
-                .foregroundStyle(note.starred ? .yellow : .secondary)
-                .help(note.starred ? "Unstar" : "Star")
-            #else
-                if note.starred {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(Color(.yellow))
-                }
 
-            #endif
+            Group {
+                #if os(macOS)
+                    Button(action: { noteStarToggle() }) {
+                        Image(systemName: note.starred ? "star.fill" : "star")
+                            .imageScale(.medium)
+                            .foregroundStyle(
+                                note.starred ? .yellow : .secondary
+                            )
+                            .padding(.zero)  // kill any extra inset
+                    }
+                    .buttonStyle(.plain)  // no chrome/insets
+                    .help(note.starred ? "Unstar" : "Star")
+                #else
+                    if note.starred {
+                        Image(systemName: "star.fill")
+                            .foregroundStyle(Color(.yellow))
+                            .padding(.zero)
+                    }
+                #endif
+            }
         }
     }
 
@@ -226,22 +223,38 @@ struct NoteListEntry: View {
 
             Spacer(minLength: 0)
 
-            if takeNoteVM.selectedContainer?.isTag == true
-                || takeNoteVM.selectedContainer?.isStarred == true
-            {
-                HStack(spacing: 6) {
-                    Text(note.folder?.name ?? "Folder")
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                        .font(.subheadline)
-                        .foregroundStyle(isOpenNote ? .primary : .secondary)
+            Group {
+                if takeNoteVM.selectedContainer?.isTag == true
+                    || takeNoteVM.selectedContainer?.isStarred == true
+                {
+                    HStack(spacing: 3) {
+                        Text(note.folder?.name ?? "Folder")
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .font(.subheadline)
+                            .foregroundStyle(isOpenNote ? .primary : .secondary)
 
-                    Image(systemName: "folder")
-                        .symbolRenderingMode(.hierarchical)
-                        .foregroundColor(iconColor)
-                        .imageScale(.medium)
+                        Image(systemName: note.folder?.symbol ?? "folder")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(iconColor)
+                            .imageScale(.medium)
+                    }
+                } else if let noteLabel = note.tag {
+                    HStack(spacing: 3) {
+                        Text(noteLabel.name)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .font(.subheadline)
+                            .foregroundStyle(isOpenNote ? .primary : .secondary)
+
+                        Image(systemName: "tag.fill")
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundColor(noteLabel.getColor())
+                            .imageScale(.medium)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)  // <- pins the icon to the far right
         }
     }
 

@@ -49,6 +49,14 @@ final class SystemFolderReconciler {
         )
         // No matching folder? bail
         guard !candidates.isEmpty else { return nil }
+        
+        for candidate in candidates {
+            if candidate.isSystemFolder && candidate.colorRGBA != 0xFF26B9FF {
+                candidate.colorRGBA = 0xFF26B9FF
+                try? ctx.save()
+            }
+        }
+        
         // Only one folder? bail
         guard candidates.count  > 1 else { return nil }
         

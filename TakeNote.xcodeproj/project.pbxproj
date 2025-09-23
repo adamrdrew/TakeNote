@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */; };
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
 		66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 66B616EC2E4CC2B6009A1857 /* SQLite */; };
@@ -109,6 +110,7 @@
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
 				66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */,
+				66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -179,6 +181,7 @@
 				66AC246E2E4609FB009B0C3F /* CodeEditorView */,
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
 				66B616EC2E4CC2B6009A1857 /* SQLite */,
+				66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */,
 			);
 			productName = TakeNote;
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
@@ -237,6 +240,7 @@
 				66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
 				66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */,
+				66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66B6907B2E3FCDF20013519B /* Products */;
@@ -425,7 +429,7 @@
 				CODE_SIGN_ENTITLEMENTS = TakeNote/TakeNote.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
@@ -457,7 +461,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -487,7 +491,7 @@
 				CODE_SIGN_ENTITLEMENTS = TakeNote/TakeNote.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
@@ -519,7 +523,7 @@
 					"@executable_path/../Frameworks",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.8;
+				MARKETING_VERSION = 1.0.9;
 				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -659,6 +663,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/alessiorubicini/SFSymbolsPicker";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.0.7;
+			};
+		};
 		66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/mchakravarty/CodeEditorView";
@@ -686,6 +698,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */;
+			productName = SFSymbolsPicker;
+		};
 		66AC246E2E4609FB009B0C3F /* CodeEditorView */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */;

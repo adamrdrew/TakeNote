@@ -22,10 +22,11 @@ struct FolderListEntry: View {
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
+    @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
     @State var inDeleteMode: Bool = false
-    
+
     func startDelete() {
         inDeleteMode = true
     }
@@ -78,7 +79,7 @@ struct FolderListEntry: View {
         }
         takeNoteVM.onMoveToFolder()
     }
-    
+
     var iconColor: Color {
         if folder == takeNoteVM.selectedContainer {
             return .primary
@@ -103,10 +104,13 @@ struct FolderListEntry: View {
                 HStack {
                     Label {
                         Text(folder.name)
-                            .foregroundColor(colorScheme == .light ? Color.primary : Color.white)
+                            .foregroundColor(
+                                colorScheme == .light
+                                    ? Color.primary : Color.white
+                            )
                     } icon: {
-                        Image(systemName: folder.getSystemImageName())
-                            .foregroundColor(iconColor)
+                            Image(systemName: folder.getSystemImageName())
+                            .foregroundColor(folder.isSystemFolder ? .takeNotePink :  folder.getColor())
                     }
                     Spacer()
                     HStack {
@@ -136,26 +140,44 @@ struct FolderListEntry: View {
                 id: folder.id
             )
         }
+        .popover(
+            isPresented: $showEditDetailsPopover,
+            attachmentAnchor: .point(.center),
+            arrowEdge: .bottom
+        ) {
+            NoteContainerDetailsEditor(
+                showColorPopover: $showEditDetailsPopover,
+                noteContainer: folder
+            )
+        }
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
             _ in
             dropNoteToFolder(wrappedIDs)
         }
         #if os(iOS)
-        .swipeActions(edge: .trailing) {
-            if folder.canBeDeleted {
-                Button(
-                    role: .destructive,
-                    action: {
-                        deleteFolder()
+            .swipeActions(edge: .trailing) {
+                if folder.canBeDeleted {
+                    Button(
+                        role: .destructive,
+                        action: {
+                            deleteFolder()
+                        }
+                    ) {
+                        Label("Delete", systemImage: "trash")
                     }
-                ) {
-                    Label("Delete", systemImage: "trash")
                 }
             }
-        }
         #endif
         .contextMenu {
+            if !folder.isSystemFolder {
+                Button(action: {
+                    showEditDetailsPopover = true
+                }) {
+
+                    Label("Edit Details", systemImage: "gear")
+                }
+            }
             if folder.canBeDeleted {
                 Button(
                     role: .destructive,
@@ -166,7 +188,7 @@ struct FolderListEntry: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-            if !folder.isTrash && !folder.isInbox {
+            if !folder.isSystemFolder {
                 Button(action: {
                     startRename()
                 }) {

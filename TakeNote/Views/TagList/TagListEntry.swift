@@ -21,10 +21,8 @@ internal struct TagListEntry: View {
 
     @State var inRenameMode: Bool = false
     @State var newTagName: String = ""
-    @State var showColorPopover: Bool = false
+    @State var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
-
-    @State var newTagColor: Color = Color(.blue)
 
     func startDelete() {
         inDeleteMode = true
@@ -81,7 +79,8 @@ internal struct TagListEntry: View {
                         }
                     }
             } else {
-                NoteLabelBadge(noteLabel: tag)
+                Image(systemName: "tag.fill")
+                    .foregroundColor(tag.getColor())
                 Text(tag.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -109,7 +108,7 @@ internal struct TagListEntry: View {
             tagSetColorRegistry.registerCommand(
                 id: tag.id,
                 command: {
-                    showColorPopover = true
+                    showEditDetailsPopover = true
                 }
             )
         }
@@ -139,12 +138,12 @@ internal struct TagListEntry: View {
             }
         #endif
         .popover(
-            isPresented: $showColorPopover,
+            isPresented: $showEditDetailsPopover,
             attachmentAnchor: .point(.center),
             arrowEdge: .bottom
         ) {
-            NoteContainerColorPicker(
-                showColorPopover: $showColorPopover,
+            NoteContainerDetailsEditor(
+                showColorPopover: $showEditDetailsPopover,
                 noteContainer: tag
             )
         }
@@ -171,11 +170,10 @@ internal struct TagListEntry: View {
                 Label("Rename Tag", systemImage: "pencil")
             }
             Button(action: {
-                newTagColor = tag.getColor()
-                showColorPopover = true
+                showEditDetailsPopover = true
             }) {
 
-                Label("Set Color", systemImage: "eyedropper")
+                Label("Edit Details", systemImage: "gear")
             }
             if tag.canBeDeleted {
                 Button(

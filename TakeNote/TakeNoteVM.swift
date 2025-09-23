@@ -171,16 +171,16 @@ class TakeNoteVM {
 
     func addTag(
         _ name: String = "New Tag",
-        color: Color = Color(.blue),
+        color: Color = .takeNotePink,
         modelContext: ModelContext
     ) {
         let newTag = NoteContainer(
             isTrash: false,
             isInbox: false,
             name: name,
+            symbol: "tag.fill",
             isTag: true
         )
-        newTag.setColor(color)
         modelContext.insert(newTag)
         do {
             try modelContext.save()
@@ -206,7 +206,6 @@ class TakeNoteVM {
         self.inboxFolder = inboxFolder
         do {
             try modelContext.save()
-            self.selectedContainer = inboxFolder
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
