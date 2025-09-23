@@ -247,7 +247,7 @@ struct NoteListEntry: View {
                             .font(.subheadline)
                             .foregroundStyle(isOpenNote ? .primary : .secondary)
 
-                        Image(systemName: noteLabel.symbol)
+                        Image(systemName: "tag.fill")
                             .symbolRenderingMode(.hierarchical)
                             .foregroundColor(noteLabel.getColor())
                             .imageScale(.medium)
