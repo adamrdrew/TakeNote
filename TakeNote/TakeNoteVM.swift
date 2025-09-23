@@ -181,7 +181,6 @@ class TakeNoteVM {
             symbol: "tag",
             isTag: true
         )
-        newTag.setColor(color)
         modelContext.insert(newTag)
         do {
             try modelContext.save()
