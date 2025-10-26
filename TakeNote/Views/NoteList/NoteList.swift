@@ -293,6 +293,15 @@ struct NoteList: View {
                 pasteNote(wrappedIDs)
             }
         #endif
+        .dropDestination(for: String.self, isEnabled: true) { items, location in
+            if !takeNoteVM.canAddNote { return }
+            defer { try? modelContext.save() }
+            for item in items {
+                let newNote = takeNoteVM.addNote(modelContext)
+                newNote?.setContent(item)
+                //modelContext.insert(newNote)
+            }
+        }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let result = fileImport(
                 items: items,
