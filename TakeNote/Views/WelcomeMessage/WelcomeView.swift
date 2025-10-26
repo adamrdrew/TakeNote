@@ -11,31 +11,25 @@ struct WelcomeView: View {
 
             // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
             WelcomeRow(
-                title: "Widgets",
-                text: "Add widgets to your home screen to keep your notes handy.",
-                systemImage: "widget.small"
+                title: "Customization",
+                text: "Set custom colors for folders and tags, and icons for folders.",
+                systemImage: "swatchpalette"
             )
             WelcomeRow(
-                title: "Control Center",
-                text: "Create a new note from the Control Center",
-                systemImage: "switch.2"
+                title: "Drag to Create",
+                text: "Drag any text into the note list to create a new note",
+                systemImage: "hand.point.up.left.and.text.fill"
             )
             WelcomeRow(
-                title: "Shortcuts Integration",
-                text: "Create notes from Shortcuts",
-                systemImage: "gear"
+                title: "Markdown Keyboard Improvements",
+                text: "More and better Makrdown keyboard shortcuts",
+                systemImage: "number.square"
             )
             WelcomeRow(
-                title: "Note Sort",
+                title: "Starred Notes Shortcut",
                 text:
-                    "Sort the note list by created and updated dates.",
-                systemImage: "arrow.up.arrow.down"
-            )
-            WelcomeRow(
-                title: "iPad Support",
-                text:
-                    "Use TakeNote on your iPad!",
-                systemImage: "ipad"
+                    "Access all starred notes from the sidebar",
+                systemImage: "star"
             )
 
             Button("Continue", action: onDone)
