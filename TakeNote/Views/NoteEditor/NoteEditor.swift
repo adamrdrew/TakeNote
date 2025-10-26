@@ -54,7 +54,7 @@ struct MarkdownShortcutBar: View {
                 .padding()
 
                 .glassEffect(in: .rect(cornerRadius: 16.0))
-            Button("[ ]") { insert("- [ ] ") }
+            Button("[ ]( )") { insert("[ ](  )") }
                 .padding()
 
                 .glassEffect(in: .rect(cornerRadius: 16.0))
