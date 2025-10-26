@@ -293,6 +293,25 @@ struct NoteList: View {
                 pasteNote(wrappedIDs)
             }
         #endif
+        .dropDestination(for: String.self) { items, _ in
+            guard takeNoteVM.canAddNote else { return false }
+
+            var added = false
+            for raw in items {
+                let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !text.isEmpty else { continue }
+
+                if let newNote = takeNoteVM.addNote(modelContext) {
+                    newNote.setContent(text)
+                    added = true
+                }
+            }
+
+            if added {
+                try? modelContext.save()
+            }
+            return added
+        }
         .dropDestination(for: URL.self, isEnabled: true) { items, location in
             let result = fileImport(
                 items: items,
