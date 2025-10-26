@@ -42,34 +42,26 @@ struct MarkdownShortcutBar: View {
             Button("#") { insert("#") }
                 .padding()
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+            
             Button("*") { insert("*") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+            
             Button("_") { insert("_") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+            
             Button("```") { insert("```\n\n```") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+            
             Button("[ ]( )") { insert("[ ](  )") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
-            /*
-            Button("Done") {
-            
-            }
-            .glassEffect()
-             */
-
             Spacer()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        //.background(.ultraThickMaterial)
         .glassEffect()
     }
 }
