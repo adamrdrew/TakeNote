@@ -42,34 +42,35 @@ struct MarkdownShortcutBar: View {
             Button("#") { insert("#") }
                 .padding()
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+
             Button("*") { insert("*") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
-            Button("_") { insert("_") }
+
+            Button("1.") { insert("1. ") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
+
             Button("```") { insert("```\n\n```") }
                 .padding()
-
                 .glassEffect(in: .rect(cornerRadius: 16.0))
-            Button("[ ]") { insert("- [ ] ") }
-                .padding()
 
-                .glassEffect(in: .rect(cornerRadius: 16.0))
-            /*
-            Button("Done") {
-            
+            Button(action: { insert("[ ](  )") }) {
+                Text(verbatim: "[]()")
             }
-            .glassEffect()
-             */
+            .padding()
+            .glassEffect(in: .rect(cornerRadius: 16.0))
 
+            Button(action: { insert("`") }) {
+                Text(verbatim: "`")
+            }
+            .padding()
+            .glassEffect(in: .rect(cornerRadius: 16.0))
+            
             Spacer()
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        //.background(.ultraThickMaterial)
         .glassEffect()
     }
 }
@@ -224,7 +225,10 @@ struct NoteEditor: View {
                         CodeEditor(
                             text: Binding(
                                 get: { note.content },
-                                set: { openNote?.content = $0 ; openNote?.updatedDate = Date() }
+                                set: {
+                                    openNote?.content = $0
+                                    openNote?.updatedDate = Date()
+                                }
                             ),
                             position: $position,
                             messages: $messages,
