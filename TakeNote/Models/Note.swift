@@ -152,6 +152,9 @@ class Note: Identifiable {
         if !canGenerateAISummary() {
             return
         }
+        defer {
+            aiSummaryIsGenerating = false
+        }
         contentHash = generateContentHash()
         aiSummaryIsGenerating = true
         aiSummary = ""
@@ -163,7 +166,6 @@ class Note: Identifiable {
         let prompt = content
         let response = try? await session.respond(to: prompt)
         aiSummary = response?.content ?? ""
-        aiSummaryIsGenerating = false
     }
 
     func setTitle() {
