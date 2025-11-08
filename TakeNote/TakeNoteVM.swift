@@ -161,7 +161,7 @@ class TakeNoteVM {
         modelContext.insert(note)
         do {
             try modelContext.save()
-            //selectedNotes = [note]
+            selectedNotes = [note]
         } catch {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
