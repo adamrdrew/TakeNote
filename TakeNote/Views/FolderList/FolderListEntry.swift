@@ -143,7 +143,7 @@ struct FolderListEntry: View {
         .popover(
             isPresented: $showEditDetailsPopover,
             attachmentAnchor: .point(.center),
-            arrowEdge: .bottom
+            arrowEdge: .leading
         ) {
             NoteContainerDetailsEditor(
                 showColorPopover: $showEditDetailsPopover,
