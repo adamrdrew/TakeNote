@@ -166,6 +166,7 @@ class TakeNoteVM {
             errorAlertMessage = error.localizedDescription
             errorAlertIsVisible = true
         }
+        openNote = note
         return note
     }
 
