@@ -112,6 +112,9 @@ struct NoteEditor: View {
     func togglePreview() {
         showPreview.toggle()
         isInputActive = !showPreview
+        if showPreview && openNote != nil {
+            Task { await openNote?.generateSummary() }
+        }
     }
 
     func showBacklinks() {

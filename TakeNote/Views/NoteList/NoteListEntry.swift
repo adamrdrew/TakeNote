@@ -453,6 +453,23 @@ struct NoteListEntry: View {
             }) {
                 Label("Copy Markdown Link", systemImage: "link")
             }
+            if takeNoteVM.aiIsAvailable {
+                Button(action: {
+                    // This content hash dance is a little hacky, but we need to do it because
+                    // we guard creating summaries on a content hash not matching
+                    note.contentHash = ""
+                    Task {
+                        await note.generateSummary()
+                        note.contentHash = note.generateContentHash()
+                    }
+
+                }) {
+                    Label(
+                        "Regenerate Summary",
+                        systemImage: "apple.intelligence"
+                    )
+                }
+            }
             if let noteLabel = note.tag {
                 Button(
                     role: .destructive,
