@@ -177,6 +177,10 @@ struct MainWindow: View {
         } content: {
             NoteList()
                 .toolbar {
+                    #if os(iOS)
+                        DefaultToolbarItem(kind: .search, placement: .bottomBar)  // <- this
+                        ToolbarSpacer(.fixed, placement: .bottomBar)
+                    #endif
                     NoteListToolbar
                 }
 
