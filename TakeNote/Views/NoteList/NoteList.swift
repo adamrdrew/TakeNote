@@ -70,16 +70,6 @@ struct NoteList: View {
     @State var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
-    var searchBarPlacement: SearchFieldPlacement {
-        #if os(iOS)
-            return UIDevice.current.userInterfaceIdiom == .phone
-                ? .navigationBarDrawer(displayMode: .automatic)
-                : .toolbarPrincipal
-        #else
-            return .toolbar
-        #endif
-    }
-
     var filteredNotes: [Note] {
         if noteSearchText.isEmpty {
             takeNoteVM.selectedContainer?.notes ?? []
@@ -248,7 +238,10 @@ struct NoteList: View {
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
             )
-            .searchable(text: $noteSearchText, placement: searchBarPlacement)
+            .searchable(text: $noteSearchText)
+            #if os(iOS)
+            .searchToolbarBehavior(.minimize)
+            #endif
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
