@@ -248,7 +248,10 @@ struct NoteList: View {
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
             )
-            .searchable(text: $noteSearchText, placement: searchBarPlacement)
+            .searchable(text: $noteSearchText)
+            #if os(iOS)
+            .searchToolbarBehavior(.minimize)
+            #endif
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
