@@ -211,6 +211,34 @@ struct NoteEditor: View {
         position.selections = [NSRange(location: newLoc, length: 0)]
     }
 
+    private func insertImageMarkdown(_ markdown: String) {
+        guard let note = openNote else { return }
+        if showPreview {
+            let prefix = note.content.isEmpty ? "" : "\n"
+            note.setContent(note.content + prefix + markdown)
+        } else {
+            insertAtCaret(markdown)
+        }
+    }
+
+    @MainActor
+    private func handleImageDrop(_ urls: [URL]) -> Bool {
+        guard let note = openNote else { return false }
+        let imageManager = NoteImageManager(modelContext: modelContext)
+        var markdownLinks: [String] = []
+
+        for url in urls {
+            guard let image = imageManager.ingestImage(from: url, note: note)
+            else { continue }
+            markdownLinks.append("![](\(image.getURL()))")
+        }
+
+        guard !markdownLinks.isEmpty else { return false }
+        insertImageMarkdown(markdownLinks.joined(separator: "\n"))
+        try? modelContext.save()
+        return true
+    }
+
     fileprivate func setShowBacklinks() {
         if let on = openNote {
             openNoteHasBacklinks = NoteLinkManager(
@@ -436,6 +464,9 @@ struct NoteEditor: View {
             .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
             .focusedSceneValue(\.openNoteHasBacklinks, openNoteHasBacklinks)
             .focusedSceneValue(\.showBacklinks, showBacklinks)
+            .dropDestination(for: URL.self, isEnabled: true) { items, _ in
+                handleImageDrop(items)
+            }
 
         } else {
             VStack {

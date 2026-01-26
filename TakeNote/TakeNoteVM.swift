@@ -284,10 +284,12 @@ class TakeNoteVM {
             errorAlertIsVisible = true
             return
         }
+        let imageManager = NoteImageManager(modelContext: modelContext)
         for note in trash.notes {
             if openNote == note {
                 openNote = nil
             }
+            imageManager.removeImageLinks(for: note)
             modelContext.delete(note)
         }
         do {

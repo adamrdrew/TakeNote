@@ -256,6 +256,8 @@ struct NoteList: View {
                         search.reindex(note: note)
                         NoteLinkManager(modelContext: modelContext)
                             .generateLinksFor(note)
+                        NoteImageManager(modelContext: modelContext)
+                            .updateImageLinks(for: note)
                         note.setTitle()
                     }
 

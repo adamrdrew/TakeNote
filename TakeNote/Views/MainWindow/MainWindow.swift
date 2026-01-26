@@ -22,6 +22,8 @@ struct MainWindow: View {
     @Query() var notes: [Note]
     @Query() var containers: [NoteContainer]
     @Query() var noteLinks: [NoteLink]
+    @Query() var noteImageLinks: [NoteImageLink]
+    @Query() var noteImages: [NoteImage]
 
     @State var notesInBufferMessagePresented: Bool = false
     @State var showDeleteEverythingAlert: Bool = false
@@ -70,6 +72,12 @@ struct MainWindow: View {
         }
         for noteLink in noteLinks {
             modelContext.delete(noteLink)
+        }
+        for imageLink in noteImageLinks {
+            modelContext.delete(imageLink)
+        }
+        for image in noteImages {
+            modelContext.delete(image)
         }
         try? modelContext.save()
     }
