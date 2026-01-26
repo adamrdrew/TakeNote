@@ -75,6 +75,7 @@ class Note: Identifiable {
     // (we'll specify inverses on NoteLink to avoid macro circularity).
     @Relationship var outgoingLinks: [NoteLink]? = []
     @Relationship var incomingLinks: [NoteLink]? = []
+    @Relationship var imageLinks: [NoteImageLink]? = []
 
     init(folder: NoteContainer) {
         self.title = self.defaultTitle
