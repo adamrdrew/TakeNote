@@ -8,10 +8,6 @@
 import SwiftData
 import SwiftUI
 
-extension FocusedValues {
-    @Entry var selectedFolder: NoteContainer?
-}
-
 struct FolderList: View {
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag

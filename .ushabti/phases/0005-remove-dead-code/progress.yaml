@@ -1,0 +1,81 @@
+phase:
+  id: "0005"
+  slug: remove-dead-code
+  title: Remove Dead Code
+  status: complete
+
+steps:
+  - id: S001
+    title: Delete VectorSearchIndex.swift and EmbeddingProvider.swift
+    implemented: true
+    reviewed: true
+    notes: Deleted VectorSearchIndex.swift and EmbeddingProvider.swift. No remaining references to either type. SearchIndexService.index remains typed as SearchIndex (FTS5).
+    touched:
+      - TakeNote/Library/VectorSearchIndex.swift
+      - TakeNote/Library/EmbeddingProvider.swift
+
+  - id: S002
+    title: Delete NoteLabelBadge.swift and HistoryPanel.swift
+    implemented: true
+    reviewed: true
+    notes: Deleted NoteLabelBadge.swift and HistoryPanel.swift. One remaining reference to HistoryPanel exists inside a commented-out block in MainWindow.swift — that is cleaned up in S003.
+    touched:
+      - TakeNote/Views/Helpers/NoteLabelBadge.swift
+      - TakeNote/Views/MainWindow/HistoryPanel.swift
+
+  - id: S003
+    title: Clean up the commented-out HistoryPanel block in MainWindow.swift
+    implemented: true
+    reviewed: true
+    notes: Removed the commented-out HistoryPanel() block (lines 172-175 in original) from MainWindow.swift. Surrounding toolbar structure is intact.
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S004
+    title: Remove dead debug methods from SearchIndex.swift
+    implemented: true
+    reviewed: true
+    notes: "Removed MARK: Debug Helpers comment, debugCount() method, and debugDump(limit:) method from SearchIndex.swift. File closes correctly."
+    touched:
+      - TakeNote/Library/SearchIndex.swift
+
+  - id: S005
+    title: Remove getLinksToDestinationNote from NoteLinkManager.swift
+    implemented: true
+    reviewed: true
+    notes: "Removed getLinksToDestinationNote(_:) from NoteLinkManager.swift. MARK: Public Methods comment retained as other public methods follow."
+    touched:
+      - TakeNote/Library/NoteLinkManager.swift
+
+  - id: S006
+    title: Remove dead selectedFolder FocusedValues entry from FolderList.swift
+    implemented: true
+    reviewed: true
+    notes: "Removed extension FocusedValues { @Entry var selectedFolder: NoteContainer? } from FolderList.swift. The entire extension block was removed."
+    touched:
+      - TakeNote/Views/FolderList/FolderList.swift
+
+  - id: S007
+    title: Remove dead placement variables from WindowCommands.swift
+    implemented: true
+    reviewed: true
+    notes: "Removed both #if os(macOS) and #if os(iOS) let placement blocks from WindowCommands.swift. CommandGroup(after: .windowArrangement) was already using .windowArrangement directly."
+    touched:
+      - TakeNote/Views/Commands/WindowCommands.swift
+
+  - id: S008
+    title: Update docs to reflect all deletions
+    implemented: true
+    reviewed: true
+    notes: "Updated all three docs: search-system.md (removed VectorSearchIndex and EmbeddingProvider sections, updated Overview to describe one index); supporting-systems.md (removed getLinksToDestinationNote bullet from NoteLinkManager Query Methods); views.md (removed NoteLabelBadge bullet from Helper Views)."
+    touched:
+      - .ushabti/docs/search-system.md
+      - .ushabti/docs/supporting-systems.md
+      - .ushabti/docs/views.md
+  - id: S009
+    title: Fix stale VectorSearchIndex reference in docs/index.md
+    implemented: true
+    reviewed: true
+    notes: "Removed VectorSearchIndex from the search-system.md description on line 19 of index.md. Line now reads: FTS5 SearchIndex, SearchIndexService, chunking, and RAG usage."
+    touched:
+      - .ushabti/docs/index.md

@@ -169,10 +169,6 @@ struct MainWindow: View {
                         }
 
                     }
-                /*
-                Spacer()
-                HistoryPanel()
-            */
             }
         } content: {
             NoteList()

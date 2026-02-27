@@ -2,12 +2,11 @@
 
 ## Overview
 
-TakeNote has two search indexes:
+TakeNote has one search index:
 
-1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The primary implementation used in production for chat RAG retrieval.
-2. **Vector index** (`VectorSearchIndex`) — In-memory dense vector search using NLEmbedding. An alternate/experimental implementation with the same public API shape.
+1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The sole implementation used in production for chat RAG retrieval.
 
-Both are managed through `SearchIndexService`, which is the `@Observable` service consumed by the UI.
+It is managed through `SearchIndexService`, which is the `@Observable` service consumed by the UI.
 
 ---
 
@@ -94,42 +93,6 @@ struct NoteChunk {
     let text: String
 }
 ```
-
----
-
-## VectorSearchIndex
-
-**File:** `TakeNote/Library/VectorSearchIndex.swift`
-
-An in-memory dense vector search index using Apple's `NLEmbedding.sentenceEmbedding(for:)`. Provides the same `searchNatural(_:limit:)` API as `SearchIndex` but uses cosine similarity over unit-normalized embedding vectors.
-
-### Status
-
-This is an alternate implementation. `SearchIndexService` uses `SearchIndex` (FTS5), not `VectorSearchIndex`. `VectorSearchIndex` is present in the codebase but not wired into the service layer or UI.
-
-### Key Details
-
-- Embeddings are computed via `EmbeddingProvider` using `NLEmbedding.sentenceEmbedding` for English.
-- Vectors are L2-normalized in `EmbeddingProvider.embed()`.
-- Cosine similarity is a dot product (since vectors are unit-length).
-- The in-memory store is a `[ChunkRecord]` array. Not persisted between launches.
-- The `dropAll()` method clears the array and resets the row ID counter.
-
----
-
-## EmbeddingProvider
-
-**File:** `TakeNote/Library/EmbeddingProvider.swift`
-
-Thin wrapper around `NLEmbedding.sentenceEmbedding(for:)`.
-
-```swift
-class EmbeddingProvider {
-    func embed(_ text: String) -> [Float]?
-}
-```
-
-Returns a unit-length `[Float]` vector or `nil` if the embedding model is unavailable or the text cannot be embedded. Vectors are L2-normalized.
 
 ---
 

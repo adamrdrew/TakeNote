@@ -147,7 +147,6 @@ Called when a note's content changes (on deselection in `NoteList`). Process:
 
 ### Query Methods
 
-- `getLinksToDestinationNote(_ note: Note) -> [NoteLink]` — all links pointing to this note.
 - `getNotesThatLinkTo(_ note: Note) -> [Note]` — source notes of all incoming links.
 - `notesLinkToDestination(_ note: Note) -> Bool` — `true` if any notes link to this note (used to show/hide the backlinks toolbar button).
 

@@ -275,36 +275,4 @@ internal final class SearchIndex {
         return dir.appendingPathComponent(filename, isDirectory: false)
     }
 
-    // MARK: Debug Helpers
-
-    /// 1) Count rows in FTS quickly
-    func debugCount() -> Int {
-        (try? db.scalar("SELECT COUNT(*) FROM fts") as? Int64).map(Int.init)
-            ?? -1
-    }
-
-    /// 2) Dump a few rows (id, note_id, first 80 chars)
-    func debugDump(limit: Int = 5) {
-        do {
-            let rowid = Expression<Int64>("rowid")
-            let note_id = Expression<String>("note_id")
-            let chunk = Expression<String>("chunk")
-            for row in try db.prepare(
-                fts.select(rowid, note_id, chunk).limit(limit)
-            ) {
-                let preview = row[chunk].prefix(80).replacingOccurrences(
-                    of: "\n",
-                    with: "⏎"
-                )
-                logger.debug(
-                    "fts row \(row[rowid])  note_id=\(row[note_id])  chunk=\"\(preview)…\""
-                )
-            }
-            let dc = debugCount()
-            logger.debug("fts total rows: \(dc)")
-        } catch {
-            logger.debug("debugDump error: \(error.localizedDescription)")
-        }
-    }
-
 }
