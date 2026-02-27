@@ -58,13 +58,13 @@ CloudKit sync can create duplicate system folders (Inbox, Trash, Starred, Buffer
 
 ### runOnce()
 
-Reconciles all four system folder types. For each type:
+Reconciles all five system folder types (Inbox, Trash, Buffer, Starred, All Notes). For each type:
 1. Fetches all matching containers.
 2. If system folder has wrong color (not `0xFF26B9FF`), corrects it and saves.
 3. If only one exists, skips.
 4. If multiple exist: picks a canonical (most notes, then lowest ID hash), moves all notes from duplicates to the canonical, updates `TakeNoteVM` if the selected container was a duplicate, deletes duplicates, saves.
 
-After reconciliation, updates `TakeNoteVM`'s system folder references (`inboxFolder`, `trashFolder`, `bufferFolder`, `starredFolder`).
+After reconciliation, updates `TakeNoteVM`'s system folder references (`inboxFolder`, `trashFolder`, `bufferFolder`, `starredFolder`, `allNotesFolder`).
 
 ### chooseCanonical(from:)
 

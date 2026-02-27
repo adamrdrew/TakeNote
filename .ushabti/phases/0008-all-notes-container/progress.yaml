@@ -1,0 +1,65 @@
+phase:
+  id: "0008"
+  slug: all-notes-container
+  title: All Notes Container
+  status: complete
+
+steps:
+  - id: S001
+    title: Add isAllNotes field to NoteContainer and update isSystemFolder
+    implemented: true
+    reviewed: true
+    notes: "Added isAllNotes: Bool = false field after isBuffer. Updated isSystemFolder to include || isAllNotes."
+    touched:
+      - TakeNote/Models/NoteContainer.swift
+
+  - id: S002
+    title: Bump ckBootstrapVersionCurrent in TakeNoteApp.swift
+    implemented: true
+    reviewed: true
+    notes: Bumped ckBootstrapVersionCurrent from 8 to 9 to fulfill L03 for the new isAllNotes persisted field.
+    touched:
+      - TakeNote/TakeNoteApp.swift
+
+  - id: S003
+    title: Add allNotesFolder property and createAllNotesFolder to TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added allNotesFolderName constant, allNotesFolder property, createAllNotesFolder method (following createBufferFolder pattern). Called from folderInit. Updated canAddNote and canRenameSelectedContainer to block All Notes."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S004
+    title: Extend SystemFolderReconciler to reconcile the All Notes container
+    implemented: true
+    reviewed: true
+    notes: "Added allNotes reconciliation in runOnce() and vm.allNotesFolder assignment, following the same pattern as other system folders."
+    touched:
+      - TakeNote/Library/SystemFolderReconciler.swift
+
+  - id: S005
+    title: Update Sidebar queries and FolderList guard
+    implemented: true
+    reviewed: true
+    notes: "Updated Sidebar systemFolders query to include isAllNotes, folders query to exclude isAllNotes. Updated FolderList guard to exclude isAllNotes."
+    touched:
+      - TakeNote/Views/MainWindow/Sidebar.swift
+      - TakeNote/Views/FolderList/FolderList.swift
+
+  - id: S006
+    title: Implement cross-container note list in NoteList for All Notes
+    implemented: true
+    reviewed: true
+    notes: "Added All Notes branch in filteredNotes using @Query var notes source, filtering out Trash and Buffer notes. Search text applied same way as existing branch."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S007
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated data-models.md (isAllNotes field, All Notes system container row, isSystemFolder description), view-model.md (allNotesFolder reference, allNotesFolderName constant, createAllNotesFolder method, canAddNote and canRenameSelectedContainer descriptions), supporting-systems.md (runOnce() updated to mention 5 system folder types and allNotesFolder)."
+    touched:
+      - .ushabti/docs/data-models.md
+      - .ushabti/docs/view-model.md
+      - .ushabti/docs/supporting-systems.md

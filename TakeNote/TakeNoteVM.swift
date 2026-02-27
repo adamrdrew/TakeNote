@@ -25,6 +25,7 @@ enum SortOrder : Int {
 class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
+    static let allNotesFolderName = "All Notes"
     static let chatWindowID = "chat-window"
 
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "TakeNoteVM")
@@ -80,6 +81,7 @@ class TakeNoteVM {
     var trashFolder: NoteContainer?
     var bufferFolder: NoteContainer?
     var starredFolder: NoteContainer?
+    var allNotesFolder: NoteContainer?
 
     var navigationTitle: String {
         #if DEBUG
@@ -98,11 +100,12 @@ class TakeNoteVM {
         return selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
             && selectedContainer?.isStarred == false
+            && selectedContainer?.isAllNotes == false
     }
 
     var canRenameSelectedContainer: Bool {
         guard let sc = selectedContainer else { return false }
-        if sc.isInbox || sc.isTrash || sc.isStarred {
+        if sc.isInbox || sc.isTrash || sc.isStarred || sc.isAllNotes {
             return false
         }
         return true
@@ -280,6 +283,28 @@ class TakeNoteVM {
         }
     }
 
+    func createAllNotesFolder(_ modelContext: ModelContext) {
+        if self.allNotesFolder != nil { return }
+        let allNotesFolder = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: false,
+            isStarred: false,
+            name: TakeNoteVM.allNotesFolderName,
+            symbol: "text.pad.header",
+            isTag: false,
+        )
+        allNotesFolder.isAllNotes = true
+        modelContext.insert(allNotesFolder)
+        self.allNotesFolder = allNotesFolder
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
+
     func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
         guard let trash = trashFolder else {
@@ -331,6 +356,7 @@ class TakeNoteVM {
         createTrashFolder(modelContext)
         createBufferFolder(modelContext)
         createStarredFolder(modelContext)
+        createAllNotesFolder(modelContext)
         #if os(macOS)
             selectedContainer = inboxFolder
         #endif

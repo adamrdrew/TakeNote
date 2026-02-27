@@ -95,13 +95,13 @@ struct Sidebar: View {
     @Query(
         filter: #Predicate<NoteContainer> { folder in
             !folder.isTag && !folder.isTrash && !folder.isInbox
-                && !folder.isBuffer
+                && !folder.isBuffer && !folder.isAllNotes
         }
     ) var folders: [NoteContainer]
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in
-            folder.isTrash || folder.isInbox || folder.isStarred
+            folder.isTrash || folder.isInbox || folder.isStarred || folder.isAllNotes
         }
     ) var systemFolders: [NoteContainer]
 
