@@ -52,6 +52,7 @@ enum SortOrder: Int {
 | `trashFolder` | `NoteContainer?` | Reference to the Trash system folder. |
 | `bufferFolder` | `NoteContainer?` | Reference to the hidden Buffer folder used for cut/paste. |
 | `starredFolder` | `NoteContainer?` | Reference to the Starred system folder. |
+| `allNotesFolder` | `NoteContainer?` | Reference to the All Notes system container. |
 
 ### UI State
 
@@ -83,6 +84,7 @@ enum SortOrder: Int {
 |---|---|---|
 | `inboxFolderName` | `"Inbox"` | Name of the Inbox system folder. |
 | `trashFolderName` | `"Trash"` | Name of the Trash system folder. |
+| `allNotesFolderName` | `"All Notes"` | Name of the All Notes system container. |
 | `chatWindowID` | `"chat-window"` | SwiftUI window ID for the Chat window. |
 
 ---
@@ -91,8 +93,8 @@ enum SortOrder: Int {
 
 | Property | Returns | Description |
 |---|---|---|
-| `canAddNote` | `Bool` | `true` if `selectedContainer` is not Trash, not a tag, and not Starred. |
-| `canRenameSelectedContainer` | `Bool` | `true` if container is not Inbox, Trash, or Starred. |
+| `canAddNote` | `Bool` | `true` if `selectedContainer` is not Trash, not a tag, not Starred, and not All Notes. |
+| `canRenameSelectedContainer` | `Bool` | `true` if container is not Inbox, Trash, Starred, or All Notes. |
 | `bufferIsEmpty` | `Bool` | `true` if Buffer folder has no notes. |
 | `bufferNotesCount` | `Int` | Number of notes in Buffer folder. |
 | `canEmptyTrash` | `Bool` | `true` if Trash is selected and not empty. |
@@ -126,7 +128,7 @@ enum SortOrder: Int {
 
 ### System Folder Creation (called by folderInit)
 
-- `createInboxFolder(_:)`, `createTrashFolder(_:)`, `createBufferFolder(_:)`, `createStarredFolder(_:)` — idempotent; only creates if not already present.
+- `createInboxFolder(_:)`, `createTrashFolder(_:)`, `createBufferFolder(_:)`, `createStarredFolder(_:)`, `createAllNotesFolder(_:)` — idempotent; only creates if not already present.
 
 ### Buffer Operations
 

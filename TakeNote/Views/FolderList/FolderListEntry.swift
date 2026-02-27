@@ -22,6 +22,7 @@ struct FolderListEntry: View {
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
+    @Query() var allNotes: [Note]
     @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
@@ -80,6 +81,15 @@ struct FolderListEntry: View {
         takeNoteVM.onMoveToFolder()
     }
 
+    var noteCount: Int {
+        if folder.isAllNotes {
+            return allNotes.filter {
+                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
+            }.count
+        }
+        return folder.notes.count
+    }
+
     var iconColor: Color {
         if folder == takeNoteVM.selectedContainer {
             return .primary
@@ -114,7 +124,7 @@ struct FolderListEntry: View {
                     }
                     Spacer()
                     HStack {
-                        Text("\(folder.notes.count)")
+                        Text("\(noteCount)")
                             .foregroundStyle(.secondary)
                         Image(systemName: "note.text")
                             .foregroundStyle(.secondary)
@@ -195,7 +205,7 @@ struct FolderListEntry: View {
                     Label("Rename", systemImage: "square.and.pencil")
                 }
             }
-            if folder.isTrash && folder.notes.count > 0 {
+            if folder.isTrash && noteCount > 0 {
                 Button(action: {
                     showEmptyTrashWarning = true
                 }) {

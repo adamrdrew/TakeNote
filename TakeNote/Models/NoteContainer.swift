@@ -33,6 +33,7 @@ class NoteContainer: Identifiable {
     internal var isStarred: Bool = false
     internal var isTag: Bool = false
     internal var isBuffer: Bool = false
+    internal var isAllNotes: Bool = false
     var colorRGBA: UInt32 = 0xFF26B9FF
     var symbol: String = "folder"
     var notes: [Note] {
@@ -42,7 +43,7 @@ class NoteContainer: Identifiable {
     }
     
     var isSystemFolder: Bool {
-        isTrash || isInbox || isStarred
+        isTrash || isInbox || isStarred || isAllNotes
     }
 
     init(

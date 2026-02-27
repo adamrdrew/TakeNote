@@ -71,10 +71,23 @@ struct NoteList: View {
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
     var filteredNotes: [Note] {
+        if takeNoteVM.selectedContainer?.isAllNotes == true {
+            let allNotesSource = notes.filter {
+                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
+            }
+            if noteSearchText.isEmpty {
+                return allNotesSource
+            } else {
+                return allNotesSource.filter {
+                    $0.title.localizedStandardContains(noteSearchText)
+                        || $0.content.localizedStandardContains(noteSearchText)
+                }
+            }
+        }
         if noteSearchText.isEmpty {
-            takeNoteVM.selectedContainer?.notes ?? []
+            return takeNoteVM.selectedContainer?.notes ?? []
         } else {
-            takeNoteVM.selectedContainer?.notes.filter {
+            return takeNoteVM.selectedContainer?.notes.filter {
                 $0.title.localizedStandardContains(noteSearchText)
                     || $0.content.localizedStandardContains(noteSearchText)
             } ?? []

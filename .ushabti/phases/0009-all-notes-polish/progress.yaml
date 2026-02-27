@@ -1,0 +1,35 @@
+phase:
+  id: "0009"
+  slug: all-notes-polish
+  title: All Notes Polish
+  status: complete
+
+steps:
+  - id: S001
+    title: Fix sidebar system folder ordering
+    implemented: true
+    reviewed: true
+    notes: "Added private file-scope systemFolderSortOrder helper function and replaced alphabetical sort with explicit priority sort: Inbox=0, Starred=1, AllNotes=2, Trash=3, unknown=4"
+    touched:
+      - TakeNote/Views/MainWindow/Sidebar.swift
+  - id: S002
+    title: Fix All Notes note count in NoteListHeader
+    implemented: true
+    reviewed: true
+    notes: "Added @Query() var allNotes: [Note] to NoteListHeader and updated noteCountLabel to filter out Trash and Buffer notes when isAllNotes is selected, matching NoteList.filteredNotes logic exactly"
+    touched:
+      - TakeNote/Views/NoteList/NoteListHeader.swift
+  - id: S003
+    title: Show source folder badge in NoteListEntry when All Notes is selected
+    implemented: true
+    reviewed: true
+    notes: "Added || takeNoteVM.selectedContainer?.isAllNotes == true to both the MetadataRow source folder badge condition and the Go to Note Folder context-menu guard"
+    touched:
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+  - id: S004
+    title: Update views.md documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated Sidebar section (explicit sort order, isAllNotes in query), NoteListHeader section (allNotes @Query and All Notes count logic), and NoteListEntry section (MetadataRow and context menu isAllNotes condition)"
+    touched:
+      - .ushabti/docs/views.md

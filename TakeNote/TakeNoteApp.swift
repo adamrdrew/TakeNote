@@ -11,7 +11,7 @@ private let onboardingVersionKey = "onboarding.version.seen"
 
 #if DEBUG
     // Bump this to get the schema to update, for example if there have been model changes
-    private let ckBootstrapVersionCurrent = 8
+    private let ckBootstrapVersionCurrent = 9
     private let ckBootstrapVersionKey = "takenote.ck.bootstrap.version"
 #endif
 
