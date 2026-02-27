@@ -226,7 +226,6 @@ Adds items after `.windowArrangement`: Open Chat (`⌘⇧C`, gated on `chatFeatu
 
 - `AIMessage` — styled label for AI-related status messages (e.g., "Magic Format", "Thinking...", "AI Summary Generating...").
 - `MultiNoteViewer` — shown in the detail column when multiple notes are selected. Contents not read in detail.
-- `NoteLabelBadge` — tag/folder badge displayed on note list entries.
 
 ---
 

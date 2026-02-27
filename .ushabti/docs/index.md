@@ -16,5 +16,5 @@ TakeNote is a native Markdown note-taking app for macOS and iOS. It supports iCl
 - [View Layer](views.md) — MainWindow, Sidebar, NoteList, NoteEditor, ChatWindow, Commands, and all supporting views
 - [CommandRegistry Pattern](command-registry.md) — How menubar commands bridge to list item operations via FocusedValues
 - [AI Features](ai-features.md) — Magic Format, Magic Assistant, Magic Chat, AI summaries, prompts, and feature flag
-- [Search System](search-system.md) — FTS5 SearchIndex, VectorSearchIndex, SearchIndexService, chunking, and RAG usage
+- [Search System](search-system.md) — FTS5 SearchIndex, SearchIndexService, chunking, and RAG usage
 - [Supporting Systems](supporting-systems.md) — AppBootstrapper, SystemFolderReconciler, SnapshotController, NoteLinkManager, FileImport, AppIntents, Widgets, and utility files

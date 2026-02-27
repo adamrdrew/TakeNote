@@ -33,12 +33,6 @@ struct WindowCommands: Commands {
     }
 
     var body: some Commands {
-        #if os(macOS)
-            let placement = CommandGroupPlacement.windowList
-        #endif
-        #if os(iOS)
-            let placement = CommandGroupPlacement.toolbar
-        #endif
         CommandGroup(after: .windowArrangement) {
             if chatFeatureFlagEnabled {
                 Button("Open Chat", systemImage: "message") {

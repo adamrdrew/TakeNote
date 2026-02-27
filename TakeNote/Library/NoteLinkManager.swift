@@ -22,10 +22,6 @@ class NoteLinkManager {
 
     // MARK: Public Methods
 
-    func getLinksToDestinationNote(_ note: Note) -> [NoteLink] {
-        return getLinksForDestinationNote(note)
-    }
-
     func getNotesThatLinkTo(_ note: Note) -> [Note] {
         let links = getLinksForDestinationNote(note)
         return links.compactMap(\.sourceNote)
