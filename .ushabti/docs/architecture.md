@@ -42,7 +42,7 @@ The Xcode project contains three targets:
 ```
 TakeNoteApp (entry point)
 ├── ModelContainer (SwiftData, CloudKit-backed)
-│   └── Models: Note, NoteContainer, NoteLink
+│   └── Models: Note, NoteContainer, NoteLink, NoteImage
 ├── TakeNoteVM (@Observable, @MainActor)
 │   └── Shared via SwiftUI Environment
 ├── SearchIndexService (@Observable, @MainActor)
@@ -73,7 +73,20 @@ TakeNoteApp (entry point)
 
 ## URL Scheme
 
-`takenote://note/<UUID>` — deep link to open a specific note by UUID. Handled by `onOpenURL` in `MainWindow`, routed through `TakeNoteVM.loadNoteFromURL()`.
+TakeNote uses the `takenote://` scheme for two purposes:
+
+| Host | Format | Purpose |
+|---|---|---|
+| `note` | `takenote://note/<UUID>` | Deep link to open a specific note by UUID |
+| `image` | `takenote://image/<UUID>` | In-process reference to an embedded image |
+
+**Routing in `MainWindow.onOpenURL`:** The handler checks `url.host` before dispatching:
+- `"note"` → `TakeNoteVM.loadNoteFromURL()` — navigates the app to the referenced note.
+- `"image"` → logged at `.info` level and returned immediately. Image URLs are resolved in-process by `TakeNoteImageProvider` (MarkdownUI) and must not be treated as navigation deep links.
+
+**Note-to-note links** (`takenote://note/<UUID>`) also appear in note content as Markdown links. `NoteLinkManager` extracts them to build the `NoteLink` graph.
+
+**Image references** (`takenote://image/<UUID>`) appear in note content as `![image](takenote://image/<UUID>)` Markdown. `TakeNoteImageProvider` resolves them to `NoteImage` records via `NoteImageStore.loadImage(uuid:modelContext:)` during preview rendering.
 
 ## App Group
 
@@ -117,5 +130,5 @@ In `TakeNoteApp.init()`:
 1. `TakeNoteApp.debugStoreURL()` computes the DEBUG store path at `~/Library/Application Support/TakeNoteDev/TakeNote.sqlite`.
 2. A temp bootstrap URL is created: `FileManager.default.temporaryDirectory/CKBootstrap-<UUID>.sqlite`.
 3. `AppBootstrapper.bootstrapDevSchemaIfNeeded()` is called with the temp URL and `ckBootstrapVersionCurrent`.
-4. Inside the bootstrap function: if the stored version in `UserDefaults` is less than `ckBootstrapVersionCurrent`, a temporary `NSPersistentCloudKitContainer` is created with the temp store, `initializeCloudKitSchema()` is called, the temp store is detached, and the version is saved to `UserDefaults`.
+4. Inside the bootstrap function: if the stored version in `UserDefaults` is less than `ckBootstrapVersionCurrent` (currently `10`), a temporary `NSPersistentCloudKitContainer` is created with the temp store, `initializeCloudKitSchema()` is called, the temp store is detached, and the version is saved to `UserDefaults`.
 5. Expected network errors (`CKError.networkUnavailable`, `.notAuthenticated`, etc.) and Cocoa-domain errors are logged at `.info` level and swallowed. Unexpected errors are logged at `.warning` level. Neither causes a crash.

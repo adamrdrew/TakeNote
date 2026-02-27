@@ -19,7 +19,7 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L02 — SwiftData and CloudKit as Sole Persistence for User Data
 
-- **Rule:** All user data persistence MUST use the SwiftData `ModelContainer` backed by `iCloud.com.adamdrew.takenote`. The three model types `Note`, `NoteContainer`, and `NoteLink` are the only `@Model` types. No alternative persistence mechanism (raw CoreData, direct SQLite for user data, flat-file note storage) may be introduced.
+- **Rule:** All user data persistence MUST use the SwiftData `ModelContainer` backed by `iCloud.com.adamdrew.takenote`. The four model types `Note`, `NoteContainer`, `NoteLink`, and `NoteImage` are the only `@Model` types. No alternative persistence mechanism (raw CoreData, direct SQLite for user data, flat-file note storage) may be introduced.
 - **Rationale:** User data integrity and iCloud sync correctness depend on all writes flowing through SwiftData's change tracking and CloudKit sync pipeline.
 - **Enforcement:** Reviewer verifies no new `@Model` classes are introduced without updating `L03`. No `NSManagedObjectContext` or direct SQLite writes to non-search databases are present.
 - **Scope:** User-facing data. The FTS5 search database (`search.sqlite`) is a derived index, not user data, and is exempt.
@@ -29,7 +29,7 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L03 — Schema Change Protocol
 
-- **Rule:** Any change to the schema of `Note`, `NoteContainer`, or `NoteLink` (adding, removing, or renaming a persisted field or relationship) MUST be accompanied by: (1) bumping `ckBootstrapVersionCurrent` in `TakeNoteApp.swift`, and (2) promoting the schema change to the production CloudKit container.
+- **Rule:** Any change to the schema of `Note`, `NoteContainer`, `NoteLink`, or `NoteImage` (adding, removing, or renaming a persisted field or relationship) MUST be accompanied by: (1) bumping `ckBootstrapVersionCurrent` in `TakeNoteApp.swift`, and (2) promoting the schema change to the production CloudKit container.
 - **Rationale:** SwiftData + CloudKit schema mismatches cause silent data corruption or migration failures on existing user devices. The version bump triggers re-bootstrapping on next launch.
 - **Enforcement:** Reviewer checks that any diff touching model files also bumps `ckBootstrapVersionCurrent`. Comments marked `// Hey! // Hey you!` in model files are reminders of this requirement.
 - **Exceptions:** Changes to `@Transient` properties (e.g., `aiSummaryIsGenerating`) require no version bump, as they are not persisted.

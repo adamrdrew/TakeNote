@@ -280,6 +280,9 @@ struct NoteList: View {
 
                 }
 
+                // Cull any NoteImage records that are no longer referenced by any active note
+                NoteImageManager(modelContext: modelContext).cullOrphanedImages()
+
             }
         }
         #if os(macOS)

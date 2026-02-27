@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import os
 
 extension FocusedValues {
     @Entry var chatEnabled: Bool?
@@ -23,6 +24,9 @@ struct MainWindow: View {
     @Query() var notes: [Note]
     @Query() var containers: [NoteContainer]
     @Query() var noteLinks: [NoteLink]
+    @Query() var noteImages: [NoteImage]
+
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MainWindow")
 
     @State var notesInBufferMessagePresented: Bool = false
     @State var showDeleteEverythingAlert: Bool = false
@@ -71,6 +75,9 @@ struct MainWindow: View {
         }
         for noteLink in noteLinks {
             modelContext.delete(noteLink)
+        }
+        for image in noteImages {
+            modelContext.delete(image)
         }
         try? modelContext.save()
     }
@@ -281,6 +288,10 @@ struct MainWindow: View {
 
         })
         .onOpenURL(perform: { url in
+            if url.host == "image" {
+                logger.info("Received image URL in onOpenURL — ignoring as in-process only")
+                return
+            }
             takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
         })
     }

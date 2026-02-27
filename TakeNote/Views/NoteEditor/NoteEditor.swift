@@ -9,9 +9,15 @@ import CodeEditorView
 import GameController
 import LanguageSupport
 import MarkdownUI
+import PhotosUI
 import SwiftData
 import SwiftUI
 import os
+#if os(iOS) || os(visionOS)
+    import UIKit
+#elseif os(macOS)
+    import AppKit
+#endif
 
 extension FocusedValues {
     @Entry var togglePreview: (() -> Void)?
@@ -89,6 +95,7 @@ struct NoteEditor: View {
     @State private var openNoteHasBacklinks: Bool = false
 
     @State private var magicFormatter = MagicFormatter()
+    @State private var selectedPhotoItem: PhotosPickerItem?
 
     @FocusState var isInputActive: Bool
     @Binding var openNote: Note?
@@ -178,6 +185,103 @@ struct NoteEditor: View {
             let newLoc = clamped.location + (s as NSString).length
             position.selections = [NSRange(location: newLoc, length: 0)]
         }
+    }
+
+    private static let maxImageDimension: CGFloat = 2048
+
+    private func insertImage(data: Data) {
+        let (downsizedData, mimeType) = Self.downsize(imageData: data)
+        let newImage = NoteImage(imageData: downsizedData, mimeType: mimeType)
+        modelContext.insert(newImage)
+        try? modelContext.save()
+        let markdownString = "![image](takenote://image/\(newImage.imageUUID.uuidString))"
+        insertAtCaret(markdownString)
+        logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
+    }
+
+    /// Downsizes image data so the longest dimension is at most 2048px.
+    /// Returns the downsized data and its MIME type.
+    private static func downsize(imageData: Data) -> (Data, String) {
+        let maxDim = maxImageDimension
+        #if os(iOS) || os(visionOS)
+            guard let image = UIImage(data: imageData) else {
+                return (imageData, "image/jpeg")
+            }
+            let originalSize = image.size
+            let longestSide = max(originalSize.width, originalSize.height)
+            guard longestSide > maxDim else {
+                // No downscaling needed; still re-encode as JPEG
+                if let jpegData = image.jpegData(compressionQuality: 0.85) {
+                    return (jpegData, "image/jpeg")
+                }
+                return (imageData, "image/jpeg")
+            }
+            let scale = maxDim / longestSide
+            let newSize = CGSize(
+                width: (originalSize.width * scale).rounded(),
+                height: (originalSize.height * scale).rounded()
+            )
+            let renderer = UIGraphicsImageRenderer(size: newSize)
+            let resizedImage = renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+            }
+            if let jpegData = resizedImage.jpegData(compressionQuality: 0.85) {
+                return (jpegData, "image/jpeg")
+            }
+            return (imageData, "image/jpeg")
+        #elseif os(macOS)
+            guard let image = NSImage(data: imageData) else {
+                return (imageData, "image/jpeg")
+            }
+            let originalSize = image.size
+            let longestSide = max(originalSize.width, originalSize.height)
+            guard longestSide > maxDim else {
+                // No downscaling needed; still re-encode as JPEG
+                let rep = NSBitmapImageRep(data: imageData)
+                if let jpegData = rep?.representation(
+                    using: .jpeg, properties: [.compressionFactor: 0.85]
+                ) {
+                    return (jpegData, "image/jpeg")
+                }
+                return (imageData, "image/jpeg")
+            }
+            let scale = maxDim / longestSide
+            let newSize = CGSize(
+                width: (originalSize.width * scale).rounded(),
+                height: (originalSize.height * scale).rounded()
+            )
+            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                return (imageData, "image/jpeg")
+            }
+            let newRep = NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: Int(newSize.width),
+                pixelsHigh: Int(newSize.height),
+                bitsPerSample: 8,
+                samplesPerPixel: 4,
+                hasAlpha: true,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 0
+            )
+            guard let rep = newRep else {
+                return (imageData, "image/jpeg")
+            }
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            let srcRect = CGRect(origin: .zero, size: originalSize)
+            let destRect = CGRect(origin: .zero, size: newSize)
+            NSGraphicsContext.current?.cgContext.draw(cgImage, in: destRect)
+            _ = srcRect  // suppress unused warning
+            NSGraphicsContext.restoreGraphicsState()
+            if let jpegData = rep.representation(
+                using: .jpeg, properties: [.compressionFactor: 0.85]
+            ) {
+                return (jpegData, "image/jpeg")
+            }
+            return (imageData, "image/jpeg")
+        #endif
     }
 
     var selectedText: String {
@@ -272,6 +376,11 @@ struct NoteEditor: View {
                             VStack(alignment: .leading, spacing: 0) {
 
                                 Markdown(note.content)
+                                    .markdownImageProvider(
+                                        TakeNoteImageProvider(
+                                            modelContext: modelContext
+                                        )
+                                    )
                                     .frame(
                                         maxWidth: .infinity,
                                         alignment: .leading
@@ -300,9 +409,37 @@ struct NoteEditor: View {
                 }
 
             }
+            .dropDestination(for: Data.self) { items, _ in
+                guard !showPreview else { return false }
+                var inserted = false
+                for item in items {
+                    // Validate that the dropped data is image data before inserting
+                    #if os(iOS) || os(visionOS)
+                        guard UIImage(data: item) != nil else { continue }
+                    #elseif os(macOS)
+                        guard NSImage(data: item) != nil else { continue }
+                    #endif
+                    insertImage(data: item)
+                    inserted = true
+                }
+                return inserted
+            }
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
                 setShowBacklinks()
+            }
+            .onChange(of: selectedPhotoItem) { _, newItem in
+                guard let item = newItem else { return }
+                Task {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        await MainActor.run {
+                            insertImage(data: data)
+                        }
+                    }
+                    await MainActor.run {
+                        selectedPhotoItem = nil
+                    }
+                }
             }
 
             .onAppear {
@@ -362,6 +499,17 @@ struct NoteEditor: View {
                     }
                     .help(showPreview ? "Hide Preview" : "Show Preview")
 
+                }
+
+                ToolbarItem(placement: toolbarPosition) {
+                    PhotosPicker(
+                        selection: $selectedPhotoItem,
+                        matching: .images
+                    ) {
+                        Image(systemName: "photo.badge.plus")
+                    }
+                    .disabled(showPreview)
+                    .help("Insert Photo")
                 }
 
                 if openNoteHasBacklinks {

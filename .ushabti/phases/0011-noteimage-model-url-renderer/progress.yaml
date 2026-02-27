@@ -1,0 +1,63 @@
+phase:
+  id: "0011"
+  slug: noteimage-model-url-renderer
+  title: NoteImage Model, URL Handler, and Preview Rendering
+  status: complete
+
+steps:
+  - id: S001
+    title: Add NoteImage model
+    implemented: true
+    reviewed: true
+    notes: "Created NoteImage.swift with @Model, private(set) imageUUID, schema reminder comments, and designated initializer."
+    touched:
+      - TakeNote/Models/NoteImage.swift
+
+  - id: S002
+    title: Bump schema version and add NoteImage to ModelContainer
+    implemented: true
+    reviewed: true
+    notes: "Bumped ckBootstrapVersionCurrent to 10. Added NoteImage.self to bootstrapDevSchemaIfNeeded and ModelContainer(for:) calls."
+    touched:
+      - TakeNote/TakeNoteApp.swift
+
+  - id: S003
+    title: Add NoteImageStore service
+    implemented: true
+    reviewed: true
+    notes: "Created NoteImageStore.swift with static loadImage(uuid:modelContext:) -> Data? using FetchDescriptor<NoteImage>."
+    touched:
+      - TakeNote/Library/NoteImageStore.swift
+
+  - id: S004
+    title: Add TakeNoteImageProvider
+    implemented: true
+    reviewed: true
+    notes: "Created TakeNoteImageProvider.swift conforming to MarkdownUI ImageProvider. Resolves takenote://image/<UUID>, uses NoteImageStore, renders via NSImage/UIImage behind platform guards."
+    touched:
+      - TakeNote/Library/TakeNoteImageProvider.swift
+
+  - id: S005
+    title: Wire TakeNoteImageProvider into NoteEditor preview
+    implemented: true
+    reviewed: true
+    notes: "Added .markdownImageProvider(TakeNoteImageProvider(modelContext: modelContext)) to Markdown(note.content) in NoteEditor preview branch."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S006
+    title: Update MainWindow — onOpenURL routing and deleteEverything
+    implemented: true
+    reviewed: true
+    notes: "Added @Query() var noteImages, logger, deleteEverything loop for NoteImage records, and onOpenURL guard for image host."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S007
+    title: Update docs
+    implemented: true
+    reviewed: true
+    notes: "Updated data-models.md with NoteImage section and updated overview. Updated architecture.md component map to list NoteImage, expanded URL Scheme section with note/image host routing, updated schema version reference to 10."
+    touched:
+      - .ushabti/docs/data-models.md
+      - .ushabti/docs/architecture.md

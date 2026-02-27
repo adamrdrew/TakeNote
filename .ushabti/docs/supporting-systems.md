@@ -161,6 +161,35 @@ UUID format: `[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}` (cas
 
 ---
 
+## NoteImageManager
+
+**File:** `TakeNote/Library/NoteImageManager.swift`
+
+`@MainActor`, `@Observable`, `final class`.
+
+Manages lazy orphan culling for `NoteImage` records. An image is orphaned when no active note's content contains a `takenote://image/<UUID>` reference to it.
+
+**Instantiation pattern:** Follows the same inline instantiation pattern as `NoteLinkManager`. It is not injected as a long-lived environment object. Instead, it is instantiated inline at the two trigger points that need it.
+
+### cullOrphanedImages()
+
+Deletes any `NoteImage` records whose `imageUUID` is not referenced by any non-trashed, non-buffered note's content.
+
+**Process:**
+1. Fetch all `NoteImage` records via `FetchDescriptor<NoteImage>()`. Returns early if there are none.
+2. Fetch all `Note` records not in Trash and not in Buffer: predicate `$0.folder?.isTrash != true && $0.folder?.isBuffer != true`.
+3. Scan each active note's `content` with the Swift regex literal `#/(?i)takenote:\/\/image\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/#` to build a `Set<UUID>` of all referenced image UUIDs.
+4. Delete any `NoteImage` whose `imageUUID` is not in the referenced set.
+5. If any records were deleted, calls `try? modelContext.save()` and logs the count at `.info` level.
+
+**Trigger points:**
+- **Note deselection:** `NoteList.onChange(of: takeNoteVM.selectedNotes)` — runs after the existing per-note `generateSummary`/`reindex`/`generateLinksFor` loop.
+- **Trash emptying:** `TakeNoteVM.emptyTrash(_:)` — runs after the delete loop and `modelContext.save()`.
+
+**Design rationale:** Culling is lazy and eventually consistent. Notes in Trash are excluded from the active scan, so an image referenced only by trashed notes will be culled when the trash is emptied. Images referenced by active notes are never culled even if other referencing notes were deleted.
+
+---
+
 ## File Import
 
 **File:** `TakeNote/Library/FileImport.swift`

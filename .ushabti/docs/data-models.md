@@ -2,7 +2,7 @@
 
 ## Overview
 
-All persistent data is stored via SwiftData using three `@Model` classes: `Note`, `NoteContainer`, and `NoteLink`. The SwiftData container is CloudKit-backed under `iCloud.com.adamdrew.takenote`.
+All persistent data is stored via SwiftData using four `@Model` classes: `Note`, `NoteContainer`, `NoteLink`, and `NoteImage`. The SwiftData container is CloudKit-backed under `iCloud.com.adamdrew.takenote`.
 
 **Important:** Any change to a model class schema requires bumping `ckBootstrapVersionCurrent` in `TakeNoteApp.swift` and promoting the schema change to the production CloudKit container.
 
@@ -126,3 +126,49 @@ A directed edge in the note graph. Created by `NoteLinkManager` when a note's co
 | `destinationNote` | `Note?` | The note being linked to. Inverse of `Note.incomingLinks`. |
 
 NoteLink records are regenerated from scratch on every content change (old links for the source note are deleted, then new ones are created).
+
+---
+
+## NoteImage
+
+**File:** `TakeNote/Models/NoteImage.swift`
+
+Stores binary image data for images embedded in notes. Images are referenced from note content via the `![image](takenote://image/<UUID>)` Markdown pattern. `NoteImage` is intentionally freestanding — it has no SwiftData relationship to `Note`. Orphan culling is handled lazily by `NoteImageManager` (see `supporting-systems.md`).
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `imageUUID` | `UUID` | Stable identifier used in `takenote://image/<UUID>` URLs. `private(set)` — assigned once at creation; SwiftData internal hydration is the only permitted setter invocation after that. |
+| `imageData` | `Data` | Raw binary image data (JPEG or PNG). CloudKit stores large `Data` fields as `CKAsset` automatically — no entitlement changes required. |
+| `mimeType` | `String` | MIME type of the stored data. Either `"image/jpeg"` or `"image/png"`. |
+| `createdDate` | `Date` | Creation timestamp. |
+
+### Design Notes
+
+- No `@Relationship` to `Note`. The link between a note and its images is purely textual: the note's `content` contains `takenote://image/<UUID>` references. This avoids SwiftData relationship complexity and allows images to outlive individual note edits until culled.
+- `imageUUID` stability mirrors `Note.uuid`. It is the permanent cross-device identifier for this image record.
+
+### Image Markdown Pattern
+
+Images are embedded in note content using standard Markdown image syntax:
+
+```
+![image](takenote://image/<UUID>)
+```
+
+Where `<UUID>` is the `imageUUID` of the corresponding `NoteImage` record (e.g., `![image](takenote://image/550e8400-e29b-41d4-a716-446655440000)`).
+
+`TakeNoteImageProvider` (a `MarkdownUI` image provider) resolves these URLs at render time by fetching the matching `NoteImage` record from the model context and displaying its `imageData`. If no matching record is found, the image renders as an empty view (graceful degradation).
+
+### Orphan Culling
+
+`NoteImageManager.cullOrphanedImages()` is responsible for removing `NoteImage` records that are no longer referenced by any active note's content. See `supporting-systems.md` for the full description of `NoteImageManager`.
+
+### Designated Initializer
+
+```swift
+init(imageData: Data, mimeType: String)
+```
+
+Generates a fresh `UUID` for `imageUUID` and sets `createdDate = Date()`. The `mimeType` parameter should be `"image/jpeg"` for JPEG-encoded data and `"image/png"` for PNG fallback data.
