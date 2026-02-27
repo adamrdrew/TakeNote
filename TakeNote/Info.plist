@@ -16,7 +16,7 @@
 		</dict>
 	</array>
 	<key>MagicChatEnabled</key>
-	<false/>
+	<true/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
