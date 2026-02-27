@@ -30,7 +30,8 @@ internal final class SearchIndex {
     "further", "then", "once", "here", "there", "when", "where", "why", "how",
     "all", "any", "both", "each", "few", "more", "most", "other", "some", "such",
     "no", "nor", "not", "only", "own", "same", "so", "than", "too", "very", "s",
-    "t", "can", "will", "just", "don", "should", "now"]
+    "t", "can", "will", "just", "don", "should", "now",
+    "note", "notes"]
 
     // MARK: Schema (DSL handles)
     private let fts = VirtualTable("fts")
@@ -215,14 +216,19 @@ internal final class SearchIndex {
 
         // 3) Be forgiving: join with OR so any token can match
         //    (FTS5 will still rank results; you're already ordering by bm25)
-        let safeQuery = starred.joined(separator: " AND ")
-        
-        
+        let safeQuery = starred.joined(separator: " OR ")
+
+        #if DEBUG
+        logger.debug("FTS query: \(safeQuery) (from tokens: \(tokens))")
+        #endif
+
         let results = search(safeQuery, limit: limit)
         
         
         
+        #if DEBUG
         logger.debug("\(results.count) search hits found.")
+        #endif
 
         // 4) Delegate to your existing FTS search
         return results
@@ -256,6 +262,12 @@ internal final class SearchIndex {
             logger.error("SearchIndex search error: \(error.localizedDescription)")
             return []
         }
+    }
+
+    // MARK: Diagnostics
+
+    var rowCount: Int {
+        (try? db.scalar(fts.count)) ?? 0
     }
 
     // MARK: Helpers
