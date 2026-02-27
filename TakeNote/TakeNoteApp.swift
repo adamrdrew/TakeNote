@@ -189,6 +189,10 @@ struct TakeNoteApp: App {
                     case .inactive, .background:
                         // write a final snapshot on background
                         SnapshotController.takeSnapshot(modelContext: ctx)
+                        // reindex the currently open note so mid-edit changes are captured
+                        if let openNote = takeNoteVM.openNote {
+                            search.reindex(note: openNote)
+                        }
                     // loop auto-cancels when scene goes inactive/background
                     @unknown default:
                         break

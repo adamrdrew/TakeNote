@@ -67,6 +67,7 @@ struct NoteListEntry: View {
     @Environment(\.noteStarToggleRegistry) private var noteStarToggleRegistry
     @Environment(\.noteOpenEditorWindowRegistry) private
         var noteOpenEditorWindowRegistry
+    @Environment(SearchIndexService.self) private var search
 
     var note: Note
     @State private var inRenameMode: Bool = false
@@ -108,6 +109,7 @@ struct NoteListEntry: View {
             return
         }
         takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
+        search.deleteFromIndex(noteID: note.uuid)
         noteDeleteRegistry.unregisterCommand(id: note.id)
         noteRenameRegistry.unregisterCommand(id: note.id)
         if takeNoteVM.openNote == note {
@@ -118,6 +120,7 @@ struct NoteListEntry: View {
     func moveSelectedNotesToTrash() {
         for sn in takeNoteVM.selectedNotes {
             takeNoteVM.moveNoteToTrash(sn, modelContext: modelContext)
+            search.deleteFromIndex(noteID: sn.uuid)
             if sn.id == note.id {
                 noteDeleteRegistry.unregisterCommand(id: note.id)
                 noteRenameRegistry.unregisterCommand(id: note.id)

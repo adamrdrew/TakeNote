@@ -15,6 +15,7 @@ struct NoteEditorWindow: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var editorWindowVM
+    @Environment(SearchIndexService.self) private var search
 
     private func makeWindowTitle() -> String {
         var noteTitle: String = ""
@@ -53,6 +54,16 @@ struct NoteEditorWindow: View {
         )
             .onAppear {
                 getNote()
+            }
+            .onChange(of: editorWindowVM.openNote) { oldNote, _ in
+                if let note = oldNote {
+                    search.reindex(note: note)
+                }
+            }
+            .onDisappear {
+                if let note = editorWindowVM.openNote {
+                    search.reindex(note: note)
+                }
             }
             .navigationTitle(windowTitle)
 

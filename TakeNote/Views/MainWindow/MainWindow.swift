@@ -18,6 +18,7 @@ struct MainWindow: View {
     @Environment(\.openWindow) var openWindow
     @Environment(\.modelContext) var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(SearchIndexService.self) private var search
 
     @Query() var notes: [Note]
     @Query() var containers: [NoteContainer]
@@ -78,7 +79,9 @@ struct MainWindow: View {
         ToolbarItemGroup(placement: toolbarPlacement) {
             if takeNoteVM.canAddNote {
                 Button(action: {
-                    _ = takeNoteVM.addNote(modelContext)
+                    if let newNote = takeNoteVM.addNote(modelContext) {
+                        search.reindex(note: newNote)
+                    }
                 }) {
                     Image(systemName: "note.text.badge.plus")
                 }
@@ -240,7 +243,11 @@ struct MainWindow: View {
                 "Empty Trash",
                 role: .destructive,
                 action: {
+                    let trashNoteIDs = takeNoteVM.trashFolder?.notes.map { $0.uuid } ?? []
                     takeNoteVM.emptyTrash(modelContext)
+                    for noteID in trashNoteIDs {
+                        search.deleteFromIndex(noteID: noteID)
+                    }
                 }
             )
         }

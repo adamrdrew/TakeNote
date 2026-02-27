@@ -155,6 +155,7 @@ struct NoteList: View {
                 newNote.contentHash = note.contentHash
                 newNote.aiSummaryIsGenerating = note.aiSummaryIsGenerating
                 modelContext.insert(newNote)
+                search.reindex(note: newNote)
             }
         }
         takeNoteVM.onMoveToFolder()
@@ -299,6 +300,7 @@ struct NoteList: View {
 
                 if let newNote = takeNoteVM.addNote(modelContext) {
                     newNote.setContent(text)
+                    search.reindex(note: newNote)
                     added = true
                 }
             }

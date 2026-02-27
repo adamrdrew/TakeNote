@@ -1,0 +1,65 @@
+phase:
+  id: "0007"
+  slug: fts-index-lifecycle
+  title: FTS Index Lifecycle Gaps
+  status: complete
+
+steps:
+  - id: S001
+    title: Add deleteFromIndex(noteID:) to SearchIndexService
+    implemented: true
+    reviewed: true
+    notes: "Added deleteFromIndex(noteID:) method to SearchIndexService. Method is a no-op when chatFeatureFlagEnabled is false, logs at debug level, and dispatches Task { index.delete(noteID:) } otherwise."
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+  - id: S002
+    title: Reindex on note creation — addNote path in NoteList (G1)
+    implemented: true
+    reviewed: true
+    notes: "Added search.reindex(note:) after addNote() in NoteList drop-destination, MainWindow toolbar button (added SearchIndexService environment), and FileCommands New Note button. AppIntents path is out of scope per phase spec."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+      - TakeNote/Views/MainWindow/MainWindow.swift
+      - TakeNote/Views/Commands/FileCommands.swift
+  - id: S003
+    title: Reindex on copy-paste note creation in pasteNote() (G1 copy-paste)
+    implemented: true
+    reviewed: true
+    notes: "Added search.reindex(note: newNote) after modelContext.insert(newNote) in the copy-paste branch of pasteNote()."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+  - id: S004
+    title: Reindex open note on scenePhase background/inactive in TakeNoteApp (G2)
+    implemented: true
+    reviewed: true
+    notes: "Added reindex call for takeNoteVM.openNote in the .inactive/.background scenePhase handler in TakeNoteApp.swift. The call is placed after SnapshotController.takeSnapshot, within the existing Task { @MainActor in } block."
+    touched:
+      - TakeNote/TakeNoteApp.swift
+  - id: S005
+    title: Reindex in NoteEditorWindow on note change and window close (G3)
+    implemented: true
+    reviewed: true
+    notes: "Added @Environment(SearchIndexService.self) private var search, onChange(of: editorWindowVM.openNote) to reindex the previous note on note change, and onDisappear to reindex on window close."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditorWindow.swift
+  - id: S006
+    title: Delete from index on Move to Trash in NoteListEntry (G4)
+    implemented: true
+    reviewed: true
+    notes: "Added @Environment(SearchIndexService.self) private var search to NoteListEntry. Added search.deleteFromIndex(noteID: note.uuid) in moveToTrash() after moveNoteToTrash for single-note case. Added search.deleteFromIndex(noteID: sn.uuid) in moveSelectedNotesToTrash() for each note in the selection."
+    touched:
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+  - id: S007
+    title: Delete from index on Empty Trash in MainWindow (G5)
+    implemented: true
+    reviewed: true
+    notes: "Updated Empty Trash alert action in MainWindow to capture trash note UUIDs before calling emptyTrash(), then call search.deleteFromIndex(noteID:) for each UUID after deletion. MainWindow.search was already added in S002."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+  - id: S008
+    title: Update search-system docs
+    implemented: true
+    reviewed: true
+    notes: "Updated search-system.md: added deleteFromIndex(noteID:) to Methods table, expanded When Indexing Runs with all new paths (note creation, app backgrounding, editor window), and added new When Index Deletion Runs section documenting G4 and G5 paths."
+    touched:
+      - .ushabti/docs/search-system.md
