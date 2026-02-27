@@ -34,8 +34,8 @@ struct NewNoteWithContentIntent: AppIntent {
         let note = takeNoteVM.addNote(modelContainer.mainContext)
 
         if let note {
-            note.content = content
-            note.title = noteTitle
+            note.setContent(content)
+            note.setTitle(noteTitle)
             takeNoteVM.openNote = note
             takeNoteVM.selectedNotes = [note]
         } else {

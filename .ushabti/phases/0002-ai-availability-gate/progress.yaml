@@ -1,0 +1,21 @@
+phase:
+  id: "0002"
+  slug: ai-availability-gate
+  title: AI Availability Gate in ChatWindow
+  status: complete
+
+steps:
+  - id: S001
+    title: Add AI availability gate to ChatWindow.generateResponse
+    implemented: true
+    reviewed: true
+    notes: "Added SystemLanguageModel.default.availability == .available guard at the top of generateResponse(). If unavailable, sets responseIsGenerating = false, appends a bot message, and returns early. FoundationModels was already imported."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+  - id: S002
+    title: Update ai-features.md to reflect the fix
+    implemented: true
+    reviewed: true
+    notes: "Removed the 'Known Issue: Missing AI Availability Gate (L05 Violation)' subsection from the Magic Chat section. Replaced it with an 'AI Availability Gate' subsection describing the guard now in place, including the rationale for checking SystemLanguageModel.default directly."
+    touched:
+      - .ushabti/docs/ai-features.md

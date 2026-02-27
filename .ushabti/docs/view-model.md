@@ -1,194 +1,143 @@
-# View Model and State Management
+# View Model and Application State
 
 ## Overview
 
-`TakeNoteVM` is the central state container for the application, implemented as an `@Observable @MainActor` class. It manages UI state, selection, and provides CRUD operations for notes and containers.
+`TakeNoteVM` is the central application state object. It is `@Observable`, confined to `@MainActor`, and shared app-wide via the SwiftUI environment (`.environment(takeNoteVM)`). Every window that needs app state accesses it via `@Environment(TakeNoteVM.self)`.
 
-**File:** `/TakeNote/TakeNoteVM.swift`
+**File:** `TakeNote/TakeNoteVM.swift`
 
-## State Properties
+---
 
-### Selection State
+## Enumerations
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `openNote` | `Note?` | Currently open note in the editor |
-| `selectedContainer` | `NoteContainer?` | Active folder or tag in sidebar |
-| `selectedNotes` | `Set<Note>` | Selected notes in the note list |
+### SortBy
 
-### System Folders
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `inboxFolder` | `NoteContainer?` | Reference to Inbox container |
-| `trashFolder` | `NoteContainer?` | Reference to Trash container |
-| `bufferFolder` | `NoteContainer?` | Reference to Buffer container |
-| `starredFolder` | `NoteContainer?` | Reference to Starred container |
-
-### UI State
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `emptyTrashAlertIsPresented` | `Bool` | Empty trash confirmation dialog |
-| `linkToNoteErrorIsPresented` | `Bool` | Link error alert visibility |
-| `linkToNoteErrorMessage` | `String` | Link error message text |
-| `folderSectionExpanded` | `Bool` | Sidebar folder section state |
-| `tagSectionExpanded` | `Bool` | Sidebar tag section state |
-| `errorAlertMessage` | `String` | General error message |
-| `errorAlertIsVisible` | `Bool` | Error alert visibility |
-| `showMultiNoteView` | `Bool` | Multi-note selection mode |
-
-### Sorting
-
-Sorting preferences persist to UserDefaults:
+Controls which date field is used for note sorting.
 
 ```swift
 enum SortBy: Int {
     case created = 0
     case updated = 1
 }
+```
 
+### SortOrder
+
+Controls ascending vs. descending sort direction.
+
+```swift
 enum SortOrder: Int {
     case oldestFirst = 0
     case newestFirst = 1
 }
-
-var sortBy: SortBy      // Persisted to "SortBy" key
-var sortOrder: SortOrder // Persisted to "SortOrder" key
 ```
 
-### AI Integration
+---
 
-```swift
-let languageModel = SystemLanguageModel.default
+## State Properties
 
-var aiIsAvailable: Bool {
-    return languageModel.availability == .available
-}
-```
+### Selection State
+
+| Property | Type | Description |
+|---|---|---|
+| `openNote` | `Note?` | The note currently displayed in the editor. |
+| `selectedContainer` | `NoteContainer?` | The folder or tag the user is viewing in the sidebar. |
+| `selectedNotes` | `Set<Note>` | Notes selected in the note list (supports multi-select). |
+
+### System Folder References
+
+| Property | Type | Description |
+|---|---|---|
+| `inboxFolder` | `NoteContainer?` | Reference to the Inbox system folder. |
+| `trashFolder` | `NoteContainer?` | Reference to the Trash system folder. |
+| `bufferFolder` | `NoteContainer?` | Reference to the hidden Buffer folder used for cut/paste. |
+| `starredFolder` | `NoteContainer?` | Reference to the Starred system folder. |
+
+### UI State
+
+| Property | Type | Description |
+|---|---|---|
+| `emptyTrashAlertIsPresented` | `Bool` | Controls empty-trash confirmation alert. |
+| `linkToNoteErrorIsPresented` | `Bool` | Controls note-link-error alert. |
+| `linkToNoteErrorMessage` | `String` | Message for link error alert. |
+| `folderSectionExpanded` | `Bool` | Folder section disclosure state in sidebar. |
+| `tagSectionExpanded` | `Bool` | Tag section disclosure state in sidebar. |
+| `errorAlertMessage` | `String` | Message for generic error alert. |
+| `errorAlertIsVisible` | `Bool` | Controls generic error alert. |
+| `showMultiNoteView` | `Bool` | When true, the detail column shows `MultiNoteViewer` instead of `NoteEditor`. |
+
+### Sort Preferences
+
+`sortBy` and `sortOrder` are custom `@Observable`-compatible computed properties that read/write to `UserDefaults` via `access(keyPath:)` and `withMutation(keyPath:)`. They are not directly `@AppStorage` so that they participate in the `@Observable` observation system.
+
+### AI
+
+| Property | Type | Description |
+|---|---|---|
+| `languageModel` | `SystemLanguageModel` | The Apple Intelligence system language model. Shared reference. |
+| `aiIsAvailable` | `Bool` | Computed. `true` when `languageModel.availability == .available`. |
+
+### Constants
+
+| Constant | Value | Description |
+|---|---|---|
+| `inboxFolderName` | `"Inbox"` | Name of the Inbox system folder. |
+| `trashFolderName` | `"Trash"` | Name of the Trash system folder. |
+| `chatWindowID` | `"chat-window"` | SwiftUI window ID for the Chat window. |
+
+---
 
 ## Computed Properties
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `canAddNote` | `Bool` | True if selected container allows new notes |
-| `canRenameSelectedContainer` | `Bool` | True if selected container is user-created |
-| `bufferIsEmpty` | `Bool` | True if buffer folder has no notes |
-| `bufferNotesCount` | `Int` | Number of notes in buffer |
-| `canEmptyTrash` | `Bool` | True if trash is selected and not empty |
-| `inboxFolderExists` | `Bool` | True if inbox folder is assigned |
-| `multipleNotesSelected` | `Bool` | True if more than one note selected |
-| `selectedContainerIsEmpty` | `Bool` | True if selected container has no notes |
-| `trashFolderSelected` | `Bool` | True if trash is selected |
-| `navigationTitle` | `String` | "TakeNote" or "TakeNote (DEBUG)" |
+| Property | Returns | Description |
+|---|---|---|
+| `canAddNote` | `Bool` | `true` if `selectedContainer` is not Trash, not a tag, and not Starred. |
+| `canRenameSelectedContainer` | `Bool` | `true` if container is not Inbox, Trash, or Starred. |
+| `bufferIsEmpty` | `Bool` | `true` if Buffer folder has no notes. |
+| `bufferNotesCount` | `Int` | Number of notes in Buffer folder. |
+| `canEmptyTrash` | `Bool` | `true` if Trash is selected and not empty. |
+| `inboxFolderExists` | `Bool` | `true` if `inboxFolder` is non-nil. |
+| `multipleNotesSelected` | `Bool` | `true` if more than one note is selected. |
+| `selectedContainerIsEmpty` | `Bool` | `true` if selected container has no notes. |
+| `trashFolderSelected` | `Bool` | `true` if selected container is the Trash. |
+| `navigationTitle` | `String` | `"TakeNote"` in release; `"TakeNote (DEBUG)"` in debug. |
 
-## CRUD Methods
+---
 
-### Folder Operations
-
-```swift
-func addFolder(_ modelContext: ModelContext)
-// Creates new folder, saves, sets as selected
-
-func folderDelete(
-    _ deletedFolder: NoteContainer,
-    folders: [NoteContainer],
-    modelContext: ModelContext
-)
-// Moves notes to trash, deletes folder, updates selection
-
-func folderInit(_ modelContext: ModelContext)
-// Creates system folders if missing, sets initial selection
-```
+## Methods
 
 ### Note Operations
 
-```swift
-func addNote(_ modelContext: ModelContext) -> Note?
-// Creates note in selected folder, sets as open and selected
+- `addNote(_ modelContext: ModelContext) -> Note?` — creates a new `Note` in `selectedContainer`, inserts, saves, sets `openNote` and `selectedNotes`.
+- `moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext)` — moves a note to Trash, unsets `starred` if needed, clears selection if the note was selected.
+- `emptyTrash(_ modelContext: ModelContext)` — permanently deletes all notes in Trash.
+- `noteStarredToggle(_ note: Note, modelContext: ModelContext)` — toggles `note.starred` and updates `starredFolder.starredNotes`.
+- `onNoteSelect(_ note: Note)` — sets `openNote`.
+- `onMoveToFolder()` — clears `selectedNotes` and `openNote` after a move operation.
+- `loadNoteFromURL(_ url: URL, modelContext: ModelContext)` — handles `takenote://note/<UUID>` deep links; finds and selects the note.
 
-func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext)
-// Moves note to trash folder, clears starred status
+### Folder/Container Operations
 
-func moveNotesFromBufferToInbox(_ modelContext: ModelContext)
-// Moves all buffer notes back to inbox
+- `addFolder(_ modelContext: ModelContext)` — creates a user folder and selects it.
+- `addTag(_ name: String, color: Color, modelContext: ModelContext)` — creates a tag container.
+- `folderDelete(_ deletedFolder: NoteContainer, folders: [NoteContainer], modelContext: ModelContext)` — moves all notes in folder to Trash, deletes folder, restores selection to Inbox.
+- `onTagDelete(_ deletedTag: NoteContainer)` — clears selection if the deleted tag was selected.
+- `folderInit(_ modelContext: ModelContext)` — creates system folders if not present, selects Inbox on startup (macOS) or if iPad.
 
-func noteStarredToggle(_ note: Note, modelContext: ModelContext)
-// Toggles starred status, manages starredNotes relationship
-```
+### System Folder Creation (called by folderInit)
 
-### Tag Operations
+- `createInboxFolder(_:)`, `createTrashFolder(_:)`, `createBufferFolder(_:)`, `createStarredFolder(_:)` — idempotent; only creates if not already present.
 
-```swift
-func addTag(
-    _ name: String = "New Tag",
-    color: Color = .takeNotePink,
-    modelContext: ModelContext
-)
-// Creates new tag, saves, sets as selected
+### Buffer Operations
 
-func onTagDelete(_ deletedTag: NoteContainer)
-// Updates selection if deleted tag was selected
-```
+- `moveNotesFromBufferToInbox(_ modelContext: ModelContext)` — drains Buffer folder into Inbox. Called on app launch if Buffer is non-empty (handles crash recovery after a cut operation).
 
-### System Folder Creation
+### Alert Control
 
-```swift
-func createInboxFolder(_ modelContext: ModelContext)
-func createTrashFolder(_ modelContext: ModelContext)
-func createBufferFolder(_ modelContext: ModelContext)
-func createStarredFolder(_ modelContext: ModelContext)
-```
+- `showEmptyTrashAlert()` — sets `emptyTrashAlertIsPresented = true`.
 
-Each method creates the respective system folder if it doesn't exist and assigns it to the corresponding property.
+---
 
-### Trash Operations
+## Dependency Injection for AppIntents
 
-```swift
-func emptyTrash(_ modelContext: ModelContext)
-// Permanently deletes all notes in trash
-
-func showEmptyTrashAlert()
-// Shows confirmation dialog
-```
-
-## Navigation Methods
-
-```swift
-func loadNoteFromURL(_ url: URL, modelContext: ModelContext)
-// Handles takenote://note/{uuid} deep links
-// Fetches note by UUID, sets selection and container
-
-func onMoveToFolder()
-// Clears selection after folder move
-
-func onNoteSelect(_ note: Note)
-// Sets openNote when note is selected
-```
-
-## Environment Integration
-
-The view model is distributed through the environment:
-
-```swift
-// In TakeNoteApp
-MainWindow()
-    .environment(takeNoteVM)
-    .focusedSceneValue(takeNoteVM)
-
-// In views
-@Environment(TakeNoteVM.self) var takeNoteVM
-```
-
-## AppIntents Integration
-
-The view model is registered with `AppDependencyManager` for Siri/Shortcuts:
-
-```swift
-AppDependencyManager.shared.add(
-    key: "TakeNoteVM",
-    dependency: { @MainActor in viewModel }
-)
-```
-
-This allows `AppIntent` implementations to access the view model via `@Dependency(key: "TakeNoteVM")`.
+`TakeNoteVM` and `ModelContainer` are registered with `AppDependencyManager` in `TakeNoteApp.init()` using string keys `"TakeNoteVM"` and `"ModelContainer"`. This allows `AppIntent` implementations to retrieve them asynchronously on `@MainActor` without capturing `self`.

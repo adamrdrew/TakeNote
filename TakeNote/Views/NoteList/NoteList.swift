@@ -143,6 +143,9 @@ struct NoteList: View {
                 // If the note.folder isn't the buffer folder then this is a
                 // copy and paste and we need a new note
                 let newNote = Note(folder: nc)
+                // Direct assignment intentional: this is initializing a copy of an existing note.
+                // Note.init(folder:) already triggered WidgetCenter.reloadAllTimelines().
+                // Using setTitle()/setContent() would fire redundant widget reloads for each field.
                 newNote.content = note.content
                 newNote.title = note.title
                 newNote.aiSummary = note.aiSummary
@@ -273,7 +276,7 @@ struct NoteList: View {
                 // Stash the notes in the hidden buffer folder
                 for note: Note in takeNoteVM.selectedNotes {
                     if let bf = takeNoteVM.bufferFolder {
-                        note.folder = bf
+                        note.setFolder(bf)
                     }
                 }
                 try? modelContext.save()

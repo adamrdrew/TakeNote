@@ -27,7 +27,7 @@ class SearchIndexService {
     var hits: [SearchHit] = []
     var isIndexing: Bool = false
     var lastReindexAllDate: Date = .distantPast
-    var logger = Logger(subsystem: "com.adammdrew.takenote", category: "SearchIndexService")
+    var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
 
     func canReindexAllNotes() -> Bool {
         if chatFeatureFlagEnabled == false { return false }

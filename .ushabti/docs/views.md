@@ -1,287 +1,249 @@
-# Views and Navigation
+# View Layer
 
 ## Overview
 
-TakeNote uses SwiftUI with a NavigationSplitView layout providing a three-column interface: sidebar (folders/tags), content (note list), and detail (note editor).
+The UI is structured as a three-column `NavigationSplitView` inside `MainWindow`. All views share `TakeNoteVM` and `SearchIndexService` via the SwiftUI environment.
 
-## Main Window
+---
 
-**File:** `/TakeNote/Views/MainWindow/MainWindow.swift`
+## MainWindow
 
-The primary application window.
+**File:** `TakeNote/Views/MainWindow/MainWindow.swift`
 
-### Structure
+The root view of the main window scene.
 
-```swift
-NavigationSplitView(preferredCompactColumn: $preferredColumn) {
-    // Sidebar: Folders and Tags
-    Sidebar()
-} content: {
-    // Note List
-    NoteList()
-} detail: {
-    // Note Editor or Multi-Note View
-    if takeNoteVM.showMultiNoteView {
-        MultiNoteViewer()
-    } else {
-        NoteEditor(openNote: $takeNoteVM.openNote)
-    }
-}
-```
+- Renders a `NavigationSplitView` with three columns: Sidebar, NoteList, and detail (NoteEditor or MultiNoteViewer).
+- Hosts toolbar items for Add Folder and Add Tag (sidebar column) and Add Note, Sort, AI Chat, and Empty Trash (content column).
+- Handles `onOpenURL` for `takenote://` deep links.
+- Shows the "notes in buffer" alert on launch and drains Buffer to Inbox.
+- Calls `takeNoteVM.folderInit()` on `onAppear`.
+- Contains alerts for Empty Trash, Delete Everything (DEBUG), Link Error, and generic errors.
+- On macOS uses `Window`; on other platforms uses `WindowGroup`.
 
-### Platform Adaptations
+**FocusedValues exposed:**
+- `\.modelContext` — passes `ModelContext` to menubar commands
+- `\.chatEnabled` — whether chat is available
+- `\.openChatWindow` — closure to open the chat window
+- `\.showDeleteEverything` — closure to trigger debug delete
 
-- **macOS:** Uses `Window` scene type (single instance)
-- **iOS Phone:** Collapses to single column with navigation
-- **iOS Tablet:** Full three-column layout
-
-### Toolbar
-
-Dynamic toolbar based on context:
-- **Add Note** - When container allows new notes
-- **Sort** - When container has notes (shows NoteSortPopover)
-- **Chat** - When AI available and notes exist
-- **Empty Trash** - When viewing non-empty trash
-
-### URL Handling
-
-```swift
-.onOpenURL { url in
-    takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
-}
-```
-
-Handles `takenote://note/{uuid}` deep links.
+---
 
 ## Sidebar
 
-**File:** `/TakeNote/Views/MainWindow/Sidebar.swift`
+**File:** `TakeNote/Views/MainWindow/Sidebar.swift`
 
-Displays hierarchical list of folders and tags.
+Left-most column. Contains the full navigation hierarchy.
 
-### Sections
+- Renders three `List` sections: system folders, user folders, tags.
+- System folders query: `isTrash || isInbox || isStarred`.
+- User folders query: `!isTag && !isTrash && !isInbox && !isBuffer`.
+- Tags query: `isTag == true`.
+- Accepts folder drag/drop via `folderImport()`.
+- Manages three `CommandRegistry` instances for delete, rename, and set-color operations, injecting them into the environment and FocusedValues.
 
-1. **System Folders** - Inbox, Starred, Trash (always visible)
-2. **User Folders** - Collapsible section
-3. **Tags** - Collapsible section
+**Environment keys provided to children:**
+- `\.containerDeleteRegistry`
+- `\.containerRenameRegistry`
+- `\.tagSetColorRegistry`
 
-### Features
+**FocusedValues exposed:**
+- `\.containerDeleteRegistry`
+- `\.containerRenameRegistry`
+- `\.tagSetColorRegistry`
+- `\.selectedNoteContainer`
 
-- Drag-and-drop note reordering
-- Inline rename via context menu
-- Delete with confirmation
-- Color picker for tags
+---
 
-## Note List
+## FolderList and FolderListEntry
 
-**File:** `/TakeNote/Views/NoteList/NoteList.swift`
+**Files:** `TakeNote/Views/FolderList/FolderList.swift`, `FolderListEntry.swift`
 
-Displays notes in the selected container.
+- `FolderList` — simple ForEach of user folders, sorted by name.
+- `FolderListEntry` — single folder row with inline rename field, context menu (rename, delete), and CommandRegistry registration/unregistration on appear/disappear.
 
-### Components
+---
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `NoteList` | `NoteList.swift` | Main list view with query |
-| `NoteListEntry` | `NoteListEntry.swift` | Individual note row |
-| `NoteListHeader` | `NoteListHeader.swift` | Container info header |
+## TagList and TagListEntry
 
-### Features
+**Files:** `TakeNote/Views/TagList/TagList.swift`, `TagListEntry.swift`, `NoteContainerDetailsEditor.swift`
 
-- SwiftData `@Query` with dynamic sorting
-- Search filtering
-- Multi-select support
-- Swipe actions (delete, star)
-- Context menu (move to folder, add tag)
-- AI summary display (when available)
+- `TagList` — ForEach of tag containers.
+- `TagListEntry` — single tag row with colored tag icon, inline rename, context menu (rename, set color, delete), and CommandRegistry registration.
+- `NoteContainerDetailsEditor` — color picker popover for editing a tag's color, displayed from context menu or Edit menu.
 
-### Sorting
+---
 
-Uses `SortDescriptor` based on `TakeNoteVM.sortBy` and `sortOrder`:
+## NoteList
 
-```swift
-@Query(sort: [SortDescriptor(\Note.updatedDate, order: .reverse)])
-var notes: [Note]
-```
+**File:** `TakeNote/Views/NoteList/NoteList.swift`
 
-## Note Editor
+Middle column. Renders notes for the selected container.
 
-**File:** `/TakeNote/Views/NoteEditor/NoteEditor.swift`
+- Filters notes by search text against title and content.
+- Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
+- Groups starred notes in a separate section above non-starred notes.
+- Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
+- On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
+- Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
+- On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, and `NoteLinkManager.generateLinksFor()`.
 
-Markdown editor with live preview.
+**FocusedValues exposed:** `\.noteDeleteRegistry`, `\.noteRenameRegistry`, `\.noteStarToggleRegistry`, `\.noteCopyMarkdownLinkRegistry`, `\.noteOpenEditorWindowRegistry`, `\.selectedNotes`
 
-### Components
+### NoteListEntry
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `NoteEditor` | `NoteEditor.swift` | Main editor view |
-| `NoteEditorWindow` | `NoteEditorWindow.swift` | Standalone window wrapper |
-| `BackLinks` | `BackLinks.swift` | Backlinks popover |
+**File:** `TakeNote/Views/NoteList/NoteListEntry.swift`
 
-### Modes
+Individual note row. Displays TitleRow (title + star button), MetadataRow (created date + folder/tag badge), and SummaryRow (AI summary or raw content preview).
 
-1. **Preview Mode** - MarkdownUI rendered view (tap to edit)
-2. **Edit Mode** - CodeEditorView with syntax highlighting
+- Registers five commands in CommandRegistry on `.onAppear`, unregisters on `.onDisappear`.
+- Supports swipe actions (trailing: trash + star; leading on iOS: move via `MovePopoverContent`, which uses `note.setTag(container)` / `note.setFolder(container)` to correctly update `updatedDate` and trigger widget reload).
+- Supports draggable `NoteIDWrapper` for drag/drop.
+- Double-tap opens a detached `NoteEditorWindow`.
+- Context menu: Move to Trash, Rename, Go to Note Folder, Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
+- File export via `.fileExporter` saves note as a `.md` file.
 
-Toggle with toolbar button or Escape key.
+### NoteListHeader
 
-### Editor Features
+**File:** `TakeNote/Views/NoteList/NoteListHeader.swift`
 
-- **CodeEditorView** - Third-party Markdown editor with syntax highlighting
-- **MarkdownUI** - Third-party Markdown renderer
-- **Magic Format** - AI-powered formatting (toolbar button)
-- **Magic Assistant** - Context-aware transformations (appears when text selected)
-- **Backlinks** - Shows notes linking to current note
+Displayed as `safeAreaInset` at the top of the NoteList. Shows the selected container's name, icon, color, and note count.
 
-### iOS Adaptations
+- Reads `TakeNoteVM` from the environment.
+- Displays the container's SF symbol (with special cases: `"trash"` for Trash, `"tag.fill"` for tags, otherwise the container's `symbol` field) and color via `getColor()`.
+- Shows a note count label ("No notes", "1 note", "N notes").
+- Supports inline rename: single-tap or context menu "Rename" enters edit mode (only if `takeNoteVM.canRenameSelectedContainer` is true). On submit, sets `container.name` directly.
+- Uses `UpperCamelCase` computed sub-view properties: `ContainerNameEditor`, `NoteCountLabel`, `ContainerNameLabel`, `RenameButton`, `Header`.
 
-```swift
-#if os(iOS)
-.safeAreaInset(edge: .bottom) {
-    if isInputActive && !showPreview && !hardwareKeyboardConnected {
-        MarkdownShortcutBar(insert: insertAtCaret)
-    }
-}
-#endif
-```
+---
 
-On-screen keyboard shows Markdown shortcut bar when no hardware keyboard connected.
+## NoteEditor
 
-### MarkdownShortcutBar
+**File:** `TakeNote/Views/NoteEditor/NoteEditor.swift`
 
-Quick-insert buttons for common Markdown syntax:
-- `#` - Heading
-- `*` - Emphasis
-- `1.` - Numbered list
-- ``` ` ``` - Code fence
-- `[]()` - Link
+Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit mode (CodeEditorView with Markdown syntax highlighting).
 
-## Folder and Tag Lists
+- `showPreview: Bool` toggles between modes.
+- In preview mode: tapping switches to edit mode; exit command on macOS also switches.
+- In edit mode: CodeEditorView renders with a custom `MarkdownConfiguration` language config; a `MarkdownShortcutBar` appears above the keyboard on iOS when no hardware keyboard is connected.
+- Toolbar items:
+  - Toggle preview (eye icon)
+  - Backlinks popover (link icon, shown only if note has incoming links)
+  - Magic Format button (wand icon, shown only if AI available)
+  - Magic Assistant button (apple.intelligence icon, shown only if text is selected)
+- Shows a modal sheet with a cancel button while Magic Format is running.
+- On note change: resets to preview mode, re-checks backlink status.
 
-**Files:** `/TakeNote/Views/FolderList/`, `/TakeNote/Views/TagList/`
+**MagicFormatter usage:** `NoteEditor` holds `@State private var magicFormatter = MagicFormatter()`. Because `MagicFormatter` is `@Observable`, a `@Bindable var formatter = magicFormatter` is created inside the view body to produce the `$formatter.formatterIsBusy` binding used for the progress sheet.
 
-### FolderList / FolderListEntry
+**Content mutation patterns:**
+- `doMagicFormat()` calls `openNote!.setContent(result.formattedText)` after Magic Format completes. This correctly updates `updatedDate` and triggers `WidgetCenter.shared.reloadAllTimelines()` as a deliberate one-shot mutation.
+- `CodeEditor` binding `set:` sets `openNote?.content = $0` and `openNote?.updatedDate = Date()` directly on every keystroke. Direct assignment is intentional here: calling `setContent()` on every keystroke would invoke `WidgetCenter.shared.reloadAllTimelines()` on every keystroke, which is excessive. The `updatedDate` is maintained correctly via the direct assignment. Widget reload and summary generation fire on note deselection via the `NoteList.onChange(of: takeNoteVM.selectedNotes)` path, which calls `note.setTitle()` (triggering `reloadAllTimelines()`) when content has changed.
 
-Renders folder items in sidebar with:
-- System icon (tray/trash/star)
-- Custom symbol for user folders
-- Note count badge
-- Drag-and-drop target for notes
+**FocusedValues exposed:** `\.togglePreview`, `\.doMagicFormat`, `\.textIsSelected`, `\.showAssistantPopover`, `\.openNoteHasBacklinks`, `\.showBacklinks`
 
-### TagList / TagListEntry
+### BackLinks
 
-Renders tag items in sidebar with:
-- Tag icon (filled when has notes)
-- Color indicator
-- Editable name and color
+**File:** `TakeNote/Views/NoteEditor/BackLinks.swift`
 
-### NoteContainerDetailsEditor
+Popover displaying notes that link to the current note. Shown via the link icon toolbar button when `openNoteHasBacklinks` is true. Uses `NoteLinkManager` to fetch source notes.
 
-Popover for editing container properties:
-- Name
-- Symbol (SF Symbol picker)
-- Color (for tags)
+### NoteEditorWindow
 
-## Chat Window
+**File:** `TakeNote/Views/NoteEditor/NoteEditorWindow.swift`
 
-**File:** `/TakeNote/Views/ChatWindow/ChatWindow.swift`
+A detached window containing a single `NoteEditor`. Opened via double-click on a `NoteListEntry` or the "Open Editor Window" context menu/command. Uses its own `TakeNoteVM` instance (not shared with the main window) — this is intentional isolation documented as an L09 exception. The window title is formatted as `"TakeNote / <FolderName> / <NoteTitle>"`.
 
-AI chat interface with RAG support.
+**Note:** The `chat-window` `WindowGroup` in `TakeNoteApp` also creates a fresh `TakeNoteVM()` for the same isolation reason. State changes in the chat window's VM (e.g., selection) do not affect the main window. An agent adding state to `TakeNoteVM` should be aware that three independent instances may exist simultaneously: main window, editor window, and chat window.
 
-### Components
+---
 
-| Component | File | Purpose |
-|-----------|------|---------|
-| `ChatWindow` | `ChatWindow.swift` | Main chat view |
-| `MessageBubble` | `MessageBubble.swift` | Chat message display |
-| `ContextBubble` | `ContextBubble.swift` | Context preview bubble |
+## ChatWindow
 
-### Conversation Model
+**File:** `TakeNote/Views/ChatWindow/ChatWindow.swift`
 
-```swift
-struct ConversationEntry: Identifiable {
-    var id: UUID
-    var sender: Sender  // .human or .bot
-    var text: String
-}
-```
+AI chat interface. Flexible enough to serve two purposes:
+1. **Standalone chat window** — full note RAG chat opened from the toolbar (macOS) or toolbar popover (iOS). The toolbar button requires **three conditions**: `chatFeatureFlagEnabled` (Info.plist flag) **AND** `takeNoteVM.aiIsAvailable` (Apple Intelligence available) **AND** `notes.count > 0` (at least one note exists). These are combined as `chatFeatureFlagEnabled && chatEnabled` in `MainWindow`, where `chatEnabled` is a computed property checking the latter two conditions.
+2. **Magic Assistant inline** — rendered as a popover in `NoteEditor` with a `context` string (selected text), custom `instructions` (Magic Assistant prompt), and an `onBotMessageClick` callback that replaces the selected text.
 
-### Features
+### Parameters
 
-- Auto-scroll to latest message
-- Typing indicator during generation
-- New chat button
-- Context display (for Magic Assistant mode)
-- Clickable bot messages (for text replacement)
+| Parameter | Default | Description |
+|---|---|---|
+| `context` | `nil` | Pre-injected context string (selected note text for Magic Assistant). |
+| `instructions` | `nil` | LLM system instructions. Defaults to `MAGIC_CHAT_PROMPT`. |
+| `prompt` | `nil` | Prompt prefix. Defaults to `"Provide an answer to the following question:\n\n"`. |
+| `searchEnabled` | `true` | Whether to run FTS search and include excerpts in the prompt. |
+| `onBotMessageClick` | `nil` | Callback receiving bot response text (used by Magic Assistant to replace selected text). |
+| `toolbarVisible` | `true` | Whether to show the "New Chat" toolbar button. |
+| `useHistory` | `true` | Whether to include chat history in prompts. |
 
-## Menu Commands
+### Data Types
 
-**Files:** `/TakeNote/Views/Commands/`
+- `Sender` — enum: `.human` / `.bot`
+- `ConversationEntry` — `Identifiable, Hashable`. Fields: `id: UUID`, `sender: Sender`, `text: String`.
 
-macOS menu bar commands using SwiftUI Commands API.
+### Behavior
+
+- On submit: appends user message, runs `SearchIndex.searchNatural()` if `searchEnabled`, assembles prompt with context + excerpts + history, calls `LanguageModelSession.respond()`.
+- A new `LanguageModelSession` is created per response (stateless).
+- Bot responses are stripped of wrapping Markdown fences via `unwrapMarkdownFence()`.
+- "New Chat" button clears `conversation`, `userQuery`, and resets state.
+
+### Supporting Views
+
+- `ContextBubble` — styled bubble displaying the injected `context` string at the top of the conversation.
+- `MessageBubble` — individual message bubble. Bot messages are tappable if `onBotMessageClick` is provided.
+
+---
+
+## Commands
+
+**Files:** `TakeNote/Views/Commands/`
+
+SwiftUI `Commands` structs registered in `TakeNoteApp.body`.
 
 ### FileCommands
 
-- New Note (`Cmd+N`)
-- New Folder
-- New Tag
-- Import Text Files
-- Export Note
+Adds items after `.newItem`: New Note (`⌘N`), New Folder (`⌘F`), New Tag (`⌘T`), Empty Trash (`⌘⌥Delete`). DEBUG: Delete Everything. All read `TakeNoteVM` and `ModelContext` from `FocusedValues`.
 
 ### EditCommands
 
-- Magic Format (`Cmd+Shift+F`)
-- Copy Note Link
+Adds items after `.pasteboard`: Rename (`⌘R`), Copy Markdown Link (`⌘⌥C`), Delete (`⌘Delete`), Set Color (`⌘⌥c`), MagicFormat (`⌘⌥f`), Magic Assistant (`⌘⌥a`), Toggle Star (`⌘S`). Uses `CommandRegistry` instances from `FocusedValues` to dispatch to the correct list item. Disable logic derived from selection and focus state.
 
 ### ViewCommands
 
-- Toggle Preview (`Cmd+P`)
-- Show Backlinks
+Adds items after `.sidebar`: Toggle Preview (`⌘P`), Backlinks (`⌘⌥B`). Reads `togglePreview`, `showBacklinks`, and `openNoteHasBacklinks` from `FocusedValues`. Backlinks command is disabled when no note has backlinks.
 
 ### WindowCommands
 
-- Open Chat Window (when AI available)
+Adds items after `.windowArrangement`: Open Chat (`⌘⇧C`, gated on `chatFeatureFlagEnabled` and `chatEnabled`), Open Editor Window (`⌘⇧E`, requires exactly one note selected). Reads `chatEnabled`, `openChatWindow`, `noteOpenEditorWindowRegistry`, and `selectedNotes` from `FocusedValues`.
 
-### FocusedValues
-
-Commands communicate with views via FocusedValues:
-
-```swift
-extension FocusedValues {
-    @Entry var togglePreview: (() -> Void)?
-    @Entry var doMagicFormat: (() -> Void)?
-    @Entry var textIsSelected: Bool?
-    // ...
-}
-```
+---
 
 ## Helper Views
 
-**Files:** `/TakeNote/Views/Helpers/`
+**Files:** `TakeNote/Views/Helpers/`
 
-### AIMessage
+- `AIMessage` — styled label for AI-related status messages (e.g., "Magic Format", "Thinking...", "AI Summary Generating...").
+- `MultiNoteViewer` — shown in the detail column when multiple notes are selected. Contents not read in detail.
+- `NoteLabelBadge` — tag/folder badge displayed on note list entries.
 
-Animated message with sparkle effect for AI operations:
+---
 
-```swift
-AIMessage(message: "Thinking...", font: .headline)
-```
+## WelcomeView
 
-### MultiNoteViewer
+**Files:** `TakeNote/Views/WelcomeMessage/WelcomeView.swift`, `WelcomeRow.swift`
 
-Displays when multiple notes are selected:
-- Note count
-- Bulk actions (move, delete, tag)
+Onboarding sheet shown on first launch (and when `onboardingVersionCurrent` is bumped). Dismissed by calling the provided callback, which updates `@AppStorage(onboardingVersionKey)`.
 
-### NoteLabelBadge
+---
 
-Small badge showing note metadata (tag color, starred status).
+## Multi-Platform Adaptations
 
-## Welcome View
-
-**Files:** `/TakeNote/Views/WelcomeMessage/`
-
-Onboarding sheet shown on first launch:
-- Feature highlights
-- Get started button
-- Version-gated (bumping `onboardingVersionCurrent` shows again)
+Key platform differences handled throughout:
+- macOS uses `Window`; iOS/visionOS use `WindowGroup`.
+- Toolbar placements differ: `.secondaryAction` on macOS, `.automatic` on iOS.
+- iOS phones start with no selected container (list view); iPads start with Inbox selected.
+- Markdown shortcut bar appears on iOS only when soft keyboard is active.
+- Copy/cut/paste system is macOS-only.
+- AI Chat is a separate window on macOS; a popover on iOS.

@@ -5,6 +5,7 @@
 //  Created by Adam Drew on 8/31/25.
 //
 
+import os
 import SwiftData
 import SwiftUI
 
@@ -13,6 +14,7 @@ final class SystemFolderReconciler {
     private let ctx: ModelContext
     private let vm: TakeNoteVM
     private var isRunning = false
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "SystemFolderReconciler")
 
     init(ctx: ModelContext, vm: TakeNoteVM) {
         self.ctx = ctx
@@ -60,7 +62,7 @@ final class SystemFolderReconciler {
         // Only one folder? bail
         guard candidates.count  > 1 else { return nil }
         
-        print("System folder duplicate found. Reconciling...")
+        logger.info("System folder duplicate found. Reconciling.")
 
 
         // Choose canonical

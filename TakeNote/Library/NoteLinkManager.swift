@@ -5,6 +5,7 @@
 //  Created by Adam Drew on 8/27/25.
 //
 
+import os
 import SwiftData
 import SwiftUI
 
@@ -13,6 +14,7 @@ import SwiftUI
 class NoteLinkManager {
 
     var modelContext: ModelContext
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteLinkManager")
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -137,7 +139,7 @@ class NoteLinkManager {
                 sourceNote: note,
                 destinationNote: targetNote
             )
-            print("Created a link")
+            logger.debug("Created a link from \(note.uuid) to \(targetNote.uuid)")
             modelContext.insert(newLink)
         }
 

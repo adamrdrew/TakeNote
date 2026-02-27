@@ -5,8 +5,11 @@
 //  Created by Adam Drew on 8/24/25.
 //
 
+import os
 import SwiftData
 import SwiftUI
+
+private let editCommandsLogger = Logger(subsystem: "com.adamdrew.takenote", category: "EditCommands")
 
 struct EditCommands: Commands {
     @FocusedValue(\.containerDeleteRegistry) var containerDeleteRegistry:
@@ -121,7 +124,7 @@ struct EditCommands: Commands {
             .keyboardShortcut("R", modifiers: [.command])
 
             Button("Copy Markdown Link", systemImage: "link.badge.plus") {
-                print("EditMenu.copyMarkdownLink")
+                editCommandsLogger.debug("copyMarkdownLink command invoked")
                 if let sn = selectedNotes {
                     if let sc = sn.first {
                         if let cml = noteCopyMarkdownLinkRegistry {

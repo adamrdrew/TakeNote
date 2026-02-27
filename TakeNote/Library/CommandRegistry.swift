@@ -5,8 +5,11 @@
 //  Created by Adam Drew on 8/25/25.
 //
 
+import os
 import SwiftUI
 import SwiftData
+
+private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "CommandRegistry")
 
 @Observable
 internal final class CommandRegistry {
@@ -29,7 +32,7 @@ internal final class CommandRegistry {
 
     @MainActor
     func runCommand(id: PersistentIdentifier) {
-        print("CommandRegistry: Running Command with ID: \(id)")
+        logger.debug("Running command with ID: \(String(describing: id))")
         commands[id]?()
     }
 

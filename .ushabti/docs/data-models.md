@@ -2,153 +2,125 @@
 
 ## Overview
 
-TakeNote uses SwiftData with CloudKit synchronization for persistence. Three model types define the data layer: `Note`, `NoteContainer`, and `NoteLink`.
+All persistent data is stored via SwiftData using three `@Model` classes: `Note`, `NoteContainer`, and `NoteLink`. The SwiftData container is CloudKit-backed under `iCloud.com.adamdrew.takenote`.
+
+**Important:** Any change to a model class schema requires bumping `ckBootstrapVersionCurrent` in `TakeNoteApp.swift` and promoting the schema change to the production CloudKit container.
+
+---
 
 ## Note
 
-The primary content model representing a single markdown note.
+**File:** `TakeNote/Models/Note.swift`
 
-**File:** `/TakeNote/Models/Note.swift`
+Represents a single note.
 
-### Properties
+### Fields
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `uuid` | `UUID` | Unique identifier (private setter) |
-| `title` | `String` | Note title (defaults to "New Note") |
-| `content` | `String` | Markdown content |
-| `createdDate` | `Date` | Creation timestamp |
-| `updatedDate` | `Date` | Last modification timestamp |
-| `starred` | `Bool` | Favorite status |
-| `aiSummary` | `String` | AI-generated summary |
-| `contentHash` | `String` | MD5 hash for change detection |
-| `aiSummaryIsGenerating` | `Bool` | Transient; not persisted |
-| `isEmpty` | `Bool` | Computed; true if content is empty |
-
-### Relationships
-
-| Relationship | Type | Inverse | Delete Rule |
-|--------------|------|---------|-------------|
-| `folder` | `NoteContainer?` | `folderNotes` | noAction |
-| `tag` | `NoteContainer?` | `tagNotes` | nullify |
-| `starredFolder` | `NoteContainer?` | `starredNotes` | nullify |
-| `outgoingLinks` | `[NoteLink]?` | `sourceNote` | - |
-| `incomingLinks` | `[NoteLink]?` | `destinationNote` | - |
-
-### Key Methods
-
-```swift
-func setTitle(_ newTitle: String)      // Updates title and timestamp
-func setContent(_ newContent: String)  // Updates content and timestamp
-func setFolder(_ folder: NoteContainer)
-func setTag(_ tag: NoteContainer)
-func getURL() -> String                // Returns takenote://note/{uuid}
-func getMarkdownLink() -> String       // Returns [title](url)
-func generateContentHash() -> String   // MD5 hash of content
-func contentHasChanged() -> Bool       // Compares current hash to stored
-func canGenerateAISummary() -> Bool    // Checks AI availability and state
-func generateSummary() async           // Generates AI summary
-func setTitle()                        // Auto-sets title from first line
-```
-
-### Widget Integration
-
-All setter methods call `WidgetCenter.shared.reloadAllTimelines()` to keep widgets updated.
-
-### NoteIDWrapper
-
-A `Transferable` wrapper for `PersistentIdentifier` used in drag-and-drop and window management:
-
-```swift
-struct NoteIDWrapper: Hashable, Codable, Transferable {
-    let id: PersistentIdentifier
-    private let snapshot: Data  // Pre-encoded for safe export
-}
-```
-
-Custom UTType: `com.adamdrew.takenote.noteid`
-
-## NoteContainer
-
-Represents folders, tags, and special system containers.
-
-**File:** `/TakeNote/Models/NoteContainer.swift`
-
-### Properties
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `name` | `String` | Display name |
-| `symbol` | `String` | SF Symbol name (default: "folder") |
-| `colorRGBA` | `UInt32` | Color as packed RGBA (default: pink) |
-| `canBeDeleted` | `Bool` | Internal; false for system containers |
-| `isTrash` | `Bool` | Internal; trash folder marker |
-| `isInbox` | `Bool` | Internal; inbox folder marker |
-| `isStarred` | `Bool` | Internal; starred container marker |
-| `isTag` | `Bool` | Internal; tag vs folder |
-| `isBuffer` | `Bool` | Internal; clipboard buffer folder |
-| `isSystemFolder` | `Bool` | Computed; true if trash, inbox, or starred |
+| Field | Type | Description |
+|---|---|---|
+| `defaultTitle` | `String` | Persisted field, defaults to `"New Note"`. Used as a sentinel by the no-arg `setTitle()` to detect whether the title is still the auto-derived default. **This is a persisted field** — schema changes to it require a `ckBootstrapVersionCurrent` bump. |
+| `title` | `String` | Display title. Property default is `""` (empty string). The `init(folder:)` initializer sets `self.title = self.defaultTitle`, so newly created notes start with `"New Note"`. Auto-derived from first line of content via the no-arg `setTitle()`. |
+| `content` | `String` | Raw Markdown text. |
+| `createdDate` | `Date` | Creation timestamp. |
+| `updatedDate` | `Date` | Last-modified timestamp. Updated by all mutating methods. |
+| `starred` | `Bool` | Whether this note appears in the Starred folder. |
+| `aiSummary` | `String` | AI-generated one-sentence summary. Stored in the database. |
+| `contentHash` | `String` | MD5 hex hash of `content`. Used to avoid regenerating AI summaries when content hasn't changed. |
+| `aiSummaryIsGenerating` | `Bool` | `@Transient` (not persisted). In-memory flag while generation is running. |
+| `uuid` | `UUID` | Stable identifier used for deep links and the FTS/vector search index. Private setter (`private(set)`); SwiftData can still set it via internal hydration. |
 
 ### Relationships
 
 | Relationship | Type | Description |
-|--------------|------|-------------|
-| `folderNotes` | `[Note]?` | Notes in this folder |
-| `tagNotes` | `[Note]?` | Notes tagged with this tag |
-| `starredNotes` | `[Note]?` | Starred notes (starred container only) |
+|---|---|---|
+| `folder` | `NoteContainer?` | The folder this note lives in. Delete rule: `.noAction` (notes are moved to Trash, not deleted). |
+| `tag` | `NoteContainer?` | Optional tag assigned to this note. Delete rule: `.nullify`. |
+| `starredFolder` | `NoteContainer?` | Reference to the Starred container when `starred == true`. Delete rule: `.nullify`. |
+| `outgoingLinks` | `[NoteLink]?` | Links where this note is the source. Declared with `@Relationship` but no explicit `deleteRule` (SwiftData default applies). Inverses are specified on `NoteLink` side to avoid macro circularity. |
+| `incomingLinks` | `[NoteLink]?` | Links where this note is the destination. Same relationship pattern as `outgoingLinks`. |
 
-### Computed Property: notes
+### Computed Properties
 
-Returns the appropriate note array based on container type:
-
-```swift
-var notes: [Note] {
-    if isTag { return tagNotes ?? [] }
-    if isStarred { return starredNotes ?? [] }
-    return folderNotes ?? []
-}
-```
+- `isEmpty: Bool` — returns `content.isEmpty`. Used by `canGenerateAISummary()` to skip summary generation on empty notes.
 
 ### Key Methods
 
-```swift
-func getSystemImageName() -> String  // Dynamic icon (empty vs filled)
-func getColor() -> Color             // Decodes colorRGBA to SwiftUI Color
-func setColor(_ color: Color)        // Encodes Color to colorRGBA
-```
+- `setTitle(_ newTitle: String)` — sets title and updates `updatedDate`; triggers widget reload.
+- `setContent(_ newContent: String)` — sets content and updates `updatedDate`; triggers widget reload.
+- `setFolder(_ folder: NoteContainer)` — moves note to a folder; updates `updatedDate`; triggers widget reload.
+- `setTag(_ tag: NoteContainer)` — assigns a tag; updates `updatedDate`; triggers widget reload.
+- `setTitle()` (no-arg) — derives title from first line of content if `title` still equals `defaultTitle`. Strips Markdown formatting via `AttributedString`. Calls `setTitle(_:)` internally (so it triggers the widget reload and updatedDate update).
+- `getURL() -> String` — returns `"takenote://note/<UUID>"` deep link string.
+- `getMarkdownLink() -> String` — returns `"[title](takenote://note/<UUID>)"`.
+- `generateContentHash() -> String` — MD5 hex of content.
+- `contentHasChanged() -> Bool` — compares stored hash with fresh hash.
+- `canGenerateAISummary() -> Bool` — checks content non-empty, content changed, not already generating, and AI available.
+- `generateSummary() async` — invokes `LanguageModelSession` to produce a one-sentence summary; stores result in `aiSummary`.
+
+### NoteIDWrapper
+
+A `Hashable, Codable, Transferable` wrapper around a `PersistentIdentifier`. Used for drag-and-drop and copy/cut/paste of notes (macOS). Conforms to `TransferRepresentation` via a custom UTType (`com.adamdrew.takenote.noteid`).
+
+---
+
+## NoteContainer
+
+**File:** `TakeNote/Models/NoteContainer.swift`
+
+A single model class that serves multiple conceptual roles: folder, tag, and system containers. Discriminated by boolean flags.
+
+### Fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | `String` | Display name. |
+| `folderNotes` | `[Note]?` | Notes whose `folder` is this container. |
+| `tagNotes` | `[Note]?` | Notes whose `tag` is this container. |
+| `starredNotes` | `[Note]?` | Notes whose `starredFolder` is this container. |
+| `canBeDeleted` | `Bool` | `false` for system containers (Inbox, Trash, Starred). |
+| `isTrash` | `Bool` | This is the Trash folder. |
+| `isInbox` | `Bool` | This is the Inbox folder. |
+| `isStarred` | `Bool` | This is the Starred folder. |
+| `isTag` | `Bool` | This is a tag (not a folder). |
+| `isBuffer` | `Bool` | This is the hidden Buffer folder used for cut/paste. |
+| `colorRGBA` | `UInt32` | Packed RGBA color as 32-bit integer. Default: `0xFF26B9FF` (TakeNote pink). |
+| `symbol` | `String` | SF Symbol name for display. Default: `"folder"`. |
+
+### Computed Properties
+
+- `notes: [Note]` — routes to `tagNotes`, `starredNotes`, or `folderNotes` based on flags.
+- `isSystemFolder: Bool` — `true` if Trash, Inbox, or Starred.
 
 ### System Containers
 
-The app creates four special containers on startup:
+| Name | isInbox | isTrash | isStarred | isBuffer | canBeDeleted |
+|---|---|---|---|---|---|
+| Inbox | true | false | false | false | false |
+| Trash | false | true | false | false | false |
+| Starred | false | false | true | false | false |
+| Buffer | false | false | false | true | false |
+| User folder | false | false | false | false | true |
+| Tag | false | false | false | false | true |
 
-| Container | Symbol | Purpose |
-|-----------|--------|---------|
-| Inbox | `tray` | Default location for new notes |
-| Trash | `trash` | Deleted notes before permanent removal |
-| Starred | `star.fill` | Virtual folder for favorited notes |
-| Buffer | `shippingbox` | Temporary storage for cut notes |
+### Key Methods
+
+- `getSystemImageName() -> String` — returns filled/unfilled SF symbol based on content state.
+- `getColor() -> Color` — decodes `colorRGBA` to SwiftUI `Color`. System folders always return `.takeNotePink`.
+- `setColor(_ color: Color)` — encodes a SwiftUI `Color` into `colorRGBA`.
+
+---
 
 ## NoteLink
 
-Represents a directional link between two notes (for backlinks feature).
+**File:** `TakeNote/Models/NoteLink.swift`
 
-**File:** `/TakeNote/Models/NoteLink.swift`
+A directed edge in the note graph. Created by `NoteLinkManager` when a note's content contains `takenote://note/<UUID>` links.
 
-### Relationships
+### Fields
 
-| Relationship | Type | Inverse | Description |
-|--------------|------|---------|-------------|
-| `sourceNote` | `Note?` | `outgoingLinks` | Note containing the link |
-| `destinationNote` | `Note?` | `incomingLinks` | Note being linked to |
+| Field | Type | Description |
+|---|---|---|
+| `sourceNote` | `Note?` | The note containing the link. Inverse of `Note.outgoingLinks`. |
+| `destinationNote` | `Note?` | The note being linked to. Inverse of `Note.incomingLinks`. |
 
-### Usage
-
-Links are extracted from note content by parsing `takenote://note/{uuid}` URLs in markdown links. The `NoteLinkManager` handles creation and cleanup of link models.
-
-## CloudKit Considerations
-
-All models sync via CloudKit. Important notes:
-
-1. **Schema Changes** - Bump `ckBootstrapVersionCurrent` in `TakeNoteApp.swift` when modifying models
-2. **Duplicate Handling** - `SystemFolderReconciler` merges duplicate system folders from sync conflicts
-3. **DEBUG vs RELEASE** - Debug builds use a separate local store; Release uses CloudKit
+NoteLink records are regenerated from scratch on every content change (old links for the source note are deleted, then new ones are created).

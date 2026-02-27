@@ -1,0 +1,36 @@
+phase:
+  id: "0003"
+  slug: direct-assignment-simple
+  title: Direct Property Assignment Fixes — Simple Cases
+  status: complete
+
+steps:
+  - id: S001
+    title: Fix direct assignment in NewNoteWithContentIntent
+    implemented: true
+    reviewed: true
+    notes: Replaced note.content = content with note.setContent(content) and note.title = noteTitle with note.setTitle(noteTitle) in NewNoteWithContentIntent.perform()
+    touched:
+      - TakeNote/AppIntents/NewNoteWithContentIntent.swift
+  - id: S002
+    title: Fix direct assignment in NoteList.cuttable
+    implemented: true
+    reviewed: true
+    notes: Replaced note.folder = bf with note.setFolder(bf) in the .cuttable closure in NoteList.swift
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+  - id: S003
+    title: Fix direct assignment in MovePopoverContent
+    implemented: true
+    reviewed: true
+    notes: Replaced note.tag = container with note.setTag(container) and note.folder = container with note.setFolder(container) in MovePopoverContent.onChange handler in NoteListEntry.swift
+    touched:
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+  - id: S004
+    title: Update docs to reflect fixes
+    implemented: true
+    reviewed: true
+    notes: Updated supporting-systems.md AppIntents section to note setContent/setTitle usage. Updated views.md NoteList and NoteListEntry descriptions to document correct setFolder/setTag usage for cuttable and MovePopoverContent paths. No R010/R011 known-issue blocks existed to remove.
+    touched:
+      - .ushabti/docs/supporting-systems.md
+      - .ushabti/docs/views.md

@@ -1,0 +1,44 @@
+phase:
+  id: "0004"
+  slug: direct-assignment-complex
+  title: Direct Property Assignment Fixes — Complex Cases
+  status: complete
+
+steps:
+  - id: S001
+    title: Read NoteEditor and NoteList deselection lifecycle
+    implemented: true
+    reviewed: true
+    notes: "Confirmed lifecycle: (1) CodeEditor binding sets content/updatedDate directly per keystroke — correct, avoids per-keystroke widget reload. (2) doMagicFormat() sets openNote!.content directly — R007 fix target, should use setContent(). (3) NoteList.onChange deselection calls note.setTitle() (if contentHasChanged()), which internally calls setTitle(_ newTitle:) which calls WidgetCenter.shared.reloadAllTimelines() — widget IS updated on deselection. (4) Note.init(folder:) already calls reloadAllTimelines() once. (5) pasteNote() copy branch creates Note(folder:nc) then sets all fields directly before insert — correct pattern, reloadAllTimelines already fired by init."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+      - TakeNote/Views/NoteList/NoteList.swift
+      - TakeNote/Models/Note.swift
+  - id: S002
+    title: Fix doMagicFormat() direct assignment
+    implemented: true
+    reviewed: true
+    notes: "Changed openNote!.content = result.formattedText to openNote!.setContent(result.formattedText) in doMagicFormat(). This ensures updatedDate is updated and WidgetCenter.shared.reloadAllTimelines() fires after the one-shot Magic Format mutation."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S003
+    title: Decide and document the CodeEditor binding policy
+    implemented: true
+    reviewed: true
+    notes: "Added 3-line comment inside the CodeEditor binding set: closure explaining that direct assignment is intentional to avoid per-keystroke WidgetCenter.reloadAllTimelines() calls, and that widget reload happens on note deselection via NoteList.onChange. No behavioral change made."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S004
+    title: Fix pasteNote() direct property assignment
+    implemented: true
+    reviewed: true
+    notes: "Added 3-line comment in pasteNote() copy-paste branch explaining that direct field assignment is intentional for the new uninserted note object: Note.init(folder:) already called reloadAllTimelines(), and calling setTitle()/setContent() would fire redundant widget reloads. No behavioral change made."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+  - id: S005
+    title: Update views.md to reflect fixes
+    implemented: true
+    reviewed: true
+    notes: "Removed 'Known Issue: Direct Content Mutation (R007)' block from NoteEditor section in views.md. Replaced with accurate 'Content mutation patterns' description: doMagicFormat() now uses setContent() (fixed), CodeEditor binding uses direct assignment by design with explanation. Also updated the NoteList section to document the pasteNote() copy-paste pattern explaining why direct assignment is used for uninserted objects."
+    touched:
+      - .ushabti/docs/views.md

@@ -95,6 +95,11 @@ struct ChatWindow: View {
     }
 
     private func generateResponse() async {
+        guard SystemLanguageModel.default.availability == .available else {
+            responseIsGenerating = false
+            conversation.append(ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device."))
+            return
+        }
 
         let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
 

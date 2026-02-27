@@ -2,237 +2,178 @@
 
 ## Overview
 
-TakeNote integrates Apple Foundation Models (FoundationModels framework) to provide AI-powered features. These features require macOS/iOS 26+ and Apple Intelligence to be enabled on the device.
+TakeNote has three AI features, all powered by Apple's `FoundationModels` framework via `SystemLanguageModel.default`. All features require Apple Intelligence to be enabled on the device. AI availability is checked via `languageModel.availability == .available` (exposed as `TakeNoteVM.aiIsAvailable`).
 
-## Availability Check
+---
 
-All AI features gate on model availability:
+## Feature Flag: Magic Chat
+
+Magic Chat (the AI chat window) is separately gated by an Info.plist boolean:
 
 ```swift
-let languageModel = SystemLanguageModel.default
-
-var aiIsAvailable: Bool {
-    return languageModel.availability == .available
+// ChatFeatureFlagEnabled.swift
+var chatFeatureFlagEnabled: Bool {
+    return Bundle.main.object(forInfoDictionaryKey: "MagicChatEnabled") as? Bool ?? false
 }
 ```
 
-A global feature flag `chatFeatureFlagEnabled` (defined in `ChatFeatureFlagEnabled.swift`) can disable AI chat features entirely.
+When `false`: the chat window never opens, search indexing is skipped, and the Chat toolbar button is hidden.
 
-## AI Features Overview
-
-| Feature | Location | Purpose |
-|---------|----------|---------|
-| AI Summaries | `Note.swift` | Auto-generated one-line summaries |
-| Magic Format | `MagicFormatter.swift` | Converts plain text to formatted Markdown |
-| Magic Assistant | `NoteEditor.swift` + `ChatWindow.swift` | Context-aware Markdown transformations |
-| AI Chat | `ChatWindow.swift` | RAG-powered Q&A over notes |
-
-## AI Summaries
-
-**Location:** `/TakeNote/Models/Note.swift`
-
-Each note can generate an AI summary of its content.
-
-### Implementation
-
-```swift
-func canGenerateAISummary() -> Bool {
-    // Checks: not empty, content changed, not generating, model available
-}
-
-func generateSummary() async {
-    let instructions = """
-        Write a single-line summary of the passage. State the core point directly.
-        Do not mention the passage or the act of summarizing. No prefaces, labels,
-        citations, or quotes. Preserve key entities and facts. Output exactly one
-        sentence with no line breaks.
-        """
-    let session = LanguageModelSession(instructions: instructions)
-    let response = try? await session.respond(to: content)
-    aiSummary = response?.content ?? ""
-}
-```
-
-### Change Detection
-
-Uses MD5 hash to detect content changes:
-
-```swift
-var contentHash: String  // Stored hash
-func generateContentHash() -> String  // Current hash
-func contentHasChanged() -> Bool      // Comparison
-```
-
-Summaries regenerate only when content has actually changed.
+---
 
 ## Magic Format
 
-**Location:** `/TakeNote/Library/MagicFormatter.swift`
+**Files:** `TakeNote/Library/MagicFormatter.swift`, `TakeNote/Prompts/MagicFormatPrompt.swift`
 
-Transforms unformatted plain text into well-structured Markdown.
+Converts the full content of the open note from plain text to well-structured Markdown.
 
-### Class: MagicFormatter
+### MagicFormatter
 
-```swift
-@MainActor
-class MagicFormatter: ObservableObject {
-    var session: LanguageModelSession
-    @Published var formatterIsBusy: Bool = false
-    @Published var sessionCancelled: Bool = false
+`@MainActor`, `@Observable`. Follows the project-standard `@Observable` pattern.
 
-    func magicFormat(_ text: String) async -> MagicFormatterResult
-    func cancel()
-}
-```
+| Property | Type | Description |
+|---|---|---|
+| `isAvailable` | `Bool` | Computed: `languageModel.isAvailable` (a property on `SystemLanguageModel`). Note this is a different check path than `TakeNoteVM.aiIsAvailable`, which uses `languageModel.availability == .available`. Both check the same underlying availability but via different API surfaces. |
+| `formatterIsBusy` | `Bool` | `true` while a session is in progress; drives the progress sheet in NoteEditor. |
+| `sessionCancelled` | `Bool` | Fake-cancel flag (LanguageModelSession cannot be truly cancelled). |
 
-### Result Type
+**Methods:**
+
+- `magicFormat(_ text: String) async -> MagicFormatterResult` — the core method. Creates a fresh `LanguageModelSession` per call (reusing would accumulate context and cause context window errors). Hashes input, calls `session.respond(to:)`, checks for the failure token `TAKENOTE_MAGICFORMAT_FORMATFAILED`, strips any Markdown fence wrapper via `unwrapMarkdownFence()`.
+- `cancel()` — sets `sessionCancelled = true` and clears `formatterIsBusy`. The cancelled flag is checked after the session resolves; the view silently discards the result via `result.wasCancelled`.
+- `hashFor(_ input: String) -> String` — SHA-256 hex of input. Used to detect content drift between when formatting started and when it finished.
+
+### MagicFormatterResult
 
 ```swift
 struct MagicFormatterResult {
-    let inputHash: String       // SHA256 of input for validation
-    let formattedText: String   // Formatted output or error message
+    let inputHash: String      // SHA-256 of input at time of call
+    let formattedText: String  // Result or error message
     let didSucceed: Bool
     let wasCancelled: Bool
     let error: Error?
 }
 ```
 
-### Cancellation
+### Failure Handling
 
-Since `LanguageModelSession` cannot be cancelled mid-response, cancellation is simulated:
-1. Set `sessionCancelled = true`
-2. When response arrives, check flag and throw error
-3. Return result with `wasCancelled = true`
+The prompt instructs the model to output `TAKENOTE_MAGICFORMAT_FORMATFAILED` (the `MAGIC_FORMAT_FAILURE_TOKEN` constant) if it cannot improve the formatting. `MagicFormatter` detects this token and sets `didSucceed = false`.
 
 ### Prompt
 
-Defined in `/TakeNote/Prompts/MagicFormatPrompt.swift`:
+The `MAGIC_FORMAT_PROMPT` instructs the model to:
+- Output only formatted Markdown, no commentary or wrapping fences.
+- Infer headings, lists, code blocks, emphasis, task items, and links from content.
+- Preserve meaning exactly.
+- Output the failure token if the document is already well-formatted or cannot be improved.
 
-- Formats plain text as Markdown
-- Infers headings, lists, code blocks, tables
-- Never wraps output in code fences
-- Returns `TAKENOTE_MAGICFORMAT_FORMATFAILED` token on failure
-
-### UI Integration
-
-The NoteEditor shows a sheet while formatting and validates input hash matches current content before applying changes.
+---
 
 ## Magic Assistant
 
-**Location:** UI in `/TakeNote/Views/NoteEditor/NoteEditor.swift`, prompt in `/TakeNote/Prompts/MagicAssistantPrompt.swift`
+**Files:** `TakeNote/Views/NoteEditor/NoteEditor.swift` (invocation), `TakeNote/Prompts/MagicAssistantPrompt.swift`
 
-Performs Markdown transformations on selected text within a note.
+Performs Markdown transformations on the currently selected text in the note editor. Presented as a `ChatWindow` popover inside `NoteEditor`.
 
-### Trigger
+### Invocation
 
-Appears as a toolbar button when text is selected in the editor:
+When text is selected in edit mode, a Magic Assistant toolbar button appears. Tapping it opens a `ChatWindow` configured as:
 
 ```swift
-if textIsSelected {
-    Button(action: { isAssistantPopoverPresented.toggle() }) {
-        Image(systemName: "apple.intelligence")
-    }
-    .popover(isPresented: $isAssistantPopoverPresented) {
-        ChatWindow(
-            context: selectedText,
-            instructions: MAGIC_ASSISTANT_PROMPT,
-            prompt: "Perform the instructions...",
-            searchEnabled: false,
-            onBotMessageClick: assistantSelectionReplacement,
-            toolbarVisible: false,
-            useHistory: false
-        )
-    }
-}
+ChatWindow(
+    context: selectedText,
+    instructions: MAGIC_ASSISTANT_PROMPT,
+    prompt: "Perform the instructions in the {{USER_REQUEST}} based on the {{CONTEXT}}:\n\nUSER_REQUEST:\n",
+    searchEnabled: false,
+    onBotMessageClick: assistantSelectionReplacement,
+    toolbarVisible: false,
+    useHistory: false
+)
 ```
+
+`onBotMessageClick` replaces the selection in the note with the bot's response text.
 
 ### Prompt
 
-The Magic Assistant prompt supports:
-- Content-preserving transformations (formatting, structuring)
-- CSV/TSV to Markdown table conversion
-- List normalization and checklist creation
-- Code fence wrapping with language detection
-- Link formatting
+`MAGIC_ASSISTANT_PROMPT` instructs the model to:
+- Accept a user request and a context (selected text).
+- Output only a Markdown transformation of the selected text — no new content, no explanations.
+- Refuse with `"I don't know how to do that."` only if the text is empty, the request adds new content, or it is inherently non-Markdown.
+- Use a fallback chain (tabular → list → nice Markdown) before refusing.
 
-It refuses requests that require inventing content.
+---
 
-### Selection Replacement
+## Magic Chat
 
-When user clicks a bot response, it replaces the selected text:
+**Files:** `TakeNote/Views/ChatWindow/ChatWindow.swift`, `TakeNote/Prompts/MagicChatPrompt.swift`
 
-```swift
-func assistantSelectionReplacement(_ replacement: String) {
-    guard let note = openNote else { return }
-    var s = note.content
-    s.replaceSubrange(swiftRange, with: replacement)
-    note.setContent(s)
-}
+A RAG-based Q&A chatbot over the user's notes.
+
+### Retrieval (RAG)
+
+On each user query, `SearchIndex.searchNatural()` retrieves up to 5 relevant note chunks. These chunks are injected into the LLM prompt as `SOURCE EXCERPTS`.
+
+### Prompt Assembly
+
+```
+[MAGIC_CHAT_PROMPT as system instructions]
+Provide an answer to the following question:
+
+<user query>
+
+SOURCE EXCERPTS:
+
+SOURCE EXCERPT 0:
+<chunk text>
+
+...
+
+CHAT HISTORY:
+
+User: <prior message>
+Assistant: <prior response>
+...
 ```
 
-## AI Chat with RAG
+### System Instructions (MAGIC_CHAT_PROMPT)
 
-**Location:** `/TakeNote/Views/ChatWindow/ChatWindow.swift`, prompt in `/TakeNote/Prompts/MagicChatPrompt.swift`
+Instructs the model to:
+- Answer only from `SOURCE EXCERPTS`, not world knowledge.
+- Use `CHAT HISTORY` only for context resolution (pronouns, follow-ups).
+- Be concise; use bullets only for lists.
+- Respond with `"I couldn't find that in your notes."` if no relevant content is found.
 
-A conversational interface that answers questions using notes as context.
+### Session Lifecycle
 
-### RAG (Retrieval-Augmented Generation)
+A new `LanguageModelSession` is created per response. No session is reused across turns — full conversation history is included in each prompt text instead.
 
-When a question is asked:
-1. Query is sent to `SearchIndexService.searchNatural()`
-2. Top matching chunks are retrieved from FTS5 index
-3. Chunks are included in the prompt as "SOURCE EXCERPTS"
+### AI Availability Gate
 
-```swift
-private func makePrompt() -> String {
-    var llmPrompt = prompt ?? "Provide an answer to the following question:\n\n"
-    llmPrompt += "\(conversation.last?.text ?? "")\n\n"
+`ChatWindow.generateResponse()` checks `SystemLanguageModel.default.availability == .available` before creating a `LanguageModelSession`. If Apple Intelligence is unavailable, `responseIsGenerating` is reset to `false`, a bot message reading "Apple Intelligence is not available on this device." is appended to the conversation, and the function returns early. No `LanguageModelSession` is instantiated on the unavailable code path. This check is performed directly on `SystemLanguageModel.default` rather than through `TakeNoteVM.aiIsAvailable` because `ChatWindow` is also used as the Magic Assistant popover inside `NoteEditor`, where it may not have access to `TakeNoteVM`.
 
-    if context != nil {
-        llmPrompt += "CONTEXT: \n\(context ?? "")\n\n"
-    }
+---
 
-    if searchEnabled {
-        llmPrompt += "SOURCE EXCERPTS:\n\n"
-        for (index, result) in searchResults.enumerated() {
-            llmPrompt += "SOURCE EXCERPT \(index):\n \(result.chunk)\n\n"
-        }
-    }
+## AI Summary
 
-    if useHistory {
-        llmPrompt += "CHAT HISTORY:\n\n\(makeConversationString())\n\n"
-    }
-    return llmPrompt
-}
-```
+**File:** `TakeNote/Models/Note.swift`
 
-### ChatWindow Configuration
+Each `Note` can generate an AI summary via `generateSummary() async`. This is called from three places:
+- `NoteList.onChange(of: takeNoteVM.selectedNotes)` — when switching away from a note (if content changed).
+- `NoteEditor.togglePreview()` — when toggling from edit to preview mode.
+- `NoteListEntry` context menu — the "Regenerate Summary" item.
 
-The ChatWindow is reusable with different configurations:
+The summary is a single-sentence summary generated by a `LanguageModelSession`. The result is stored in `note.aiSummary` and displayed in `NoteListEntry`'s `SummaryRow`.
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `context` | `nil` | Static context (e.g., selected text) |
-| `instructions` | `MAGIC_CHAT_PROMPT` | System prompt |
-| `prompt` | "Provide an answer..." | User prompt prefix |
-| `searchEnabled` | `true` | Enable RAG search |
-| `onBotMessageClick` | `nil` | Callback when bot message clicked |
-| `toolbarVisible` | `true` | Show toolbar |
-| `useHistory` | `true` | Include conversation history |
+Summary generation is guarded by `canGenerateAISummary()`, which checks four conditions:
+1. Content is not empty (`!isEmpty`).
+2. Content hash differs from stored hash (`contentHasChanged()`).
+3. Generation is not already in progress (`!aiSummaryIsGenerating`).
+4. AI is available — checked via `SystemLanguageModel.default.availability != .available` directly on the model object, **not** through `TakeNoteVM.aiIsAvailable`. This is because `generateSummary()` is a method on the `Note` model, which has no access to `TakeNoteVM`.
 
-### Platform Differences
+---
 
-- **macOS:** Opens as separate window via `openWindow(id: TakeNoteVM.chatWindowID)`
-- **iOS:** Opens as popover attached to toolbar button
+## Shared Utility: unwrapMarkdownFence
 
-## Utility: unwrapMarkdownFence
+**File:** `TakeNote/Library/UnwrapMarkdownFence.swift`
 
-**Location:** `/TakeNote/Library/UnwrapMarkdownFence.swift`
-
-LLMs sometimes wrap responses in markdown code fences. This utility strips them:
-
-```swift
-func unwrapMarkdownFence(_ text: String) -> String
-```
-
-Used by both MagicFormatter and ChatWindow before displaying AI responses.
+LLM responses sometimes arrive wrapped in triple-backtick Markdown code fences despite prompt instructions. `unwrapMarkdownFence(_ input: String) -> String` strips the opening fence line and closing `` ``` `` if present; otherwise returns the input unchanged. Used by both `MagicFormatter` and `ChatWindow`.
