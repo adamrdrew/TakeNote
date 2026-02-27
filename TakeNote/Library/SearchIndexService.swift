@@ -49,6 +49,9 @@ class SearchIndexService {
         Task {
             index.reindex(noteData)
             isIndexing = false
+            #if DEBUG
+            logger.info("RAG search reindex complete. \(noteData.count) notes indexed, \(self.index.rowCount) chunks in index.")
+            #endif
         }
     }
     

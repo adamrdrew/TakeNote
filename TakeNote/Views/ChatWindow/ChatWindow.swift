@@ -75,22 +75,42 @@ struct ChatWindow: View {
         }.joined(separator: "\n")
     }
 
+    private func stripMarkdown(_ text: String) -> String {
+        var s = text
+        // Remove images and links but keep link text
+        s = s.replacingOccurrences(of: #"!\[.*?\]\(.*?\)"#, with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"\[([^\]]*)\]\(.*?\)"#, with: "$1", options: .regularExpression)
+        // Remove fenced code blocks (``` ... ```)
+        s = s.replacingOccurrences(of: #"```[^`]*```"#, with: "", options: .regularExpression)
+        // Remove inline code
+        s = s.replacingOccurrences(of: #"`[^`]+`"#, with: "", options: .regularExpression)
+        // Remove heading markers, bold, italic, strikethrough
+        s = s.replacingOccurrences(of: #"#{1,6}\s*"#, with: "", options: .regularExpression)
+        s = s.replacingOccurrences(of: #"[*_~]{1,3}"#, with: "", options: .regularExpression)
+        // Remove checkbox markers
+        s = s.replacingOccurrences(of: #"- \[[ x]\] "#, with: "- ", options: .regularExpression)
+        // Collapse multiple blank lines
+        s = s.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
+        return s.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
     private func makePrompt() -> String {
-        var llmPrompt =
-            prompt ?? "Provide an answer to the following question:\n\n"
-        llmPrompt += "\(conversation.last?.text ?? "")\n\n"
-        if context != nil {
-            llmPrompt += "CONTEXT: \n\(context ?? "")\n\n"
-        }
+        var llmPrompt = ""
         if searchEnabled {
-            llmPrompt += "SOURCE EXCERPTS:\n\n"
+            llmPrompt += "TEXT FROM USER'S NOTES:\n\n"
             for (index, result) in searchResults.enumerated() {
-                llmPrompt += "SOURCE EXCERPT \(index):\n \(result.chunk)\n\n"
+                let cleaned = stripMarkdown(result.chunk)
+                guard !cleaned.isEmpty else { continue }
+                llmPrompt += "EXCERPT \(index + 1):\n\(cleaned)\n\n"
             }
         }
-        if useHistory {
-            llmPrompt += "CHAT HISTORY:\n\n\(makeConversationString())\n\n"
+        if context != nil {
+            llmPrompt += "CONTEXT:\n\(context ?? "")\n\n"
         }
+        if useHistory && conversation.count > 1 {
+            llmPrompt += "CHAT HISTORY:\n\(makeConversationString())\n\n"
+        }
+        llmPrompt += "QUESTION: \(conversation.last?.text ?? "")\n"
         return llmPrompt
     }
 
@@ -107,6 +127,10 @@ struct ChatWindow: View {
         if session.isResponding { return }
 
         let assembledPrompt = makePrompt()
+        #if DEBUG
+        let logger = search.logger
+        logger.debug("Assembled prompt for LLM:\n\(assembledPrompt)")
+        #endif
         let response = try? await session.respond(to: assembledPrompt)
         let aiSummary = response?.content ?? "Something went wrong. Sorry."
 
