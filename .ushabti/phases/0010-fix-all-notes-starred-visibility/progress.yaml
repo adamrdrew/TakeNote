@@ -1,0 +1,28 @@
+phase:
+  id: "0010"
+  slug: fix-all-notes-starred-visibility
+  title: Fix All Notes Starred Note Visibility
+  status: complete
+
+steps:
+  - id: S001
+    title: Update folderHasStarredNotes() in NoteList.swift
+    implemented: true
+    reviewed: true
+    notes: Added isAllNotes branch to folderHasStarredNotes(); when All Notes is selected it checks sortedNotes directly rather than selectedContainer?.notes (which is always empty for the virtual All Notes container). Falls through to original selectedContainer?.notes path for all other containers.
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+  - id: S002
+    title: Update views.md to document the All Notes starred-section behavior
+    implemented: true
+    reviewed: true
+    notes: "Added documentation in NoteList section explaining the two-branch behavior of folderHasStarredNotes(): the isAllNotes path uses sortedNotes (because All Notes virtual container.notes is always empty), and all other containers use selectedContainer?.notes."
+    touched:
+      - .ushabti/docs/views.md
+  - id: S003
+    title: Bump CURRENT_PROJECT_VERSION and MARKETING_VERSION in project.pbxproj
+    implemented: true
+    reviewed: true
+    notes: Changed all four CURRENT_PROJECT_VERSION = 12 entries to 13 and all four MARKETING_VERSION = 1.1.8 entries to 1.1.9 in project.pbxproj.
+    touched:
+      - TakeNote.xcodeproj/project.pbxproj

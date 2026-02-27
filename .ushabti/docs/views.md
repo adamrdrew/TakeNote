@@ -82,7 +82,7 @@ Middle column. Renders notes for the selected container.
 
 - Filters notes by search text against title and content.
 - Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
-- Groups starred notes in a separate section above non-starred notes.
+- Groups starred notes in a separate section above non-starred notes. The `folderHasStarredNotes()` function determines whether the Starred section renders. It has two branches: when `selectedContainer?.isAllNotes == true` it checks `sortedNotes.contains { $0.starred }` (using the already-computed, filtered array), because the All Notes virtual container's `NoteContainer.notes` computed property always returns an empty array and would otherwise suppress the Starred section unconditionally. For all other containers it falls back to `selectedContainer?.notes.contains { $0.starred } ?? false`.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
 - On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
 - Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
