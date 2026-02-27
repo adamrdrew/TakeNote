@@ -33,12 +33,28 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 - `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. No-op if chat is disabled.
 - `reindexAll(_ noteData: [(UUID, String)])` — rate-limited bulk reindex. Only runs if `canReindexAllNotes()` returns `true`. Sets `isIndexing` and resets `lastReindexAllDate`.
 - `dropAll()` — clears all indexed data.
+- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. No-op if chat is disabled. Logs at debug level.
 
 ### When Indexing Runs
 
-- **Single note**: triggered from `NoteList.onChange(of: takeNoteVM.selectedNotes)` when a note is deselected and content has changed.
+- **Single note — deselect**: triggered from `NoteList.onChange(of: takeNoteVM.selectedNotes)` when a note is deselected and content has changed. This is the primary single-note reindex path.
+- **Single note — note creation (New Note button/toolbar)**: `MainWindow` toolbar Add Note button calls `search.reindex(note:)` immediately after `takeNoteVM.addNote()` returns.
+- **Single note — note creation (File menu / keyboard shortcut)**: `FileCommands` New Note command calls `search.reindex(note:)` immediately after `takeNoteVM.addNote()` returns.
+- **Single note — note creation (text drop)**: `NoteList` drop-destination for `String.self` calls `search.reindex(note:)` after `addNote()` and `setContent()`.
+- **Single note — copy-paste**: `NoteList.pasteNote()` calls `search.reindex(note:)` after `modelContext.insert(newNote)` for the copy-paste branch.
+- **Single note — app backgrounding/quit**: `TakeNoteApp.onChange(of: scenePhase)` reindexes `takeNoteVM.openNote` when the scene transitions to `.inactive` or `.background`, capturing mid-edit changes before the process suspends.
+- **Single note — detached editor window note change**: `NoteEditorWindow.onChange(of: editorWindowVM.openNote)` reindexes the previous note when the window switches to a different note.
+- **Single note — detached editor window close**: `NoteEditorWindow.onDisappear` reindexes the current `editorWindowVM.openNote` when the editor window is closed.
 - **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync), subject to the 10-minute rate limit.
 - **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true` and `canReindexAllNotes()` is satisfied (feature flag on, not currently indexing, 10-minute cooldown elapsed). Runs at app launch before any user interaction with Magic Chat. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
+
+### When Index Deletion Runs
+
+All deletion paths are gated on `chatFeatureFlagEnabled` via `SearchIndexService.deleteFromIndex(noteID:)`, which is a no-op when chat is disabled.
+
+- **Move to Trash — single note**: `NoteListEntry.moveToTrash()` calls `search.deleteFromIndex(noteID: note.uuid)` immediately after `takeNoteVM.moveNoteToTrash()`. This covers swipe-to-trash, the context menu "Move to Trash" item, and the `noteDeleteRegistry` menu bar command (all routes through `moveToTrash()`).
+- **Move to Trash — multi-select**: `NoteListEntry.moveSelectedNotesToTrash()` calls `search.deleteFromIndex(noteID: sn.uuid)` for each note in the selection after its `moveNoteToTrash` call.
+- **Empty Trash**: The Empty Trash confirmation alert action in `MainWindow` captures `takeNoteVM.trashFolder?.notes.map { $0.uuid }` before calling `takeNoteVM.emptyTrash(modelContext)`, then calls `search.deleteFromIndex(noteID:)` for each UUID after the deletion completes.
 
 ---
 

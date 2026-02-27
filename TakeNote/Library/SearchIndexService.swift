@@ -59,5 +59,11 @@ class SearchIndexService {
         if chatFeatureFlagEnabled == false { return }
         Task { index.dropAll() }
     }
-    
+
+    func deleteFromIndex(noteID: UUID) {
+        if chatFeatureFlagEnabled == false { return }
+        logger.debug("Removing note \(noteID) from FTS index.")
+        Task { index.delete(noteID: noteID) }
+    }
+
 }
