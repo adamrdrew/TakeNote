@@ -37,7 +37,8 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 ### When Indexing Runs
 
 - **Single note**: triggered from `NoteList.onChange(of: takeNoteVM.selectedNotes)` when a note is deselected and content has changed.
-- **Bulk**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync), subject to the 10-minute rate limit.
+- **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync), subject to the 10-minute rate limit.
+- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true` and `canReindexAllNotes()` is satisfied (feature flag on, not currently indexing, 10-minute cooldown elapsed). Runs at app launch before any user interaction with Magic Chat. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
 
 ---
 

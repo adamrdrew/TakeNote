@@ -1,0 +1,30 @@
+phase:
+  id: "0006"
+  slug: startup-search-index
+  title: Startup Search Index Build
+  status: complete
+
+steps:
+  - id: S001
+    title: Add startup reindex call in AppBootstrapper.installReconciler
+    implemented: true
+    reviewed: true
+    notes: "Added startup reindex Task block immediately after reconciler.runOnce() in the runOnStartup branch. Gated on canReindexAllNotes(), logs at .info level, fetches all Notes from mainContext, calls reindexAll with (uuid, content) tuples."
+    touched:
+      - TakeNote/Library/AppBootstrapper.swift
+
+  - id: S002
+    title: Update search-system.md
+    implemented: true
+    reviewed: true
+    notes: "Added startup trigger as third bullet under When Indexing Runs. Includes feature-flag gate, rate-limit condition, and DEBUG behavior note."
+    touched:
+      - .ushabti/docs/search-system.md
+
+  - id: S003
+    title: Update supporting-systems.md
+    implemented: true
+    reviewed: true
+    notes: "Added startup reindex behavior note to installReconciler section. Documents the canReindexAllNotes() gate, the note fetch, and the purpose of populating the FTS5 index before Magic Chat interactions."
+    touched:
+      - .ushabti/docs/supporting-systems.md
