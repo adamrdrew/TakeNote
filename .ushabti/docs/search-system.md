@@ -4,7 +4,7 @@
 
 TakeNote has one search index:
 
-1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The sole implementation used in production for chat RAG retrieval.
+1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. Used in production for both keyword search in `NoteList` and chat RAG retrieval.
 
 It is managed through `SearchIndexService`, which is the `@Observable` service consumed by the UI.
 
@@ -29,13 +29,15 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 
 ### Methods
 
-- `canReindexAllNotes() -> Bool` — returns `true` only if: chat feature flag is enabled, not currently indexing, and at least 10 minutes have elapsed since the last full reindex.
-- `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. No-op if chat is disabled.
+- `canReindexAllNotes() -> Bool` — returns `true` only if not currently indexing and at least 10 minutes have elapsed since the last full reindex. The `chatFeatureFlagEnabled` gate has been intentionally removed (L07 deviation): the index now serves dual purpose and is maintained unconditionally.
+- `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. Runs unconditionally regardless of chat feature flag.
 - `reindexAll(_ noteData: [(UUID, String)])` — rate-limited bulk reindex. Only runs if `canReindexAllNotes()` returns `true`. Sets `isIndexing` and resets `lastReindexAllDate`.
-- `dropAll()` — clears all indexed data.
-- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. No-op if chat is disabled. Logs at debug level.
+- `dropAll()` — clears all indexed data. Runs unconditionally regardless of chat feature flag.
+- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. Runs unconditionally regardless of chat feature flag. Logs at debug level.
 
 ### When Indexing Runs
+
+All indexing paths run unconditionally — the `chatFeatureFlagEnabled` gate has been removed (intentional L07 deviation, Phase 0011). The index is maintained regardless of whether chat is enabled.
 
 - **Single note — deselect**: triggered from `NoteList.onChange(of: takeNoteVM.selectedNotes)` when a note is deselected and content has changed. This is the primary single-note reindex path.
 - **Single note — note creation (New Note button/toolbar)**: `MainWindow` toolbar Add Note button calls `search.reindex(note:)` immediately after `takeNoteVM.addNote()` returns.
@@ -46,11 +48,11 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 - **Single note — detached editor window note change**: `NoteEditorWindow.onChange(of: editorWindowVM.openNote)` reindexes the previous note when the window switches to a different note.
 - **Single note — detached editor window close**: `NoteEditorWindow.onDisappear` reindexes the current `editorWindowVM.openNote` when the editor window is closed.
 - **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync), subject to the 10-minute rate limit.
-- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true` and `canReindexAllNotes()` is satisfied (feature flag on, not currently indexing, 10-minute cooldown elapsed). Runs at app launch before any user interaction with Magic Chat. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
+- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true` and `canReindexAllNotes()` is satisfied (not currently indexing, 10-minute cooldown elapsed). Runs at app launch. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
 
 ### When Index Deletion Runs
 
-All deletion paths are gated on `chatFeatureFlagEnabled` via `SearchIndexService.deleteFromIndex(noteID:)`, which is a no-op when chat is disabled.
+All deletion paths run unconditionally — the `chatFeatureFlagEnabled` gate has been removed (intentional L07 deviation, Phase 0011).
 
 - **Move to Trash — single note**: `NoteListEntry.moveToTrash()` calls `search.deleteFromIndex(noteID: note.uuid)` immediately after `takeNoteVM.moveNoteToTrash()`. This covers swipe-to-trash, the context menu "Move to Trash" item, and the `noteDeleteRegistry` menu bar command (all routes through `moveToTrash()`).
 - **Move to Trash — multi-select**: `NoteListEntry.moveSelectedNotesToTrash()` calls `search.deleteFromIndex(noteID: sn.uuid)` for each note in the selection after its `moveNoteToTrash` call.
@@ -110,6 +112,24 @@ struct NoteChunk {
     let text: String
 }
 ```
+
+---
+
+## Usage in Keyword Search
+
+`NoteList.filteredNotes` uses the FTS5 index when `takeNoteVM.searchIsActive` is `true`:
+
+1. Calls `search.index.searchNatural(takeNoteVM.searchQuery, limit: 50)` to get up to 50 `SearchHit` values ranked by BM25 relevance.
+2. Deduplicates hits by `noteID`, preserving the first (highest-ranked) hit per note. A `Set<UUID>` tracks seen IDs; subsequent hits for the same note are discarded.
+3. Builds a `[UUID: Note]` lookup dictionary from the `@Query` result array.
+4. Maps the ordered, deduplicated UUIDs to `Note` objects via `compactMap`.
+5. Filters out notes whose `folder?.isTrash == true` or `folder?.isBuffer == true`.
+
+`NoteList.sortedNotes` short-circuits when `takeNoteVM.searchIsActive` is `true`, returning `filteredNotes` unchanged so BM25 relevance order is preserved. Date-based sort does not apply during search.
+
+The 300 ms debounce in `NoteList.onChange(of: takeNoteVM.searchQuery)` throttles index queries while the user types. Pressing Return bypasses the debounce and calls `takeNoteVM.activateSearch(query:)` immediately. Clearing the search bar calls `takeNoteVM.clearSearch()` immediately (no debounce).
+
+`takeNoteVM.activateSearch(query:)` navigates to All Notes before activating so that results from all folders are visible.
 
 ---
 

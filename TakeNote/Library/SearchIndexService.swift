@@ -29,19 +29,21 @@ class SearchIndexService {
     var lastReindexAllDate: Date = .distantPast
     var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
 
+    // Intentional L07 deviation: the FTS5 index now serves dual purpose (chat RAG and
+    // keyword search) and is unconditionally maintained regardless of chatFeatureFlagEnabled.
+    // Chat UI surfaces remain gated on chatFeatureFlagEnabled; only the indexing gate is removed.
     func canReindexAllNotes() -> Bool {
-        if chatFeatureFlagEnabled == false { return false }
         if isIndexing { return false }
         return Date().timeIntervalSince(lastReindexAllDate) >= 10 * 60
     }
-    
+
+    // Intentional L07 deviation: index is maintained unconditionally (see above).
     func reindex(note: Note) {
-        if chatFeatureFlagEnabled == false { return }
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
+    // Intentional L07 deviation: index is maintained unconditionally (see above).
     func reindexAll(_ noteData: [(UUID, String)]) {
-        if chatFeatureFlagEnabled == false { return }
         if !canReindexAllNotes() { return }
         logger.info("RAG search reindex running.")
         lastReindexAllDate = Date()
@@ -54,14 +56,14 @@ class SearchIndexService {
             #endif
         }
     }
-    
+
+    // Intentional L07 deviation: index is maintained unconditionally (see above).
     func dropAll() {
-        if chatFeatureFlagEnabled == false { return }
         Task { index.dropAll() }
     }
 
+    // Intentional L07 deviation: index is maintained unconditionally (see above).
     func deleteFromIndex(noteID: UUID) {
-        if chatFeatureFlagEnabled == false { return }
         logger.debug("Removing note \(noteID) from FTS index.")
         Task { index.delete(noteID: noteID) }
     }

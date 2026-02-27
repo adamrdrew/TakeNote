@@ -210,7 +210,8 @@ internal final class SearchIndex {
     func searchNatural(_ text: String, limit: Int = 5) -> [SearchHit] {
         
         let tokens = normalizeQuery(text)
-        
+        guard !tokens.isEmpty else { return [] }
+
         // 2) Add prefix wildcard to longer tokens (keeps small ones as-is)
         let starred = tokens.map { $0.count >= 3 ? "\($0)*" : $0 }
 

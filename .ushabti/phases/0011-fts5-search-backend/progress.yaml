@@ -1,0 +1,56 @@
+phase:
+  id: "0011"
+  slug: fts5-search-backend
+  title: Switch Search to FTS5 Backend
+  status: complete
+
+steps:
+  - id: S001
+    title: Remove chatFeatureFlagEnabled gate from SearchIndexService
+    implemented: true
+    reviewed: true
+    notes: "Removed all five chatFeatureFlagEnabled early-return guards from SearchIndexService. Added comment above each method noting the intentional L07 deviation: FTS5 index now serves dual purpose and is unconditionally maintained. Chat UI and toolbar button surfaces remain gated on chatFeatureFlagEnabled."
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+
+  - id: S002
+    title: Add search state and methods to TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added searchQuery: String = '', computed searchIsActive: Bool, activateSearch(query:) with allNotesFolder nil guard, and clearSearch() to TakeNoteVM."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S003
+    title: Rewire NoteList search binding and add debounce
+    implemented: true
+    reviewed: true
+    notes: "Removed noteSearchText local state. Added debounceTask: Task<Void, Never>? = nil. Changed .searchable binding from local noteSearchText to takeNoteVM.searchQuery. Added .onChange debounce (300ms, cancel-on-new-keystroke, immediate clear) and .onSubmit immediate activate."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S004
+    title: Replace filteredNotes in-memory filter with FTS5 search
+    implemented: true
+    reviewed: true
+    notes: "Replaced in-memory localizedStandardContains filter with FTS5 early-return branch. When searchIsActive: calls searchNatural(limit:50), deduplicates by noteID preserving BM25 order, maps to Note objects via UUID lookup dict, filters trash/buffer. Non-search branches simplified (no more in-branch search text filter)."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S005
+    title: Short-circuit sortedNotes to preserve BM25 order during search
+    implemented: true
+    reviewed: true
+    notes: "Added early return in sortedNotes: when takeNoteVM.searchIsActive is true, returns filteredNotes directly to preserve BM25 relevance order. Date-based sort only applies when search is not active."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S006
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated search-system.md: revised overview, all five method descriptions updated to remove chat flag condition, When Indexing Runs and When Index Deletion Runs sections updated to note unconditional behavior, added Usage in Keyword Search section. Updated views.md: NoteList section fully revised to document FTS5 search path, debounce, BM25 sort short-circuit. Updated view-model.md: added Search State table (searchQuery, searchIsActive) and Search Operations methods (activateSearch, clearSearch)."
+    touched:
+      - .ushabti/docs/search-system.md
+      - .ushabti/docs/views.md
+      - .ushabti/docs/view-model.md

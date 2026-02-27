@@ -39,6 +39,20 @@ class TakeNoteVM {
     // The LLM we use throughout the app
     let languageModel = SystemLanguageModel.default
 
+    // MARK: Search State
+    var searchQuery: String = ""
+    var searchIsActive: Bool { return !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    func activateSearch(query: String) {
+        guard let allNotes = allNotesFolder else { return }
+        selectedContainer = allNotes
+        searchQuery = query
+    }
+
+    func clearSearch() {
+        searchQuery = ""
+    }
+
     var emptyTrashAlertIsPresented: Bool = false
     var linkToNoteErrorIsPresented: Bool = false
     var linkToNoteErrorMessage: String = ""

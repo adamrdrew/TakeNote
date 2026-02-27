@@ -54,6 +54,13 @@ enum SortOrder: Int {
 | `starredFolder` | `NoteContainer?` | Reference to the Starred system folder. |
 | `allNotesFolder` | `NoteContainer?` | Reference to the All Notes system container. |
 
+### Search State
+
+| Property | Type | Description |
+|---|---|---|
+| `searchQuery` | `String` | The current search query string. Bound to the `.searchable` modifier in `NoteList`. Empty string means no active search. |
+| `searchIsActive` | `Bool` (computed) | `true` when `searchQuery` is non-empty. Drives FTS5 search path in `NoteList.filteredNotes` and BM25 short-circuit in `NoteList.sortedNotes`. |
+
 ### UI State
 
 | Property | Type | Description |
@@ -133,6 +140,11 @@ enum SortOrder: Int {
 ### Buffer Operations
 
 - `moveNotesFromBufferToInbox(_ modelContext: ModelContext)` — drains Buffer folder into Inbox. Called on app launch if Buffer is non-empty (handles crash recovery after a cut operation).
+
+### Search Operations
+
+- `activateSearch(query: String)` — guards `allNotesFolder` (no-op if nil), sets `selectedContainer = allNotesFolder`, sets `searchQuery = query`. Called by `NoteList` after debounce or on Return.
+- `clearSearch()` — sets `searchQuery = ""`. Called by `NoteList` when the search bar is cleared. Does not change `selectedContainer`.
 
 ### Alert Control
 

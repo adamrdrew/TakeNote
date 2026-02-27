@@ -61,7 +61,7 @@ struct NoteList: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
-    @State var noteSearchText: String = ""
+    @State var debounceTask: Task<Void, Never>? = nil
     @Query() var notes: [Note]
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
@@ -71,31 +71,35 @@ struct NoteList: View {
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
     var filteredNotes: [Note] {
-        if takeNoteVM.selectedContainer?.isAllNotes == true {
-            let allNotesSource = notes.filter {
+        if takeNoteVM.searchIsActive {
+            // FTS5 search path: deduplicate by noteID preserving BM25 order,
+            // map to Note objects, filter out Trash and Buffer.
+            let hits = search.index.searchNatural(takeNoteVM.searchQuery, limit: 50)
+            var seenIDs = Set<UUID>()
+            let dedupedIDs: [UUID] = hits.compactMap { hit in
+                guard !seenIDs.contains(hit.noteID) else { return nil }
+                seenIDs.insert(hit.noteID)
+                return hit.noteID
+            }
+            let noteLookup: [UUID: Note] = Dictionary(
+                uniqueKeysWithValues: notes.map { ($0.uuid, $0) }
+            )
+            return dedupedIDs.compactMap { noteLookup[$0] }.filter {
                 $0.folder?.isTrash != true && $0.folder?.isBuffer != true
             }
-            if noteSearchText.isEmpty {
-                return allNotesSource
-            } else {
-                return allNotesSource.filter {
-                    $0.title.localizedStandardContains(noteSearchText)
-                        || $0.content.localizedStandardContains(noteSearchText)
-                }
+        }
+        if takeNoteVM.selectedContainer?.isAllNotes == true {
+            return notes.filter {
+                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
             }
         }
-        if noteSearchText.isEmpty {
-            return takeNoteVM.selectedContainer?.notes ?? []
-        } else {
-            return takeNoteVM.selectedContainer?.notes.filter {
-                $0.title.localizedStandardContains(noteSearchText)
-                    || $0.content.localizedStandardContains(noteSearchText)
-            } ?? []
-        }
+        return takeNoteVM.selectedContainer?.notes ?? []
     }
 
     var sortedNotes: [Note] {
-        filteredNotes.sorted { lhs, rhs in
+        // Preserve BM25 relevance order from FTS5 during search; do not re-sort.
+        if takeNoteVM.searchIsActive { return filteredNotes }
+        return filteredNotes.sorted { lhs, rhs in
             switch takeNoteVM.sortBy {
             case .created:
                 if takeNoteVM.sortOrder == .newestFirst {
@@ -257,10 +261,26 @@ struct NoteList: View {
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
             )
-            .searchable(text: $noteSearchText)
+            .searchable(text: $takeNoteVM.searchQuery)
             #if os(iOS)
             .searchToolbarBehavior(.minimize)
             #endif
+            .onChange(of: takeNoteVM.searchQuery) { _, newValue in
+                debounceTask?.cancel()
+                if newValue.isEmpty {
+                    takeNoteVM.clearSearch()
+                } else {
+                    debounceTask = Task {
+                        try? await Task.sleep(for: .milliseconds(300))
+                        guard !Task.isCancelled else { return }
+                        takeNoteVM.activateSearch(query: newValue)
+                    }
+                }
+            }
+            .onSubmit(of: .search) {
+                debounceTask?.cancel()
+                takeNoteVM.activateSearch(query: takeNoteVM.searchQuery)
+            }
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {
