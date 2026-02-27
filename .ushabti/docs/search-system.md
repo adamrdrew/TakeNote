@@ -50,8 +50,8 @@ SQLite FTS5 full-text index. Uses the `SQLite.swift` SPM package.
 
 ### Storage
 
-- **Debug:** in-memory SQLite connection.
-- **Release:** `~/Library/Application Support/TakeNote/search.sqlite`.
+- **Debug:** in-memory SQLite connection (intentional — prevents stale on-disk search data in development).
+- **Release:** on-disk at the `applicationSupportDirectory` path. On macOS this resolves to `~/Library/Application Support/TakeNote/search.sqlite`. On iOS the path is the app's sandboxed Application Support directory.
 
 ### Schema
 
@@ -74,9 +74,9 @@ struct SearchHit: Identifiable {
 - `reindex(noteID: UUID, markdown: String)` — deletes all existing chunks for this note, then inserts new chunks from `WindowChunker`. Wrapped in a transaction.
 - `reindex(_ notes: [(UUID, String)])` — bulk version, single transaction.
 - `delete(noteID: UUID)` — removes all chunks for one note.
-- `dropAll()` — clears all rows; runs FTS5 `optimize`, WAL checkpoint, and `VACUUM`.
+- `dropAll()` — clears all rows; runs FTS5 `optimize`, WAL checkpoint, and `VACUUM`. Has a fallback path: if the initial clear fails (e.g., table doesn't exist or is corrupted), it drops and recreates the entire FTS table, then checkpoints and vacuums.
 - `search(_ query: String, limit: Int = 5) -> [SearchHit]` — raw FTS5 MATCH query ordered by BM25 relevance.
-- `searchNatural(_ text: String, limit: Int = 5) -> [SearchHit]` — NLP-normalized search. Lemmatizes tokens via `NLTagger`, strips stop words, adds prefix wildcards (`*`) to tokens of 3+ characters, joins with `AND`.
+- `searchNatural(_ text: String, limit: Int = 5) -> [SearchHit]` — NLP-normalized search. Lemmatizes tokens via `NLTagger`, strips stop words, adds prefix wildcards (`*`) to tokens of 3+ characters, joins with `AND`. **Note:** A source comment on line 216 of `SearchIndex.swift` says "join with OR so any token can match" but the actual code on line 218 uses `" AND "` as the separator. The code is correct (AND gives more relevant results with BM25 ranking); the comment is stale/misleading.
 - `normalizeQuery(_ text: String, locale: Locale) -> [String]` — returns lemmatized, stop-word-filtered tokens.
 
 ### Chunking

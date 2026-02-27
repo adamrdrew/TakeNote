@@ -45,9 +45,9 @@ struct MovePopoverContent: View {
         .onChange(of: selectedContainer) { _, newValue in
             guard let container = newValue else { return }
             if container.isTag {
-                note.tag = container
+                note.setTag(container)
             } else {
-                note.folder = container
+                note.setFolder(container)
             }
             takeNoteVM.selectedContainer = container
             onSelect()

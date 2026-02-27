@@ -5,5 +5,8 @@
       "Bash(git add:*)",
       "Bash(git commit:*)"
     ]
+  },
+  "enabledPlugins": {
+    "ushabti@adamdrew": true
   }
 }

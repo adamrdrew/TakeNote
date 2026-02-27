@@ -1,0 +1,65 @@
+phase:
+  id: "0001"
+  slug: hygiene-fixes
+  title: Hygiene Fixes
+  status: complete
+
+steps:
+  - id: S001
+    title: Fix SearchIndexService logger subsystem typo
+    implemented: true
+    reviewed: true
+    notes: "Changed 'com.adammdrew.takenote' to 'com.adamdrew.takenote' (removed double m) on line 30 of SearchIndexService.swift"
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+  - id: S002
+    title: Migrate MagicFormatter to @Observable
+    implemented: true
+    reviewed: true
+    notes: Removed ObservableObject conformance and @Published annotations from MagicFormatter; added @Observable macro. Changed @StateObject to @State in NoteEditor; added @Bindable var formatter = magicFormatter in view body to support .formatterIsBusy binding for the sheet.
+    touched:
+      - TakeNote/Library/MagicFormatter.swift
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S003
+    title: Replace print() in CommandRegistry
+    implemented: true
+    reviewed: true
+    notes: Added file-scoped os.Logger and replaced print() with logger.debug() in CommandRegistry.runCommand
+    touched:
+      - TakeNote/Library/CommandRegistry.swift
+  - id: S004
+    title: Replace print() in SystemFolderReconciler
+    implemented: true
+    reviewed: true
+    notes: "Added import os, added logger property to SystemFolderReconciler, replaced print() with logger.info() in reconcile()"
+    touched:
+      - TakeNote/Library/SystemFolderReconciler.swift
+  - id: S005
+    title: Replace print() in NoteLinkManager
+    implemented: true
+    reviewed: true
+    notes: "Added import os, added logger property to NoteLinkManager, replaced print('Created a link') with logger.debug() including source and destination UUIDs"
+    touched:
+      - TakeNote/Library/NoteLinkManager.swift
+  - id: S006
+    title: Replace print() in TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added import os, added logger property to TakeNoteVM class, replaced print() with logger.warning() in addNote()"
+    touched:
+      - TakeNote/TakeNoteVM.swift
+  - id: S007
+    title: Replace print() in EditCommands
+    implemented: true
+    reviewed: true
+    notes: "Added import os, added file-scoped private editCommandsLogger constant, replaced print() with editCommandsLogger.debug() in the Copy Markdown Link button action"
+    touched:
+      - TakeNote/Views/Commands/EditCommands.swift
+  - id: S008
+    title: Update docs to reflect hygiene fixes
+    implemented: true
+    reviewed: true
+    notes: "Updated ai-features.md: removed ObservableObject/R002 tech-debt note, updated MagicFormatter section to reflect @Observable pattern and plain var properties. Updated views.md: added note about @State and @Bindable usage for magicFormatter in NoteEditor."
+    touched:
+      - .ushabti/docs/ai-features.md
+      - .ushabti/docs/views.md

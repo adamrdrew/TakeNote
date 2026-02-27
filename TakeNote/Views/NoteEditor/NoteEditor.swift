@@ -88,7 +88,7 @@ struct NoteEditor: View {
     @State private var isAssistantPopoverPresented: Bool = false
     @State private var openNoteHasBacklinks: Bool = false
 
-    @StateObject private var magicFormatter = MagicFormatter()
+    @State private var magicFormatter = MagicFormatter()
 
     @FocusState var isInputActive: Bool
     @Binding var openNote: Note?
@@ -157,7 +157,7 @@ struct NoteEditor: View {
                     "Mismatch between MagicFormat input and current note content."
                 return
             }
-            openNote!.content = result.formattedText
+            openNote!.setContent(result.formattedText)
             return
         }
 
@@ -221,6 +221,7 @@ struct NoteEditor: View {
 
     var body: some View {
         if let note = openNote {
+            @Bindable var formatter = magicFormatter
             ZStack {
                 if !showPreview {
                     GeometryReader { geometry in
@@ -229,6 +230,9 @@ struct NoteEditor: View {
                             text: Binding(
                                 get: { note.content },
                                 set: {
+                                    // Direct assignment intentional: setContent() triggers WidgetCenter.reloadAllTimelines()
+                                    // on every call, which would be excessive per-keystroke. Widget reload and summary
+                                    // generation happen on note deselection in NoteList.onChange instead.
                                     openNote?.content = $0
                                     openNote?.updatedDate = Date()
                                 }
@@ -304,7 +308,7 @@ struct NoteEditor: View {
             .onAppear {
                 setShowBacklinks()
             }
-            .sheet(isPresented: $magicFormatter.formatterIsBusy) {
+            .sheet(isPresented: $formatter.formatterIsBusy) {
                 VStack {
                     AIMessage(message: "Magic Format", font: .headline)
                         .padding()

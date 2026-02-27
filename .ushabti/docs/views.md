@@ -83,7 +83,7 @@ Middle column. Renders notes for the selected container.
 - Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
 - Groups starred notes in a separate section above non-starred notes.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
-- On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder), and `.pasteDestination` (moves/copies from Buffer or pastes copy).
+- On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
 - Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
 - On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, and `NoteLinkManager.generateLinksFor()`.
 
@@ -96,7 +96,7 @@ Middle column. Renders notes for the selected container.
 Individual note row. Displays TitleRow (title + star button), MetadataRow (created date + folder/tag badge), and SummaryRow (AI summary or raw content preview).
 
 - Registers five commands in CommandRegistry on `.onAppear`, unregisters on `.onDisappear`.
-- Supports swipe actions (trailing: trash + star; leading on iOS: move).
+- Supports swipe actions (trailing: trash + star; leading on iOS: move via `MovePopoverContent`, which uses `note.setTag(container)` / `note.setFolder(container)` to correctly update `updatedDate` and trigger widget reload).
 - Supports draggable `NoteIDWrapper` for drag/drop.
 - Double-tap opens a detached `NoteEditorWindow`.
 - Context menu: Move to Trash, Rename, Go to Note Folder, Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
@@ -106,7 +106,13 @@ Individual note row. Displays TitleRow (title + star button), MetadataRow (creat
 
 **File:** `TakeNote/Views/NoteList/NoteListHeader.swift`
 
-Displayed as `safeAreaInset` at the top of the NoteList. Shows the selected container's name, icon, and color. Content unknown beyond filename — not read in detail during survey.
+Displayed as `safeAreaInset` at the top of the NoteList. Shows the selected container's name, icon, color, and note count.
+
+- Reads `TakeNoteVM` from the environment.
+- Displays the container's SF symbol (with special cases: `"trash"` for Trash, `"tag.fill"` for tags, otherwise the container's `symbol` field) and color via `getColor()`.
+- Shows a note count label ("No notes", "1 note", "N notes").
+- Supports inline rename: single-tap or context menu "Rename" enters edit mode (only if `takeNoteVM.canRenameSelectedContainer` is true). On submit, sets `container.name` directly.
+- Uses `UpperCamelCase` computed sub-view properties: `ContainerNameEditor`, `NoteCountLabel`, `ContainerNameLabel`, `RenameButton`, `Header`.
 
 ---
 
@@ -127,6 +133,12 @@ Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit
 - Shows a modal sheet with a cancel button while Magic Format is running.
 - On note change: resets to preview mode, re-checks backlink status.
 
+**MagicFormatter usage:** `NoteEditor` holds `@State private var magicFormatter = MagicFormatter()`. Because `MagicFormatter` is `@Observable`, a `@Bindable var formatter = magicFormatter` is created inside the view body to produce the `$formatter.formatterIsBusy` binding used for the progress sheet.
+
+**Content mutation patterns:**
+- `doMagicFormat()` calls `openNote!.setContent(result.formattedText)` after Magic Format completes. This correctly updates `updatedDate` and triggers `WidgetCenter.shared.reloadAllTimelines()` as a deliberate one-shot mutation.
+- `CodeEditor` binding `set:` sets `openNote?.content = $0` and `openNote?.updatedDate = Date()` directly on every keystroke. Direct assignment is intentional here: calling `setContent()` on every keystroke would invoke `WidgetCenter.shared.reloadAllTimelines()` on every keystroke, which is excessive. The `updatedDate` is maintained correctly via the direct assignment. Widget reload and summary generation fire on note deselection via the `NoteList.onChange(of: takeNoteVM.selectedNotes)` path, which calls `note.setTitle()` (triggering `reloadAllTimelines()`) when content has changed.
+
 **FocusedValues exposed:** `\.togglePreview`, `\.doMagicFormat`, `\.textIsSelected`, `\.showAssistantPopover`, `\.openNoteHasBacklinks`, `\.showBacklinks`
 
 ### BackLinks
@@ -139,7 +151,9 @@ Popover displaying notes that link to the current note. Shown via the link icon 
 
 **File:** `TakeNote/Views/NoteEditor/NoteEditorWindow.swift`
 
-A detached window containing a single `NoteEditor`. Opened via double-click on a `NoteListEntry` or the "Open Editor Window" context menu/command. Uses its own `TakeNoteVM` instance (not shared with the main window). The window title is formatted as `"TakeNote / <FolderName> / <NoteTitle>"`.
+A detached window containing a single `NoteEditor`. Opened via double-click on a `NoteListEntry` or the "Open Editor Window" context menu/command. Uses its own `TakeNoteVM` instance (not shared with the main window) — this is intentional isolation documented as an L09 exception. The window title is formatted as `"TakeNote / <FolderName> / <NoteTitle>"`.
+
+**Note:** The `chat-window` `WindowGroup` in `TakeNoteApp` also creates a fresh `TakeNoteVM()` for the same isolation reason. State changes in the chat window's VM (e.g., selection) do not affect the main window. An agent adding state to `TakeNoteVM` should be aware that three independent instances may exist simultaneously: main window, editor window, and chat window.
 
 ---
 
@@ -148,7 +162,7 @@ A detached window containing a single `NoteEditor`. Opened via double-click on a
 **File:** `TakeNote/Views/ChatWindow/ChatWindow.swift`
 
 AI chat interface. Flexible enough to serve two purposes:
-1. **Standalone chat window** — full note RAG chat opened from the toolbar (macOS) or toolbar popover (iOS). Gated by `chatFeatureFlagEnabled`.
+1. **Standalone chat window** — full note RAG chat opened from the toolbar (macOS) or toolbar popover (iOS). The toolbar button requires **three conditions**: `chatFeatureFlagEnabled` (Info.plist flag) **AND** `takeNoteVM.aiIsAvailable` (Apple Intelligence available) **AND** `notes.count > 0` (at least one note exists). These are combined as `chatFeatureFlagEnabled && chatEnabled` in `MainWindow`, where `chatEnabled` is a computed property checking the latter two conditions.
 2. **Magic Assistant inline** — rendered as a popover in `NoteEditor` with a `context` string (selected text), custom `instructions` (Magic Assistant prompt), and an `onBotMessageClick` callback that replaces the selected text.
 
 ### Parameters
@@ -196,9 +210,13 @@ Adds items after `.newItem`: New Note (`⌘N`), New Folder (`⌘F`), New Tag (`�
 
 Adds items after `.pasteboard`: Rename (`⌘R`), Copy Markdown Link (`⌘⌥C`), Delete (`⌘Delete`), Set Color (`⌘⌥c`), MagicFormat (`⌘⌥f`), Magic Assistant (`⌘⌥a`), Toggle Star (`⌘S`). Uses `CommandRegistry` instances from `FocusedValues` to dispatch to the correct list item. Disable logic derived from selection and focus state.
 
-### ViewCommands / WindowCommands
+### ViewCommands
 
-Contents not read in detail during survey. Likely standard view/window menu additions.
+Adds items after `.sidebar`: Toggle Preview (`⌘P`), Backlinks (`⌘⌥B`). Reads `togglePreview`, `showBacklinks`, and `openNoteHasBacklinks` from `FocusedValues`. Backlinks command is disabled when no note has backlinks.
+
+### WindowCommands
+
+Adds items after `.windowArrangement`: Open Chat (`⌘⇧C`, gated on `chatFeatureFlagEnabled` and `chatEnabled`), Open Editor Window (`⌘⇧E`, requires exactly one note selected). Reads `chatEnabled`, `openChatWindow`, `noteOpenEditorWindowRegistry`, and `selectedNotes` from `FocusedValues`.
 
 ---
 

@@ -18,7 +18,8 @@ Represents a single note.
 
 | Field | Type | Description |
 |---|---|---|
-| `title` | `String` | Display title. Defaults to `"New Note"`. Auto-set from first line of content via `setTitle()`. |
+| `defaultTitle` | `String` | Persisted field, defaults to `"New Note"`. Used as a sentinel by the no-arg `setTitle()` to detect whether the title is still the auto-derived default. **This is a persisted field** — schema changes to it require a `ckBootstrapVersionCurrent` bump. |
+| `title` | `String` | Display title. Property default is `""` (empty string). The `init(folder:)` initializer sets `self.title = self.defaultTitle`, so newly created notes start with `"New Note"`. Auto-derived from first line of content via the no-arg `setTitle()`. |
 | `content` | `String` | Raw Markdown text. |
 | `createdDate` | `Date` | Creation timestamp. |
 | `updatedDate` | `Date` | Last-modified timestamp. Updated by all mutating methods. |
@@ -26,7 +27,7 @@ Represents a single note.
 | `aiSummary` | `String` | AI-generated one-sentence summary. Stored in the database. |
 | `contentHash` | `String` | MD5 hex hash of `content`. Used to avoid regenerating AI summaries when content hasn't changed. |
 | `aiSummaryIsGenerating` | `Bool` | `@Transient` (not persisted). In-memory flag while generation is running. |
-| `uuid` | `UUID` | Stable identifier used for deep links and the FTS/vector search index. Private setter; SwiftData can still set it. |
+| `uuid` | `UUID` | Stable identifier used for deep links and the FTS/vector search index. Private setter (`private(set)`); SwiftData can still set it via internal hydration. |
 
 ### Relationships
 
@@ -35,16 +36,20 @@ Represents a single note.
 | `folder` | `NoteContainer?` | The folder this note lives in. Delete rule: `.noAction` (notes are moved to Trash, not deleted). |
 | `tag` | `NoteContainer?` | Optional tag assigned to this note. Delete rule: `.nullify`. |
 | `starredFolder` | `NoteContainer?` | Reference to the Starred container when `starred == true`. Delete rule: `.nullify`. |
-| `outgoingLinks` | `[NoteLink]?` | Links where this note is the source. |
-| `incomingLinks` | `[NoteLink]?` | Links where this note is the destination. |
+| `outgoingLinks` | `[NoteLink]?` | Links where this note is the source. Declared with `@Relationship` but no explicit `deleteRule` (SwiftData default applies). Inverses are specified on `NoteLink` side to avoid macro circularity. |
+| `incomingLinks` | `[NoteLink]?` | Links where this note is the destination. Same relationship pattern as `outgoingLinks`. |
+
+### Computed Properties
+
+- `isEmpty: Bool` — returns `content.isEmpty`. Used by `canGenerateAISummary()` to skip summary generation on empty notes.
 
 ### Key Methods
 
 - `setTitle(_ newTitle: String)` — sets title and updates `updatedDate`; triggers widget reload.
 - `setContent(_ newContent: String)` — sets content and updates `updatedDate`; triggers widget reload.
-- `setFolder(_ folder: NoteContainer)` — moves note to a folder.
-- `setTag(_ tag: NoteContainer)` — assigns a tag.
-- `setTitle()` (no-arg) — derives title from first line of content if title is still the default.
+- `setFolder(_ folder: NoteContainer)` — moves note to a folder; updates `updatedDate`; triggers widget reload.
+- `setTag(_ tag: NoteContainer)` — assigns a tag; updates `updatedDate`; triggers widget reload.
+- `setTitle()` (no-arg) — derives title from first line of content if `title` still equals `defaultTitle`. Strips Markdown formatting via `AttributedString`. Calls `setTitle(_:)` internally (so it triggers the widget reload and updatedDate update).
 - `getURL() -> String` — returns `"takenote://note/<UUID>"` deep link string.
 - `getMarkdownLink() -> String` — returns `"[title](takenote://note/<UUID>)"`.
 - `generateContentHash() -> String` — MD5 hex of content.

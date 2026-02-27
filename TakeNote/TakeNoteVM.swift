@@ -6,6 +6,7 @@
 //
 
 import FoundationModels
+import os
 import SwiftData
 import SwiftUI
 
@@ -25,6 +26,8 @@ class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     static let chatWindowID = "chat-window"
+
+    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "TakeNoteVM")
 
     // The note currently open in the editor
     var openNote: Note?
@@ -154,7 +157,7 @@ class TakeNoteVM {
 
     func addNote(_ modelContext: ModelContext) -> Note? {
         guard let folder = selectedContainer else {
-            print("Adding note failed, no folder selected")
+            logger.warning("addNote called with no selected container")
             return nil
         }
         let note = Note(folder: folder)

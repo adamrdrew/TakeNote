@@ -19,7 +19,8 @@ struct MagicFormatterResult {
 }
 
 @MainActor
-class MagicFormatter: ObservableObject {
+@Observable
+class MagicFormatter {
 
     var session: LanguageModelSession
     let languageModel = SystemLanguageModel.default
@@ -29,11 +30,11 @@ class MagicFormatter: ObservableObject {
         return languageModel.isAvailable
     }
 
-    
+
     var defaultPrompt: String = "Document to format in markdown:\n\n"
 
-    @Published var formatterIsBusy: Bool = false
-    @Published var sessionCancelled: Bool = false
+    var formatterIsBusy: Bool = false
+    var sessionCancelled: Bool = false
 
     init() {
         self.session = LanguageModelSession(instructions: MAGIC_FORMAT_PROMPT)

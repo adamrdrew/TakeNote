@@ -14,26 +14,36 @@ A namespace struct containing all app initialization logic, keeping `TakeNoteApp
 
 ### makeModelConfiguration(debugStoreURL:)
 
-Returns a `ModelConfiguration`. In DEBUG builds, uses a file at `~/Library/Application Support/TakeNoteDev/TakeNote.sqlite`. In release, uses the default CloudKit-backed configuration.
+Returns a `ModelConfiguration`. The `debugStoreURL` parameter is `@autoclosure`, evaluated only in DEBUG builds.
+
+- **DEBUG:** `ModelConfiguration(url: debugStoreURL())` — uses the URL provided by the caller. In `TakeNoteApp`, this is `TakeNoteApp.debugStoreURL()`, which computes `~/Library/Application Support/TakeNoteDev/TakeNote.sqlite` (creating the directory if needed).
+- **Release:** `ModelConfiguration()` — the default CloudKit-backed configuration.
 
 ### bootstrapDevSchemaIfNeeded(...) [DEBUG only]
 
-Pushes the current SwiftData schema to the CloudKit development environment using a temporary `NSPersistentCloudKitContainer`. Only runs once per `ckBootstrapVersionCurrent` (version stored in `UserDefaults`). Swallows network-related `CKError`s (unavailable, not authenticated, etc.) silently.
+Pushes the current SwiftData schema to the CloudKit **development** environment using a temporary `NSPersistentCloudKitContainer`. Only runs once per `ckBootstrapVersionCurrent` (version stored in `UserDefaults`). See `architecture.md` "CloudKit Schema Management" for the full workflow explanation.
+
+The bootstrap function creates a temporary SQLite file (not the app's main store) to avoid interfering with the real SwiftData container. In `TakeNoteApp.init()`, this is a random-UUID file in the system temp directory: `FileManager.default.temporaryDirectory/CKBootstrap-<UUID>.sqlite`. The `storeURL` parameter receives this temp URL from the caller.
+
+**Error handling:** Expected network errors (`CKError.networkUnavailable`, `.networkFailure`, `.serviceUnavailable`, `.notAuthenticated`, `.requestRateLimited`, `.internalError`) and Cocoa-domain errors are logged at `.info` level ("skipped due to expected condition") and swallowed. Unexpected errors are logged at `.warning` level. Neither causes a crash.
 
 **Parameters:**
 - `modelTypes: [any PersistentModel.Type]` — the model classes to include in the schema
-- `storeURL: URL` — temporary SQLite URL for the bootstrap container
+- `storeURL: URL` — temporary SQLite URL for the bootstrap container (must NOT be the app's real store)
 - `containerID: String` — CloudKit container ID (`"iCloud.com.adamdrew.takenote"`)
 - `userDefaultsKey: String` — key to track schema version
 - `currentVersion: Int` — current schema version number
+- `logger: Logger` — logger for debug/info/warning output
 
 ### installReconciler(container:vm:runOnStartup:listenForLocalSaves:searchIndexService:)
 
 Wires up the `SystemFolderReconciler` with notification observers. Returns a `ReconcilerHarness` (reconciler + observer tokens) that must be retained to keep observations alive.
 
 - Listens for `NSPersistentStoreRemoteChange` — runs reconciler + bulk search reindex on CloudKit sync.
-- Optionally listens for `NSManagedObjectContextDidSave` (not enabled by default).
-- Runs reconciler once on startup if `runOnStartup` is true.
+- Optionally listens for `NSManagedObjectContextDidSave` — the parameter default is `false`, but **in `TakeNoteApp.init()` it is called with `listenForLocalSaves: true`**. This means the reconciler runs on both remote changes AND every local save in production.
+- Runs reconciler once on startup if `runOnStartup` is true (also `true` in the actual call).
+
+The returned `ReconcilerHarness` holds the reconciler instance and notification observer tokens. It is stored in `TakeNoteApp.reconcilerHarness` (a `private var`). The tokens must be retained for the lifetime of the app to keep notifications active.
 
 ---
 
@@ -121,6 +131,12 @@ Reads and decodes the snapshot file. Used by widget extensions via `ContainerPro
 
 Manages the `NoteLink` graph that tracks which notes link to which other notes via `takenote://note/<UUID>` URLs.
 
+**Instantiation pattern:** Unlike `TakeNoteVM` and `SearchIndexService`, `NoteLinkManager` is **not** injected into the SwiftUI environment as a long-lived service. Instead, it is instantiated inline where needed:
+- `NoteList.onChange(of: takeNoteVM.selectedNotes)` creates `NoteLinkManager(modelContext:)` on every note deselection to regenerate links.
+- `NoteEditor.setShowBacklinks()` creates a fresh `NoteLinkManager(modelContext:)` to check if backlinks exist.
+
+An agent extending the note link system should follow this inline instantiation pattern, not inject it as an environment object.
+
 ### generateLinksFor(_ note: Note)
 
 Called when a note's content changes (on deselection in `NoteList`). Process:
@@ -207,7 +223,7 @@ Parameters:
 - `content: String` — note body
 - `noteTitle: String` — note title
 
-Creates a note in Inbox, sets content and title, selects it in the UI.
+Creates a note in Inbox, sets content and title via `note.setContent(content)` and `note.setTitle(noteTitle)` (the model's mutating methods, which update `updatedDate` and trigger `WidgetCenter.shared.reloadAllTimelines()`), then selects it in the UI.
 
 ### Dependency Access
 
