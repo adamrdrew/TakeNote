@@ -82,6 +82,14 @@ extension EnvironmentValues {
     }
 }
 
+private func systemFolderSortOrder(_ folder: NoteContainer) -> Int {
+    if folder.isInbox { return 0 }
+    if folder.isStarred { return 1 }
+    if folder.isAllNotes { return 2 }
+    if folder.isTrash { return 3 }
+    return 4
+}
+
 struct Sidebar: View {
     @Environment(SearchIndexService.self) var search
     @Environment(TakeNoteVM.self) var takeNoteVM
@@ -123,7 +131,7 @@ struct Sidebar: View {
         List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 content: {
-                    ForEach(systemFolders.sorted(by: { $0.name < $1.name}), id: \.self) { folder in
+                    ForEach(systemFolders.sorted(by: { systemFolderSortOrder($0) < systemFolderSortOrder($1) }), id: \.self) { folder in
                         FolderListEntry(
                             folder: folder
                         )

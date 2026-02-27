@@ -5,10 +5,12 @@
 //  Created by Adam Drew on 9/7/25.
 //
 
+import SwiftData
 import SwiftUI
 
 struct NoteListHeader: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
+    @Query() var allNotes: [Note]
 
     @State var inEditMode: Bool = false
     @State var newName: String = ""
@@ -32,13 +34,21 @@ struct NoteListHeader: View {
         guard let container = takeNoteVM.selectedContainer else {
             return noNotes
         }
-        if container.notes.isEmpty {
+        let count: Int
+        if container.isAllNotes {
+            count = allNotes.filter {
+                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
+            }.count
+        } else {
+            count = container.notes.count
+        }
+        if count == 0 {
             return noNotes
         }
-        if container.notes.count == 1 {
-            return "\(String(describing: container.notes.count)) note"
+        if count == 1 {
+            return "\(count) note"
         }
-        return "\(String(describing: container.notes.count)) notes"
+        return "\(count) notes"
     }
 
     var ContainerNameEditor: some View {

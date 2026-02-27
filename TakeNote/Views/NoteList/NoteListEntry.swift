@@ -229,6 +229,7 @@ struct NoteListEntry: View {
             Group {
                 if takeNoteVM.selectedContainer?.isTag == true
                     || takeNoteVM.selectedContainer?.isStarred == true
+                    || takeNoteVM.selectedContainer?.isAllNotes == true
                 {
                     HStack(spacing: 3) {
                         Text(note.folder?.name ?? "Folder")
@@ -408,6 +409,7 @@ struct NoteListEntry: View {
 
             if takeNoteVM.selectedContainer?.isTag == true
                 || takeNoteVM.selectedContainer?.isStarred == true
+                || takeNoteVM.selectedContainer?.isAllNotes == true
             {
                 Button(action: {
                     if let f = note.folder { takeNoteVM.selectedContainer = f }

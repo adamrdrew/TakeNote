@@ -35,8 +35,9 @@ The root view of the main window scene.
 Left-most column. Contains the full navigation hierarchy.
 
 - Renders three `List` sections: system folders, user folders, tags.
-- System folders query: `isTrash || isInbox || isStarred`.
-- User folders query: `!isTag && !isTrash && !isInbox && !isBuffer`.
+- System folders query: `isTrash || isInbox || isStarred || isAllNotes`.
+- System folders are sorted by a private file-scope helper `systemFolderSortOrder(_ folder: NoteContainer) -> Int` that maps Inbox→0, Starred→1, AllNotes→2, Trash→3, unknown→4. This replaces the previous alphabetical sort and ensures deterministic order regardless of folder names.
+- User folders query: `!isTag && !isTrash && !isInbox && !isBuffer && !isAllNotes`.
 - Tags query: `isTag == true`.
 - Accepts folder drag/drop via `folderImport()`.
 - Manages three `CommandRegistry` instances for delete, rename, and set-color operations, injecting them into the environment and FocusedValues.
@@ -99,7 +100,8 @@ Individual note row. Displays TitleRow (title + star button), MetadataRow (creat
 - Supports swipe actions (trailing: trash + star; leading on iOS: move via `MovePopoverContent`, which uses `note.setTag(container)` / `note.setFolder(container)` to correctly update `updatedDate` and trigger widget reload).
 - Supports draggable `NoteIDWrapper` for drag/drop.
 - Double-tap opens a detached `NoteEditorWindow`.
-- Context menu: Move to Trash, Rename, Go to Note Folder, Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
+- `MetadataRow` shows the source folder name and icon badge when `selectedContainer` is a tag, Starred, or All Notes (`isTag == true || isStarred == true || isAllNotes == true`). When viewing a user folder, the tag badge is shown instead (if the note has a tag).
+- Context menu: Move to Trash, Rename, Go to Note Folder (shown when `isTag || isStarred || isAllNotes`), Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
 - File export via `.fileExporter` saves note as a `.md` file.
 
 ### NoteListHeader
@@ -109,8 +111,9 @@ Individual note row. Displays TitleRow (title + star button), MetadataRow (creat
 Displayed as `safeAreaInset` at the top of the NoteList. Shows the selected container's name, icon, color, and note count.
 
 - Reads `TakeNoteVM` from the environment.
+- Holds `@Query() var allNotes: [Note]` to support accurate note counting when All Notes is selected.
 - Displays the container's SF symbol (with special cases: `"trash"` for Trash, `"tag.fill"` for tags, otherwise the container's `symbol` field) and color via `getColor()`.
-- Shows a note count label ("No notes", "1 note", "N notes").
+- Shows a note count label ("No notes", "1 note", "N notes"). When the selected container `isAllNotes`, the count is computed from `allNotes` filtered to exclude Trash and Buffer notes (matching `NoteList.filteredNotes`). For all other containers, the count is `container.notes.count`.
 - Supports inline rename: single-tap or context menu "Rename" enters edit mode (only if `takeNoteVM.canRenameSelectedContainer` is true). On submit, sets `container.name` directly.
 - Uses `UpperCamelCase` computed sub-view properties: `ContainerNameEditor`, `NoteCountLabel`, `ContainerNameLabel`, `RenameButton`, `Header`.
 
