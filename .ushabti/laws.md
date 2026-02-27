@@ -177,3 +177,13 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 - **Rationale:** This law makes docs reconciliation a first-class completion criterion, ensuring it cannot be deferred or skipped.
 - **Enforcement:** Overseer treats any unreconciled doc as a blocking defect equivalent to a failing test. The Phase remains open until docs are updated.
 - **Exceptions:** None.
+
+---
+
+### L20 — Overseer Must Bump Build Number Before Approving Phase Completion
+
+- **Rule:** Overseer MUST increment `CURRENT_PROJECT_VERSION` (the build number integer) in `TakeNote.xcodeproj/project.pbxproj` before marking any Phase GREEN/complete. All four occurrences of `CURRENT_PROJECT_VERSION` in the project file (Debug and Release configurations for the TakeNote and NewNoteControl targets) MUST be updated to the same new value. `MARKETING_VERSION` MUST NOT be changed unless the user explicitly requests it.
+- **Rationale:** Every completed Phase must produce a uniquely identifiable, publishable build. Automating this increment as a Phase-gate obligation ensures the build number never falls behind and removes it as a manual concern for the developer.
+- **Enforcement:** Overseer searches `TakeNote.xcodeproj/project.pbxproj` for all occurrences of `CURRENT_PROJECT_VERSION` and confirms each is set to a value one greater than the value present at the start of the Phase. A Phase with an unchanged build number MUST NOT be marked complete. `MARKETING_VERSION` is left at its current value unless the user has explicitly requested a version string change.
+- **Scope:** `TakeNote.xcodeproj/project.pbxproj` — all four `CURRENT_PROJECT_VERSION` entries.
+- **Exceptions:** If a Phase produces no shippable change (e.g., a documentation-only or tooling-only Phase where no app binary is produced), the build number increment may be skipped, but Overseer MUST explicitly note the exemption in the Phase review.
