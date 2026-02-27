@@ -180,8 +180,10 @@ struct NoteList: View {
     }
 
     func folderHasStarredNotes() -> Bool {
-        return takeNoteVM.selectedContainer?.notes.contains { $0.starred }
-            ?? false
+        if takeNoteVM.selectedContainer?.isAllNotes == true {
+            return sortedNotes.contains { $0.starred }
+        }
+        return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
     }
 
     var body: some View {

@@ -11,24 +11,24 @@ struct WelcomeView: View {
 
             // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
             WelcomeRow(
-                title: "Customization",
-                text: "Set custom colors for folders and tags, and icons for folders.",
-                systemImage: "swatchpalette"
+                title: "Magic Chat",
+                text: "Chat with your notes! Ask questions and get answers right from your notes.",
+                systemImage: "message"
             )
             WelcomeRow(
-                title: "Drag to Create",
-                text: "Drag any text into the note list to create a new note",
-                systemImage: "hand.point.up.left.and.text.fill"
+                title: "All Notes Folder",
+                text: "The new All Notes folder in the side bar shows all of your notes in one list.",
+                systemImage: "text.pad.header"
             )
             WelcomeRow(
-                title: "Markdown Keyboard Improvements",
-                text: "More and better Makrdown keyboard shortcuts",
-                systemImage: "number.square"
+                title: "Semantic Search",
+                text: "Search all of your notes with natural language.",
+                systemImage: "magnifyingglass"
             )
             WelcomeRow(
-                title: "Starred Notes Shortcut",
+                title: "Images in Notes",
                 text:
-                    "Access all starred notes from the sidebar",
+                    "Drag and Drop or Import images and add them to your notes.",
                 systemImage: "star"
             )
 
