@@ -1,0 +1,54 @@
+phase:
+  id: "0017"
+  slug: ios-sidebar-search
+  title: iOS Sidebar Search (Apple Notes Pattern)
+  status: complete
+
+steps:
+  - id: S001
+    title: Add noteSearchText to TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added noteSearchText: String = "" property to TakeNoteVM after showMultiNoteView in the UI State section."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S002
+    title: Update NoteList to use TakeNoteVM.noteSearchText (state and binding)
+    implemented: true
+    reviewed: true
+    notes: "Removed @State var noteSearchText from NoteList. All references to noteSearchText now use takeNoteVM.noteSearchText. The .searchable() modifier on the List is now wrapped in #if os(macOS) / #endif so it only applies on macOS. iOS will get .searchable() on the NavigationSplitView in S003."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S003
+    title: Move .searchable() to NavigationSplitView on iOS and remove broken sidebar DefaultToolbarItem
+    implemented: true
+    reviewed: true
+    notes: "Removed DefaultToolbarItem(kind: .search, placement: .bottomBar) from sidebar column toolbar. Added .searchable(text: $takeNoteVM.noteSearchText) to NavigationSplitView inside #if os(iOS) block. Also removed the content column DefaultToolbarItem(kind: .search, placement: .bottomBar) since search is now at NavigationSplitView level on iOS — keeping it would produce a redundant search button that wires to the same NavigationSplitView-level searchable."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S004
+    title: Update filteredNotes for global search behavior
+    implemented: true
+    reviewed: true
+    notes: "filteredNotes refactored during S002. When noteSearchText is non-empty, candidate pool is all non-trash/non-buffer notes (global search). When empty and All Notes selected, returns allNotesSource. When empty and any other container, returns selectedContainer?.notes ?? []. FTS BM25 ranking preserved via indexMap sort."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S005
+    title: Update views.md documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated views.md: NoteList section documents noteSearchText living in TakeNoteVM, global search behavior when non-empty, platform-specific .searchable() placement. MainWindow section documents iOS .searchable() on NavigationSplitView. Multi-Platform Adaptations section notes search bar placement difference."
+    touched:
+      - .ushabti/docs/views.md
+
+  - id: S006
+    title: Update ai-features.md documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated ai-features.md: Phase 0016 Search Button subsection documents that the DefaultToolbarItem(kind: .search) in the sidebar was non-functional (no .searchable() in that column), and records the Phase 0017 fix: removal of the broken item, .searchable() moved to NavigationSplitView on iOS, noteSearchText moved to TakeNoteVM, global search when non-empty."
+    touched:
+      - .ushabti/docs/ai-features.md

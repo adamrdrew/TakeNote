@@ -47,7 +47,8 @@ class TakeNoteVM {
     var errorAlertMessage: String = ""
     var errorAlertIsVisible: Bool = false
     var showMultiNoteView: Bool = false
-    
+    var noteSearchText: String = ""
+
     let userDefaults = UserDefaults.standard
     
     public var sortBy: SortBy {

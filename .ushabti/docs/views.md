@@ -14,6 +14,7 @@ The root view of the main window scene.
 
 - Renders a `NavigationSplitView` with three columns: Sidebar, NoteList, and detail (NoteEditor or MultiNoteViewer).
 - Hosts toolbar items for Add Folder and Add Tag (sidebar column) and Add Note, Sort, AI Chat, and Empty Trash (content column).
+- On iOS: `.searchable(text: $takeNoteVM.noteSearchText)` is attached to the `NavigationSplitView` (inside `#if os(iOS)`), following the Apple Notes pattern. This causes the system to render the search bar at the bottom of the sidebar column on iPhone. The `noteSearchText` property lives in `TakeNoteVM` as the single source of truth for both platforms (L09).
 - Handles `onOpenURL` for `takenote://` deep links.
 - Shows the "notes in buffer" alert on launch and drains Buffer to Inbox.
 - Calls `takeNoteVM.folderInit()` on `onAppear`.
@@ -80,7 +81,12 @@ Left-most column. Contains the full navigation hierarchy.
 
 Middle column. Renders notes for the selected container.
 
-- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When `noteSearchText` is empty, returns all container notes unchanged. FTS results are deduplicated by note UUID and initially ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
+- Search text state lives in `TakeNoteVM.noteSearchText` (not a local `@State` on `NoteList`). This is the single source of truth for search text shared across platforms.
+- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When search text is non-empty the candidate pool is **all non-trash/non-buffer notes** regardless of the selected container (global search). FTS results are ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
+- When search text is empty: returns notes scoped to the selected container (or all non-trash/non-buffer notes if All Notes is selected), unchanged from the pre-search behavior.
+- The `.searchable()` modifier placement differs by platform:
+  - **macOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `List` inside `NoteList`.
+  - **iOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern — search bar appears at the bottom of the sidebar column on iPhone).
 - Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
 - Groups starred notes in a separate section above non-starred notes. The `folderHasStarredNotes()` function determines whether the Starred section renders. It has two branches: when `selectedContainer?.isAllNotes == true` it checks `sortedNotes.contains { $0.starred }` (using the already-computed, filtered array), because the All Notes virtual container's `NoteContainer.notes` computed property always returns an empty array and would otherwise suppress the Starred section unconditionally. For all other containers it falls back to `selectedContainer?.notes.contains { $0.starred } ?? false`.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
@@ -249,3 +255,4 @@ Key platform differences handled throughout:
 - Markdown shortcut bar appears on iOS only when soft keyboard is active.
 - Copy/cut/paste system is macOS-only.
 - AI Chat is a separate window on macOS; a popover on iOS.
+- Search bar placement: on macOS `.searchable()` is attached to the `List` in `NoteList`; on iOS `.searchable()` is attached to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern), placing the search bar at the bottom of the sidebar column on iPhone. Both use `TakeNoteVM.noteSearchText` as the shared binding. When search text is non-empty, results span all non-trash/non-buffer notes regardless of selected folder (global search).

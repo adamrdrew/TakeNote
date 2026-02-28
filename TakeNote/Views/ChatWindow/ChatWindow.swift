@@ -182,10 +182,9 @@ struct ChatWindow: View {
         textFieldFocused = true
     }
 
-    // MARK: - iOS Sub-Views
+    // MARK: - Sub-Views
 
-    #if os(iOS)
-    /// Centered placeholder shown when the conversation is empty. iOS only.
+    /// Centered placeholder shown when the conversation is empty. Cross-platform (macOS and iOS).
     var EmptyStatePlaceholder: some View {
         VStack(spacing: 12) {
             Spacer()
@@ -203,6 +202,9 @@ struct ChatWindow: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    // MARK: - iOS Sub-Views
+
+    #if os(iOS)
     /// Title bar shown at the top of the iOS chat overlay when toolbarVisible is true.
     var TitleBar: some View {
         VStack(spacing: 0) {
@@ -278,14 +280,12 @@ struct ChatWindow: View {
                 .onAppear {
                     proxy.scrollTo("BOTTOM", anchor: .bottom)
                 }
-                // iOS empty-state placeholder layered inside the scroll area
-                #if os(iOS)
+                // Empty-state placeholder layered inside the scroll area (macOS and iOS)
                 .overlay {
                     if conversation.isEmpty {
                         EmptyStatePlaceholder
                     }
                 }
-                #endif
             }
 
             Divider()

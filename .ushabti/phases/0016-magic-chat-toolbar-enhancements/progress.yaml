@@ -1,0 +1,38 @@
+phase:
+  id: "0016"
+  slug: magic-chat-toolbar-enhancements
+  title: Magic Chat & Toolbar Enhancements
+  status: complete
+
+steps:
+  - id: S001
+    title: Add dedicated sidebar chat popover state to MainWindow
+    implemented: true
+    reviewed: true
+    notes: Added showSidebarChatPopover state bool and doShowSidebarChatPopover() action method alongside existing showChatPopover and doShowChatPopover().
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S002
+    title: Add Magic Chat and Search buttons to the iOS sidebar toolbar
+    implemented: true
+    reviewed: true
+    notes: "Added DefaultToolbarItem(kind: .search, placement: .bottomBar) and a gated chat popover ToolbarItem to the sidebar toolbar, both inside #if os(iOS). The chat button calls doShowSidebarChatPopover() and attaches ChatWindow() as a popover on showSidebarChatPopover, matching the NoteList pattern."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S003
+    title: Widen the EmptyStatePlaceholder guard in ChatWindow
+    implemented: true
+    reviewed: true
+    notes: "Moved EmptyStatePlaceholder out of the #if os(iOS) block into a new cross-platform Sub-Views section. Updated the doc comment to say cross-platform. Updated MARK comment from 'iOS Sub-Views' to 'Sub-Views' with a new 'iOS Sub-Views' MARK before TitleBar. Removed the #if os(iOS) guard from the overlay that applies the placeholder."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S004
+    title: Update ai-features.md documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated ai-features.md: widened Empty-State Placeholder description to cross-platform, removed stale 'iOS only' sentence, added Phase 0016 section documenting iOS sidebar Search and Magic Chat toolbar buttons."
+    touched:
+      - .ushabti/docs/ai-features.md

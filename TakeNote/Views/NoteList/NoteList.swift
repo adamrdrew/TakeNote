@@ -61,7 +61,6 @@ struct NoteList: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
     @State var showFileImportError: Bool = false
     @State var fileImportErrorMessage: String = ""
-    @State var noteSearchText: String = ""
     @Query() var notes: [Note]
 
     @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
@@ -71,34 +70,23 @@ struct NoteList: View {
     @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
     var filteredNotes: [Note] {
-        if takeNoteVM.selectedContainer?.isAllNotes == true {
-            let allNotesSource = notes.filter {
-                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
-            }
-            if noteSearchText.isEmpty {
-                return allNotesSource
-            } else {
-                let matchedIDs = search.searchNoteIDs(noteSearchText)
-                let matchedSet = Set(matchedIDs)
-                let filtered = allNotesSource.filter { matchedSet.contains($0.uuid) }
-                let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
-                return filtered.sorted { (lhs, rhs) in
-                    (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
-                }
-            }
+        let allNotesSource = notes.filter {
+            $0.folder?.isTrash != true && $0.folder?.isBuffer != true
         }
-        if noteSearchText.isEmpty {
-            return takeNoteVM.selectedContainer?.notes ?? []
-        } else {
-            let matchedIDs = search.searchNoteIDs(noteSearchText)
+        if !takeNoteVM.noteSearchText.isEmpty {
+            // Global search: search across all non-trash/non-buffer notes regardless of selected container
+            let matchedIDs = search.searchNoteIDs(takeNoteVM.noteSearchText)
             let matchedSet = Set(matchedIDs)
-            let candidateNotes = takeNoteVM.selectedContainer?.notes ?? []
-            let filtered = candidateNotes.filter { matchedSet.contains($0.uuid) }
+            let filtered = allNotesSource.filter { matchedSet.contains($0.uuid) }
             let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
             return filtered.sorted { (lhs, rhs) in
                 (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
             }
         }
+        if takeNoteVM.selectedContainer?.isAllNotes == true {
+            return allNotesSource
+        }
+        return takeNoteVM.selectedContainer?.notes ?? []
     }
 
     var sortedNotes: [Note] {
@@ -264,10 +252,6 @@ struct NoteList: View {
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
             )
-            .searchable(text: $noteSearchText)
-            #if os(iOS)
-            .searchToolbarBehavior(.minimize)
-            #endif
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
                 // We look in the new selected notes array so we can run the callback on the selected notes
                 if newValue.count == 1 {

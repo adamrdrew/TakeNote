@@ -203,7 +203,7 @@ Note: `reduceMotion` and `dotPhase` were added in Phase 0013 but removed in Phas
 
 ### iOS Overlay Polish (Phase 0015)
 
-All changes in this section are iOS-only. macOS behavior is completely unaffected.
+All changes in this section were originally iOS-only. macOS empty-state behavior was widened in Phase 0016 (see below).
 
 #### Dismiss on Citation Link Tap
 
@@ -213,12 +213,12 @@ Implementation: `ChatWindow` declares `@Environment(\.dismiss) private var dismi
 
 #### Empty-State Placeholder
 
-When `conversation` is empty on iOS, a centered gray placeholder is shown in place of the empty scroll area.
+When `conversation` is empty, a centered gray placeholder is shown in place of the empty scroll area.
 
-- Implemented as `var EmptyStatePlaceholder: some View` (`UpperCamelCase` sub-view convention) inside an `#if os(iOS)` block on `ChatWindow`.
+- Implemented as `var EmptyStatePlaceholder: some View` (`UpperCamelCase` sub-view convention) in a shared `// MARK: - Sub-Views` section of `ChatWindow` (not platform-guarded).
 - Contains a `VStack` with two `Spacer()` views for vertical centering plus a `Text("MagicChat")` (`.title2`, bold) and a descriptive subtitle `Text`, both using `.foregroundStyle(.secondary)`.
 - Applied via `.overlay { if conversation.isEmpty { EmptyStatePlaceholder } }` on the `ScrollView`. SwiftUI reactivity causes the placeholder to disappear automatically once `conversation` is non-empty (first message sent).
-- iOS only; no placeholder is shown on macOS.
+- **Cross-platform as of Phase 0016.** Originally iOS-only (Phase 0015); the `#if os(iOS)` guard was removed in Phase 0016 so the placeholder renders on macOS as well (inside the standalone Chat Window).
 
 #### iOS Title Bar
 
@@ -244,6 +244,28 @@ While `responseIsGenerating == true`, the "MagicChat" title text in `TitleBar` c
 #### iOS Toolbar New Chat Button Removed
 
 The toolbar `ToolbarItem` containing the New Chat button is now wrapped in `#if os(macOS)` and `#if os(visionOS)` blocks so it no longer renders on iOS (where the equivalent button lives in `TitleBar`). macOS and visionOS toolbar buttons are preserved exactly as before.
+
+### iOS Sidebar Toolbar Additions (Phase 0016)
+
+Two new toolbar buttons were added to the sidebar column toolbar in `MainWindow.swift`, inside an `#if os(iOS)` block, so they appear on the root sidebar view (visible from app launch before any note container is selected).
+
+#### Search Button (Phase 0016 — non-functional; replaced in Phase 0017)
+
+Phase 0016 added a `DefaultToolbarItem(kind: .search, placement: .bottomBar)` to the sidebar column toolbar. This item did not work: `DefaultToolbarItem(kind: .search)` requires a `.searchable()` modifier in the same navigation column to wire to, but `.searchable()` was only attached to the `List` in `NoteList` (the content column). No search bar appeared in the sidebar as a result.
+
+**Phase 0017 fix:** The broken `DefaultToolbarItem(kind: .search)` was removed from the sidebar toolbar. Instead, `.searchable(text: $takeNoteVM.noteSearchText)` is attached to the `NavigationSplitView` itself on iOS (inside `#if os(iOS)` in `MainWindow.swift`), following the Apple Notes pattern. This causes the system to render the search bar at the bottom of the sidebar column on iPhone when the sidebar is visible. `noteSearchText` was moved from a local `@State` on `NoteList` to `TakeNoteVM.noteSearchText` (L09 — TakeNoteVM as sole state manager) so a single binding can serve both the NavigationSplitView-level searchable on iOS and the List-level searchable on macOS. When search text is non-empty, results are global (all non-trash/non-buffer notes) regardless of selected folder.
+
+#### Magic Chat Button
+
+A `ToolbarItem(placement: toolbarPlacement)` containing a chat button is added to the sidebar toolbar, gated on `chatFeatureFlagEnabled && chatEnabled` (same guard as the existing note-list chat button). The button:
+
+- Calls `doShowSidebarChatPopover()`, which toggles `@State var showSidebarChatPopover: Bool = false`.
+- Uses `Label("Chat", systemImage: "message")` and `.help("AI Chat")`, matching the note-list button.
+- Attaches a `ChatWindow()` popover via `.popover(isPresented: $showSidebarChatPopover, arrowEdge: .trailing)`.
+
+`showSidebarChatPopover` is independent of `showChatPopover` (used by the note-list chat button), so both popovers are independently dismissible. `doShowSidebarChatPopover()` is a dedicated action method alongside `doShowChatPopover()`.
+
+The `ChatWindow()` on the sidebar uses all default arguments — it queries the full note corpus with FTS search enabled, just like the note-list chat button.
 
 ---
 

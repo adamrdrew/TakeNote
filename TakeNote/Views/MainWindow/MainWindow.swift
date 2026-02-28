@@ -30,6 +30,7 @@ struct MainWindow: View {
     @State private var preferredColumn = NavigationSplitViewColumn.sidebar
 
     @State var showChatPopover: Bool = false
+    @State var showSidebarChatPopover: Bool = false
     @State var showSortPopover: Bool = false
 
     var toolbarPlacement: ToolbarItemPlacement {
@@ -47,6 +48,10 @@ struct MainWindow: View {
 
     func doShowChatPopover() {
         showChatPopover.toggle()
+    }
+
+    func doShowSidebarChatPopover() {
+        showSidebarChatPopover.toggle()
     }
 
     func doShowSortPopover() {
@@ -147,12 +152,17 @@ struct MainWindow: View {
         NavigationSplitView(preferredCompactColumn: $preferredColumn) {
             VStack {
                 Sidebar()
+
                     #if os(iOS)
                         .navigationTitle(
                             Text(navTitle)
                         )
                     #endif
                     .toolbar {
+                        if #available(iOS 26.0, *) {
+                            DefaultToolbarItem(kind: .search, placement: .bottomBar)
+                            ToolbarSpacer(.flexible, placement: .bottomBar)
+                        }
                         ToolbarItem(placement: toolbarPlacement) {
 
                             Button(action: {
@@ -170,6 +180,22 @@ struct MainWindow: View {
                                 takeNoteVM.addTag(modelContext: modelContext)
                             })
                         }
+                        #if os(iOS)
+                        if chatFeatureFlagEnabled && chatEnabled {
+                            ToolbarItem(placement: toolbarPlacement) {
+                                Button(action: doShowSidebarChatPopover) {
+                                    Label("Chat", systemImage: "message")
+                                }
+                                .help("AI Chat")
+                                .popover(
+                                    isPresented: $showSidebarChatPopover,
+                                    arrowEdge: .trailing
+                                ) {
+                                    ChatWindow()
+                                }
+                            }
+                        }
+                        #endif
 
                     }
             }
@@ -177,7 +203,6 @@ struct MainWindow: View {
             NoteList()
                 .toolbar {
                     #if os(iOS)
-                        DefaultToolbarItem(kind: .search, placement: .bottomBar)
                         ToolbarSpacer(.fixed, placement: .bottomBar)
                     #endif
                     NoteListToolbar
@@ -194,6 +219,7 @@ struct MainWindow: View {
                 .transition(.opacity)
             }
         }
+        .searchable(text: $takeNoteVM.noteSearchText)
         .onChange(of: takeNoteVM.multipleNotesSelected) { _, newValue in
             withAnimation {
                 takeNoteVM.showMultiNoteView = newValue
