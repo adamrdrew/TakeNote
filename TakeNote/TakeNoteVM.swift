@@ -326,6 +326,8 @@ class TakeNoteVM {
             errorAlertIsVisible = true
         }
 
+        // Cull any NoteImage records that were only referenced by the now-deleted trash notes
+        NoteImageManager(modelContext: modelContext).cullOrphanedImages()
     }
 
     func folderDelete(

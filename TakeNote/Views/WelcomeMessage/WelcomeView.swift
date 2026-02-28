@@ -29,7 +29,7 @@ struct WelcomeView: View {
                 title: "Images in Notes",
                 text:
                     "Drag and Drop or Import images and add them to your notes.",
-                systemImage: "star"
+                systemImage: "photo"
             )
 
             Button("Continue", action: onDone)

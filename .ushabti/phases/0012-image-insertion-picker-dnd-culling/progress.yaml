@@ -1,0 +1,85 @@
+phase:
+  id: "0012"
+  slug: image-insertion-picker-dnd-culling
+  title: Image Insertion — Picker, Drag and Drop, and Orphan Culling
+  status: complete
+
+steps:
+  - id: S001
+    title: Add NoteImageManager with cullOrphanedImages
+    implemented: true
+    reviewed: true
+    notes: "Created NoteImageManager.swift with cullOrphanedImages() using Swift regex to find takenote://image/<UUID> references, fetches all non-trashed non-buffered notes, deletes unreferenced NoteImage records, logs at .info level."
+    touched:
+      - TakeNote/Library/NoteImageManager.swift
+
+  - id: S002
+    title: Wire orphan culling into NoteList note deselection
+    implemented: true
+    reviewed: true
+    notes: "Added NoteImageManager(modelContext:).cullOrphanedImages() call after the existing for-note-in-oldValue loop in NoteList.onChange(of: takeNoteVM.selectedNotes)."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S003
+    title: Wire orphan culling into emptyTrash
+    implemented: true
+    reviewed: true
+    notes: "Added NoteImageManager(modelContext:).cullOrphanedImages() call at the end of emptyTrash(_:) in TakeNoteVM.swift, after the delete loop and save."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S004
+    title: Add insertImage function to NoteEditor
+    implemented: true
+    reviewed: true
+    notes: "Added insertImage(data:) private function and static downsize(imageData:) helper in NoteEditor. Platform-conditional downsizing using UIImage/UIGraphicsImageRenderer on iOS/visionOS and NSImage/NSBitmapImageRep on macOS. Inserts NoteImage record and calls insertAtCaret with takenote://image/<UUID> markdown."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S005
+    title: Add PhotosPicker toolbar button
+    implemented: true
+    reviewed: true
+    notes: "Added PhotosUI import, @State selectedPhotoItem: PhotosPickerItem?, PhotosPicker toolbar item (disabled when showPreview), and onChange(of: selectedPhotoItem) handler that loads Data via loadTransferable and calls insertImage(data:) on MainActor."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S006
+    title: Add drag-and-drop onto the editor body
+    implemented: true
+    reviewed: true
+    notes: "Added .dropDestination(for: Data.self) to the ZStack in NoteEditor. Validates dropped data as image (UIImage/NSImage check), guards on !showPreview, calls insertImage(data:) for each valid item, returns true if at least one image was inserted."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S007
+    title: Update docs
+    implemented: true
+    reviewed: true
+    notes: Updated supporting-systems.md with NoteImageManager section. Updated views.md NoteEditor section with image insertion docs. Updated data-models.md NoteImage section with markdown pattern and culling reference.
+    touched:
+      - .ushabti/docs/supporting-systems.md
+      - .ushabti/docs/views.md
+      - .ushabti/docs/data-models.md
+  - id: S008
+    title: Fix views.md NoteList deselection doc omission
+    implemented: true
+    reviewed: true
+    notes: "Added NoteImageManager.cullOrphanedImages() to the deselection trigger list in the NoteList section."
+    touched:
+      - .ushabti/docs/views.md
+  - id: S009
+    title: Fix view-model.md emptyTrash doc omission
+    implemented: true
+    reviewed: true
+    notes: "Updated emptyTrash description to include the NoteImageManager.cullOrphanedImages() step."
+    touched:
+      - .ushabti/docs/view-model.md
+  - id: S010
+    title: Fix views.md downsize return-tuple order inaccuracy
+    implemented: true
+    reviewed: true
+    notes: "Corrected downsize return tuple from (\"image/jpeg\", data) to (data, \"image/jpeg\") to match actual (Data, String) return type."
+    touched:
+      - .ushabti/docs/views.md

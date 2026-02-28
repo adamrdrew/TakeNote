@@ -92,7 +92,7 @@ Middle column. Renders notes for the selected container.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
 - On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
 - Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
-- On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, and `NoteLinkManager.generateLinksFor()`.
+- On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, `NoteLinkManager.generateLinksFor()`, and `NoteImageManager.cullOrphanedImages()`.
 
 **FocusedValues exposed:** `\.noteDeleteRegistry`, `\.noteRenameRegistry`, `\.noteStarToggleRegistry`, `\.noteCopyMarkdownLinkRegistry`, `\.noteOpenEditorWindowRegistry`, `\.selectedNotes`
 
@@ -136,6 +136,7 @@ Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit
 - In edit mode: CodeEditorView renders with a custom `MarkdownConfiguration` language config; a `MarkdownShortcutBar` appears above the keyboard on iOS when no hardware keyboard is connected.
 - Toolbar items:
   - Toggle preview (eye icon)
+  - Insert Photo button (`photo.badge.plus` icon) — opens `PhotosPicker` for image insertion. Disabled when `showPreview == true`.
   - Backlinks popover (link icon, shown only if note has incoming links)
   - Magic Format button (wand icon, shown only if AI available)
   - Magic Assistant button (apple.intelligence icon, shown only if text is selected)
@@ -143,6 +144,16 @@ Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit
 - On note change: resets to preview mode, re-checks backlink status.
 
 **MagicFormatter usage:** `NoteEditor` holds `@State private var magicFormatter = MagicFormatter()`. Because `MagicFormatter` is `@Observable`, a `@Bindable var formatter = magicFormatter` is created inside the view body to produce the `$formatter.formatterIsBusy` binding used for the progress sheet.
+
+**Image insertion:** `NoteEditor` provides two paths for inserting images into the note:
+
+1. **PhotosPicker toolbar button:** `@State private var selectedPhotoItem: PhotosPickerItem?` drives a `PhotosPicker(selection:matching:)` toolbar item. Disabled when `showPreview == true`. On selection, `loadTransferable(type: Data.self)` loads the image data in a `Task`, then `insertImage(data:)` is called on `MainActor`. After processing, `selectedPhotoItem` is reset to `nil`.
+
+2. **Drag and drop:** `.dropDestination(for: Data.self)` on the root `ZStack` accepts image data dragged onto the editor body. The `perform` closure: (a) returns `false` immediately if `showPreview` is true, (b) validates each item as image data via `UIImage(data:)` / `NSImage(data:)`, (c) calls `insertImage(data:)` for each valid item, (d) returns `true` if at least one image was inserted.
+
+**`insertImage(data:)` (private):** Downsizes the image so the longest dimension is at most 2048px using `NoteEditor.downsize(imageData:)`, creates a `NoteImage(imageData:mimeType:)` record, inserts it via `modelContext.insert`, saves with `try? modelContext.save()`, constructs `![image](takenote://image/<UUID>)`, and calls `insertAtCaret(_:)`.
+
+**`downsize(imageData:)` (private static):** Platform-conditional image scaling. On iOS/visionOS: `UIImage` + `UIGraphicsImageRenderer`. On macOS: `NSImage` + `NSBitmapImageRep`. Always re-encodes as JPEG (`compressionQuality: 0.85`) for compact storage. Returns `(data, "image/jpeg")` on success, or the original data with `"image/jpeg"` as fallback mimeType.
 
 **Content mutation patterns:**
 - `doMagicFormat()` calls `openNote!.setContent(result.formattedText)` after Magic Format completes. This correctly updates `updatedDate` and triggers `WidgetCenter.shared.reloadAllTimelines()` as a deliberate one-shot mutation.

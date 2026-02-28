@@ -112,7 +112,7 @@ enum SortOrder: Int {
 
 - `addNote(_ modelContext: ModelContext) -> Note?` — creates a new `Note` in `selectedContainer`, inserts, saves, sets `openNote` and `selectedNotes`.
 - `moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext)` — moves a note to Trash, unsets `starred` if needed, clears selection if the note was selected.
-- `emptyTrash(_ modelContext: ModelContext)` — permanently deletes all notes in Trash.
+- `emptyTrash(_ modelContext: ModelContext)` — permanently deletes all notes in Trash, then runs `NoteImageManager.cullOrphanedImages()` to remove any images that were only referenced by the deleted notes.
 - `noteStarredToggle(_ note: Note, modelContext: ModelContext)` — toggles `note.starred` and updates `starredFolder.starredNotes`.
 - `onNoteSelect(_ note: Note)` — sets `openNote`.
 - `onMoveToFolder()` — clears `selectedNotes` and `openNote` after a move operation.

@@ -24,6 +24,7 @@ Key files:
 - Widget reads data only via `SnapshotController.readSnapshot()` (App Group snapshot)
 - `SystemFolderReconciler` merges CloudKit-induced duplicate system containers
 - `AppDependencyManager` used by AppIntents to access TakeNoteVM and ModelContainer
+- SPM dependencies: CodeEditorView 0.15.4, swift-markdown-ui 2.4.1, SQLite.swift 0.15.4, NetworkImage 6.0.1, SFSymbolsPicker 1.0.7
 
 ## CloudKit Schema Management Workflow (critical context)
 
@@ -31,7 +32,7 @@ Key files:
 
 1. Developer bumps `ckBootstrapVersionCurrent` in DEBUG build
 2. On next DEBUG launch, `bootstrapDevSchemaIfNeeded()` pushes the schema to the CloudKit development environment using `NSPersistentCloudKitContainer.initializeCloudKitSchema()`
-3. Developer then manually promotes the schema to the production CloudKit container via the Apple CloudKit Dashboard
+3. Developer then manually promotes the schema from development to production CloudKit container via the Apple CloudKit Dashboard
 4. Production builds never need this code path — CloudKit schema is already live before the app ships
 
 Any agent seeing `#if DEBUG` around `ckBootstrapVersionCurrent` must NOT flag it as a violation. It is the correct implementation of L03.
@@ -100,6 +101,19 @@ The user's actual request ("make this bold", "make this a link") is completely a
 - R006: Production `print()` calls outside `#if DEBUG` in TakeNoteVM, CommandRegistry, SystemFolderReconciler, NoteLinkManager, EditCommands
 - R013: Direct property sets bypassing model mutating methods in several places (NoteList cut/paste, NoteEditor content set)
 
+## Images-in-Notes Feature (planned, Phase 0011+)
+
+Design spike completed Feb 2026. Key architectural decisions:
+- New `@Model` class `NoteImage` required (law L02 update needed)
+- Images stored as `Data` (binary) in SwiftData — base64 is unnecessary overhead since SwiftData/CloudKit handles binary natively
+- UUID field on `NoteImage` is stable cross-device identifier
+- URL scheme: `takenote://image/<UUID>` (new handler alongside existing `takenote://note/<UUID>`)
+- Markdown references: `![alt](takenote://image/<UUID>)`
+- MarkdownUI 2.4.1 supports custom image providers via `.markdownImageProvider()`
+- Orphan culling: scan `NoteImage` records and check if any Note.content contains their UUID
+- Image picker: `PhotosPickerItem` (PhotosUI framework) — no new entitlements needed for standard photo picker
+- Drag and drop: `.dropDestination(for: Data.self)` or `for: URL.self` with image UTType filtering
+
 ## Key Doc Inaccuracies (audit Feb 2026)
 
 Major findings from documentation audit — recorded previously, still unresolved.
@@ -139,6 +153,7 @@ None recorded yet.
 - [WidgetKit Documentation](https://developer.apple.com/documentation/widgetkit)
 - [AppIntents Documentation](https://developer.apple.com/documentation/appintents)
 - [CloudKit Documentation](https://developer.apple.com/documentation/cloudkit)
+- [PhotosUI Documentation](https://developer.apple.com/documentation/photosuit)
 
 ### Libraries
 - [SQLite.swift](https://github.com/stephencelis/SQLite.swift)
