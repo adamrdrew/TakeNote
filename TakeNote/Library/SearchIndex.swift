@@ -212,9 +212,10 @@ internal final class SearchIndex {
     /// - ORs the tokens (forgiving),
     /// - adds "*" to tokens >= 3 chars (prefix match).
     func searchNatural(_ text: String, limit: Int = 5) -> [SearchHit] {
-        
+
         let tokens = normalizeQuery(text)
-        
+        guard !tokens.isEmpty else { return [] }
+
         // 2) Add prefix wildcard to longer tokens (keeps small ones as-is)
         let starred = tokens.map { $0.count >= 3 ? "\($0)*" : $0 }
 
@@ -240,6 +241,7 @@ internal final class SearchIndex {
 
     /// Simple FTS5 search. Supports plain words or FTS syntax (phrases, prefix*).
     func search(_ query: String, limit: Int = 5) -> [SearchHit] {
+        guard !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         do {
             let q =
                 fts
