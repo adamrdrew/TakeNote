@@ -18,6 +18,8 @@ struct ConversationEntry: Identifiable, Hashable {
     var id: UUID
     var sender: Sender
     var text: String
+    var sources: [SearchHit] = []
+    var isComplete: Bool = false
 
     init(sender: Sender, text: String) {
         self.id = UUID()
@@ -28,6 +30,8 @@ struct ConversationEntry: Identifiable, Hashable {
 
 struct ChatWindow: View {
     @Environment(SearchIndexService.self) private var search
+
+    @Query() var allNotes: [Note]
 
     @State private var conversation: [ConversationEntry] = []
     @State private var userQuery: String = ""
@@ -43,6 +47,8 @@ struct ChatWindow: View {
     var useHistory: Bool = true
 
     @FocusState private var textFieldFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var dotPhase: Double = 0
 
 
     // MARK: - Actions
@@ -56,16 +62,17 @@ struct ChatWindow: View {
         let conversationEntry = ConversationEntry(sender: .human, text: trimmed)
         conversation.append(conversationEntry)
 
-        // Prepare retrieval
+        // Prepare retrieval and freeze sources at ask-time
         if searchEnabled {
             self.searchResults = search.index.searchNatural(trimmed)
         }
+        let capturedSources = searchResults
 
         // Clear the field & keep focus
         self.userQuery = ""
         self.textFieldFocused = true
 
-        Task { await generateResponse() }
+        Task { await generateResponse(sources: capturedSources) }
     }
 
     private func makeConversationString() -> String {
@@ -114,29 +121,48 @@ struct ChatWindow: View {
         return llmPrompt
     }
 
-    private func generateResponse() async {
+    private func noteTitle(for noteID: UUID) -> String {
+        allNotes.first(where: { $0.uuid == noteID })?.title ?? "Note"
+    }
+
+    private func generateResponse(sources: [SearchHit]) async {
         guard SystemLanguageModel.default.availability == .available else {
+            var unavailableEntry = ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device.")
+            unavailableEntry.isComplete = true
+            conversation.append(unavailableEntry)
             responseIsGenerating = false
-            conversation.append(ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device."))
             return
         }
 
         let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
 
-        let session = LanguageModelSession(instructions: modelInstructions)
-        if session.isResponding { return }
+        // Append bot entry before streaming begins so SwiftUI renders the bubble immediately
+        var botEntry = ConversationEntry(sender: .bot, text: "")
+        botEntry.sources = sources
+        conversation.append(botEntry)
+        let botIndex = conversation.count - 1
 
         let assembledPrompt = makePrompt()
         #if DEBUG
         let logger = search.logger
         logger.debug("Assembled prompt for LLM:\n\(assembledPrompt)")
         #endif
-        let response = try? await session.respond(to: assembledPrompt)
-        let aiSummary = response?.content ?? "Something went wrong. Sorry."
+
+        let session = LanguageModelSession(instructions: modelInstructions)
+        let stream = session.streamResponse(to: assembledPrompt)
+
+        do {
+            for try await partial in stream {
+                conversation[botIndex].text = partial.content
+            }
+            conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
+            conversation[botIndex].isComplete = true
+        } catch {
+            conversation[botIndex].text = "Something went wrong. Sorry."
+            conversation[botIndex].isComplete = true
+        }
 
         responseIsGenerating = false
-        let conversationEntry = ConversationEntry(sender: .bot, text: unwrapMarkdownFence(aiSummary))
-        conversation.append(conversationEntry)
     }
     
     private func newChat() {
@@ -160,15 +186,35 @@ struct ChatWindow: View {
                             ContextBubble(text: context ?? "")
                         }
                         ForEach(conversation) { entry in
-                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick)
+                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick, notes: allNotes)
                                 .id(entry.id)
                                 .padding(.horizontal, 12)
                                 .padding(.top, 2)
                         }
 
-                        // Subtle typing indicator when generating
-                        if responseIsGenerating {
-                            AIMessage(message: "Thinking...", font: .headline)
+                        // Three-dot animated indicator while waiting for first streaming token
+                        if let lastEntry = conversation.last, lastEntry.sender == .bot, lastEntry.text.isEmpty {
+                            HStack(spacing: 4) {
+                                ForEach(0..<3, id: \.self) { i in
+                                    Circle()
+                                        .fill(Color.secondary.opacity(0.6))
+                                        .frame(width: 8, height: 8)
+                                        .scaleEffect(dotPhase > Double(i) * (1.0 / 3.0) ? 1.3 : 1.0)
+                                        .animation(
+                                            reduceMotion ? nil : .easeInOut(duration: 0.4).delay(Double(i) * 0.15),
+                                            value: dotPhase
+                                        )
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .onAppear {
+                                guard !reduceMotion else { return }
+                                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: true)) {
+                                    dotPhase = 1.0
+                                }
+                            }
                         }
 
                         // Bottom spacer to anchor scroll
@@ -209,6 +255,7 @@ struct ChatWindow: View {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
                 )
+                .disabled(responseIsGenerating)
             }
             .padding(10)
             .background(.bar)  // blends like a toolbar at the bottom

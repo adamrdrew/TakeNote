@@ -17,7 +17,7 @@ var chatFeatureFlagEnabled: Bool {
 }
 ```
 
-When `false`: the chat window never opens, search indexing is skipped, and the Chat toolbar button is hidden.
+When `false`: the Chat window never opens and the Chat toolbar button is hidden. FTS search indexing continues to run unconditionally (see L07) — the feature flag gates only the Chat UI surfaces, not the search index.
 
 ---
 
@@ -105,13 +105,13 @@ ChatWindow(
 
 ## Magic Chat
 
-**Files:** `TakeNote/Views/ChatWindow/ChatWindow.swift`, `TakeNote/Prompts/MagicChatPrompt.swift`
+**Files:** `TakeNote/Views/ChatWindow/ChatWindow.swift`, `TakeNote/Views/ChatWindow/MessageBubble.swift`, `TakeNote/Prompts/MagicChatPrompt.swift`
 
 A RAG-based Q&A chatbot over the user's notes.
 
 ### Retrieval (RAG)
 
-On each user query, `SearchIndex.searchNatural()` retrieves up to 5 relevant note chunks. These chunks are injected into the LLM prompt as `SOURCE EXCERPTS`.
+On each user query, `SearchIndex.searchNatural()` retrieves up to 5 relevant note chunks. The retrieved `[SearchHit]` values are captured into a `capturedSources` local constant at ask-time (before any async gap) and passed into `generateResponse(sources:)`, where they are stored on the bot `ConversationEntry` via `entry.sources`. These chunks are also injected into the LLM prompt as `SOURCE EXCERPTS`.
 
 ### Prompt Assembly
 
@@ -143,13 +143,54 @@ Instructs the model to:
 - Be concise; use bullets only for lists.
 - Respond with `"I couldn't find that in your notes."` if no relevant content is found.
 
-### Session Lifecycle
+### Data Types
 
-A new `LanguageModelSession` is created per response. No session is reused across turns — full conversation history is included in each prompt text instead.
+| Type | Description |
+|---|---|
+| `SearchHit` | `struct SearchHit: Identifiable, Hashable` — FTS result with `id: Int64`, `noteID: UUID`, `chunk: String`. Conforms to `Hashable` to allow use as `Set` element and in `[SearchHit]` stored on `ConversationEntry`. |
+| `ConversationEntry` | `struct ConversationEntry: Identifiable, Hashable` — one message in the conversation. Fields: `id: UUID`, `sender: Sender`, `text: String`, `sources: [SearchHit] = []`, `isComplete: Bool = false`. |
+| `Sender` | `enum Sender` — `.human` or `.bot`. |
+
+### Session Lifecycle and Streaming
+
+A new `LanguageModelSession` is created inside `generateResponse(sources:)` per invocation. No session is reused across turns.
+
+The bot `ConversationEntry` is appended to the conversation with `text: ""` and `sources: sources` **before** the streaming loop begins, so SwiftUI can render the bubble immediately. `generateResponse(sources:)` then calls `session.streamResponse(to:)` to obtain a `ResponseStream` (`AsyncSequence`). Each element of the stream is a cumulative partial string (not a delta); it is assigned directly to `conversation[botIndex].text` — not appended. After the loop finishes, `unwrapMarkdownFence` is applied to the final text and `conversation[botIndex].isComplete` is set to `true`. On error, the text is set to `"Something went wrong. Sorry."` and `isComplete` is set to `true`. In all paths, `responseIsGenerating` is reset to `false` after the `do/catch` block.
+
+### Input Locking
+
+The `TextField` container `HStack` has `.disabled(responseIsGenerating)` applied. The input is visually and functionally disabled for the full duration of streaming. The `askQuestion()` guard `guard !trimmed.isEmpty, !responseIsGenerating else { return }` remains as defense in depth.
+
+### Loading Indicator (Animated Dots)
+
+While the last `ConversationEntry` is a bot entry with empty text (i.e., waiting for the first streaming token), a three-dot animated pulse indicator is displayed left-aligned in the message list. The dots disappear automatically when `conversation.last?.text` becomes non-empty (first token arrives and mutates the entry's text in-place). The animation respects `@Environment(\.accessibilityReduceMotion)`: when `reduceMotion` is `true`, no animation is applied. `ChatWindow` holds `@State private var dotPhase: Double = 0` to drive the animation.
 
 ### AI Availability Gate
 
-`ChatWindow.generateResponse()` checks `SystemLanguageModel.default.availability == .available` before creating a `LanguageModelSession`. If Apple Intelligence is unavailable, `responseIsGenerating` is reset to `false`, a bot message reading "Apple Intelligence is not available on this device." is appended to the conversation, and the function returns early. No `LanguageModelSession` is instantiated on the unavailable code path. This check is performed directly on `SystemLanguageModel.default` rather than through `TakeNoteVM.aiIsAvailable` because `ChatWindow` is also used as the Magic Assistant popover inside `NoteEditor`, where it may not have access to `TakeNoteVM`.
+`ChatWindow.generateResponse(sources:)` checks `SystemLanguageModel.default.availability == .available` before creating a `LanguageModelSession`. If Apple Intelligence is unavailable, a bot message reading "Apple Intelligence is not available on this device." is appended (with `isComplete: true`), `responseIsGenerating` is reset to `false`, and the function returns early. No `LanguageModelSession` is instantiated on the unavailable code path. This check is performed directly on `SystemLanguageModel.default` rather than through `TakeNoteVM.aiIsAvailable` because `ChatWindow` is also used as the Magic Assistant popover inside `NoteEditor`, where it may not have access to `TakeNoteVM`.
+
+### Citation Links
+
+After streaming completes (`entry.isComplete == true`), `MessageBubble` renders citation links below the bot bubble — one `Link` per unique source note. Sources are deduplicated by `noteID` via the `deduplicated(_:)` helper (using a `Set<UUID>`). Links use `Color.takeNotePink`, font `.caption`, and open via `takenote://note/<UUID>` deep links. No citation row renders when: `isHuman` is `true`, `entry.isComplete` is `false`, `entry.sources` is empty, or all sources deduplicate to nothing.
+
+`MessageBubble` accepts `notes: [Note] = []` to look up note titles. `ChatWindow` passes `allNotes` (from `@Query() var allNotes: [Note]`) to each `MessageBubble` call. When `searchEnabled` is `false` (Magic Assistant mode), `capturedSources` is always empty (`[]`), so no citations render.
+
+### `ChatWindow` Properties Added (Phase 0013)
+
+| Property | Type | Description |
+|---|---|---|
+| `allNotes` | `@Query() [Note]` | All notes from SwiftData, used for citation title lookup. |
+| `reduceMotion` | `@Environment(\.accessibilityReduceMotion) Bool` | Disables dot animation when true. |
+| `dotPhase` | `@State Double` | Animation phase driver for the three-dot loading indicator. |
+
+### `MessageBubble` Changes (Phase 0013)
+
+| Addition | Description |
+|---|---|
+| `notes: [Note] = []` | Notes passed in from `ChatWindow.allNotes` for citation title lookup. |
+| `noteTitle(for:)` | Private helper that finds a note by UUID and returns its title. |
+| `deduplicated(_:)` | Private helper that filters `[SearchHit]` to unique `noteID` values. |
+| Citation links block | Renders in `VStack` after the Accept button row, gated on `!isHuman && entry.isComplete && !entry.sources.isEmpty`. |
 
 ---
 

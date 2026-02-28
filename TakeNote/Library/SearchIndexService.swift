@@ -9,7 +9,7 @@ import SwiftUI
 import os
 
 // MARK: Result type
-struct SearchHit: Identifiable {
+struct SearchHit: Identifiable, Hashable {
     public let id: Int64  // rowid inside FTS table
     public let noteID: UUID
     public let chunk: String  // the stored chunk text

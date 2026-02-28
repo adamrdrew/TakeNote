@@ -46,7 +46,6 @@ In `TakeNoteApp.init()`, `installReconciler` is called with `listenForLocalSaves
 
 - R001: `SearchIndexService.logger` has typo in subsystem: `com.adammdrew.takenote` (double 'm') — Style violation (wrong subsystem string)
 - R002: `MagicFormatter` uses `ObservableObject`/`@Published` instead of `@Observable` — L09/Style violation
-- R004: `ChatWindow.generateResponse()` has no `aiIsAvailable` check before `LanguageModelSession` creation — L05 violation (`ChatWindow.swift` line 101)
 - R005: `NewNoteWithContentIntent.perform()` sets `note.content` and `note.title` directly, bypassing `setContent()`/`setTitle()` — Style/contract violation
 - R007: `NoteEditor.doMagicFormat()` sets `openNote!.content` directly (line 160); CodeEditor binding also sets `openNote?.content` directly (line 232) bypassing `setContent()` — Style/contract violation
 - R009: `NoteList.pasteNote()` sets multiple fields directly on a copy-paste new note, bypassing mutating methods
@@ -55,6 +54,7 @@ In `TakeNoteApp.init()`, `installReconciler` is called with `listenForLocalSaves
 ### Confirmed Non-violations
 
 - R003: `NoteEditorWindow` and `ChatWindow` creating `TakeNoteVM()` instances — intentional per L09 exception
+- R004 RESOLVED: `ChatWindow.generateResponse()` DOES have an availability guard at line 118: `guard SystemLanguageModel.default.availability == .available else { ... }` — compliant with L05
 - R008: `ckBootstrapVersionCurrent` inside `#if DEBUG` is intentional — see CloudKit Schema Management Workflow above
 - L01: Deployment targets are macOS 26 and iOS 26 — confirmed compliant
 - L02/L03: Only Note, NoteContainer, NoteLink are `@Model` types — confirmed
@@ -85,7 +85,7 @@ Major findings from documentation audit:
 
 4. **ai-features.md**: `isAvailable` property described as `languageModel.isAvailable` — but `SystemLanguageModel` doesn't have `.isAvailable`; the actual property is `languageModel.availability == .available`. The AI Features doc description of `isAvailable` property is inconsistent with how availability is checked in `TakeNoteVM.aiIsAvailable`.
 
-5. **ai-features.md**: L05 gap — `ChatWindow.generateResponse()` creates a `LanguageModelSession` without an `aiIsAvailable` guard. The doc doesn't flag this gap.
+5. **ai-features.md**: L05 gap in docs — docs do not clearly document the availability check in `ChatWindow.generateResponse()`. The check is present in code but the doc's description does not match it closely.
 
 6. **search-system.md**: `searchNatural` is documented as joining tokens with `AND` but the comment in the source says "join with OR". The actual code joins with `AND` (line 218 of SearchIndex.swift). The doc text matches the code but the comment inside the source is misleading.
 
@@ -96,6 +96,28 @@ Major findings from documentation audit:
 9. **views.md**: `NoteListHeader` description says "Content unknown beyond filename — not read in detail during survey" — this is a gap left from the survey phase, not updated.
 
 10. **views.md**: `ChatWindow` Chat toolbar button — doc says it is "Gated by `chatFeatureFlagEnabled`" which is true, but the actual gate in `MainWindow` is `chatFeatureFlagEnabled && chatEnabled` where `chatEnabled = takeNoteVM.aiIsAvailable && notes.count > 0`. The button requires both the feature flag AND AI availability AND notes to exist.
+
+## FoundationModels Streaming API
+
+`LanguageModelSession.streamResponse(to:)` returns a `ResponseStream` conforming to `AsyncSequence`. For plain `String` generation, each iteration element is a partial string snapshot. Usage pattern:
+
+```swift
+let stream = session.streamResponse(to: prompt)
+for try await partial in stream {
+    // partial is a String snapshot growing with each token
+    currentText = partial
+}
+```
+
+This is distinct from `session.respond(to:)` which awaits the complete response. The streaming variant enables progressive UI updates. The final complete value is available after the loop ends (or via `stream.collect()`). Each intermediate `partial` is a full snapshot, not a delta — so assigning `@State` directly to each yields the progressive build-up.
+
+## Note URL Scheme
+
+`Note.getURL()` returns `"takenote://note/<UUID>"`. This is the deep link format used throughout the app. `TakeNoteVM.loadNoteFromURL()` handles these URLs in `MainWindow.onOpenURL`. The URL derives from `note.uuid.uuidString`. `Note.getMarkdownLink()` returns `"[<title>](takenote://note/<UUID>)"`.
+
+## ChatWindow — No ModelContext
+
+`ChatWindow` does not currently have `@Query` or `@Environment(\.modelContext)`. To look up notes from `SearchHit.noteID` (UUID) values for citation purposes, a `@Query() var notes: [Note]` must be added. The note title can then be fetched by matching UUID: `notes.first(where: { $0.uuid == hit.noteID })`.
 
 ## User Preferences
 

@@ -1,0 +1,85 @@
+phase:
+  id: "0013"
+  slug: magic-chat-ux-improvements
+  title: Magic Chat UX Improvements
+  status: complete
+
+steps:
+  - id: S001
+    title: Add Hashable conformance to SearchHit
+    implemented: true
+    reviewed: true
+    notes: Added Hashable conformance to SearchHit struct
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+
+  - id: S002
+    title: Add sources and isComplete to ConversationEntry
+    implemented: true
+    reviewed: true
+    notes: "Added sources: [SearchHit] = [] and isComplete: Bool = false to ConversationEntry"
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S003
+    title: Add @Query and noteTitle helper to ChatWindow
+    implemented: true
+    reviewed: true
+    notes: "Added @Query() var allNotes: [Note] and noteTitle(for:) helper to ChatWindow"
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S004
+    title: Disable input while generating
+    implemented: true
+    reviewed: true
+    notes: Applied .disabled(responseIsGenerating) to inner HStack containing TextField
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S005
+    title: Switch generateResponse() to streaming
+    implemented: true
+    reviewed: true
+    notes: "Rewrote generateResponse(sources:) to use streamResponse, append bot entry before loop, mutate text in-place, set isComplete=true after loop or on error, reset responseIsGenerating after do/catch. Updated askQuestion() to capture sources and pass them."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S006
+    title: Replace Thinking indicator with animated dots
+    implemented: true
+    reviewed: true
+    notes: Removed AIMessage Thinking... block. Added three-dot animated pulse indicator gated on last entry being a bot entry with empty text. Added reduceMotion env property and dotPhase state.
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S007
+    title: Update MessageBubble to render citation links
+    implemented: true
+    reviewed: true
+    notes: "Updated MessageBubble to accept notes:[Note], added noteTitle(for:) and deduplicated(_:) helpers, rendered citation links in takeNotePink at .caption font gated on isComplete and non-empty sources. Updated ChatWindow call site to pass allNotes."
+    touched:
+      - TakeNote/Views/ChatWindow/MessageBubble.swift
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S008
+    title: Update ai-features.md
+    implemented: true
+    reviewed: true
+    notes: "Updated ai-features.md Magic Chat section to describe streaming, input locking, animated dots, citation links, ConversationEntry new fields, SearchHit Hashable conformance, and all new MessageBubble and ChatWindow changes."
+    touched:
+      - .ushabti/docs/ai-features.md
+  - id: S009
+    title: Fix stale Feature Flag section in ai-features.md
+    implemented: true
+    reviewed: true
+    notes: "Corrected Feature Flag section: removed 'search indexing is skipped' claim; now states FTS indexing is unconditional and flag gates only Chat UI surfaces per L07."
+    touched:
+      - .ushabti/docs/ai-features.md
+  - id: S010
+    title: Bump CURRENT_PROJECT_VERSION and MARKETING_VERSION in project.pbxproj
+    implemented: true
+    reviewed: true
+    notes: Bumped all four CURRENT_PROJECT_VERSION entries from 15 to 16 and all four MARKETING_VERSION entries from 1.1.11 to 1.1.12 per L20.
+    touched:
+      - TakeNote.xcodeproj/project.pbxproj

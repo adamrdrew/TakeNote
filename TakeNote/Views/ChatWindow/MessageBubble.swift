@@ -4,11 +4,13 @@
 //
 //  Created by Adam Drew on 8/13/25.
 //
+import SwiftData
 import SwiftUI
 
 struct MessageBubble: View {
     let entry: ConversationEntry
     var onBotMessageClick: ((String) -> Void)?
+    var notes: [Note] = []
 
     var isHuman: Bool { entry.sender == .human }
 
@@ -44,11 +46,37 @@ struct MessageBubble: View {
                         Spacer(minLength: 0)
                     }
                 }
+
+                if !isHuman && entry.isComplete && !entry.sources.isEmpty {
+                    let uniqueSources = deduplicated(entry.sources)
+                    if !uniqueSources.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(uniqueSources, id: \.noteID) { hit in
+                                if let url = URL(string: "takenote://note/\(hit.noteID.uuidString)") {
+                                    Link(noteTitle(for: hit.noteID), destination: url)
+                                        .font(.caption)
+                                        .foregroundStyle(Color.takeNotePink)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 4)
+                    }
+                }
             }
             .frame(maxWidth: 520, alignment: isHuman ? .trailing : .leading)
 
             if !isHuman { Spacer(minLength: 40) }
         }
+    }
+
+    private func noteTitle(for noteID: UUID) -> String {
+        notes.first(where: { $0.uuid == noteID })?.title ?? "Note"
+    }
+
+    private func deduplicated(_ hits: [SearchHit]) -> [SearchHit] {
+        var seen = Set<UUID>()
+        return hits.filter { seen.insert($0.noteID).inserted }
     }
 
     private var bubble: some View {
