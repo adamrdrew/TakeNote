@@ -310,7 +310,7 @@ struct NoteEditor: View {
             }
             .sheet(isPresented: $formatter.formatterIsBusy) {
                 VStack {
-                    AIMessage(message: "Magic Format", font: .headline)
+                    AIMessage(message: "Magic Format", font: .largeTitle)
                         .padding()
                     Button("Cancel", role: .cancel) {
                         magicFormatter.cancel()
