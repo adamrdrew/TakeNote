@@ -201,6 +201,50 @@ Note: `reduceMotion` and `dotPhase` were added in Phase 0013 but removed in Phas
 | `TypingIndicator` (private struct) | A `PhaseAnimator`-based three-dot typing indicator defined in `MessageBubble.swift`. Reads `@Environment(\.accessibilityReduceMotion)` and shows static dots when reduce motion is enabled. Cycles through phases `[0, 1, 2]`, highlighting one dot at 1.4× scale per phase. |
 | `bubble` branching logic | The `bubble` computed property now branches on `!isHuman && entry.text.isEmpty && !entry.isComplete` to render `TypingIndicator` inside the glass-effect bubble styling, rather than `Text(entry.text)`. When `entry.text` becomes non-empty, SwiftUI switches to the text rendering branch and `TypingIndicator` is torn down, stopping the animation. |
 
+### iOS Overlay Polish (Phase 0015)
+
+All changes in this section are iOS-only. macOS behavior is completely unaffected.
+
+#### Dismiss on Citation Link Tap
+
+When the user taps a `takenote://note/<UUID>` citation link inside the iOS chat overlay, the overlay dismisses so the navigated note becomes visible.
+
+Implementation: `ChatWindow` declares `@Environment(\.dismiss) private var dismiss` inside an `#if os(iOS)` block. An `.onOpenURL { _ in dismiss() }` modifier is applied to the view inside `#if os(iOS)`. SwiftUI URL propagation allows both this handler (which dismisses the sheet) and `MainWindow`'s `onOpenURL` handler (which performs the actual note navigation) to fire in sequence. No explicit `UIApplication.shared.open(_:)` forwarding is needed.
+
+#### Empty-State Placeholder
+
+When `conversation` is empty on iOS, a centered gray placeholder is shown in place of the empty scroll area.
+
+- Implemented as `var EmptyStatePlaceholder: some View` (`UpperCamelCase` sub-view convention) inside an `#if os(iOS)` block on `ChatWindow`.
+- Contains a `VStack` with two `Spacer()` views for vertical centering plus a `Text("MagicChat")` (`.title2`, bold) and a descriptive subtitle `Text`, both using `.foregroundStyle(.secondary)`.
+- Applied via `.overlay { if conversation.isEmpty { EmptyStatePlaceholder } }` on the `ScrollView`. SwiftUI reactivity causes the placeholder to disappear automatically once `conversation` is non-empty (first message sent).
+- iOS only; no placeholder is shown on macOS.
+
+#### iOS Title Bar
+
+The iOS chat overlay has a custom title bar with a centered "MagicChat" label and a New Chat button on the right.
+
+- Implemented as `var TitleBar: some View` (`UpperCamelCase` sub-view convention) inside `#if os(iOS)` on `ChatWindow`.
+- Uses a `ZStack`: the "MagicChat" `Text` is in the center layer; an `HStack { Spacer(); Button }` pins the New Chat button to the trailing edge.
+- A `Divider()` is placed below the `ZStack` inside a wrapping `VStack`.
+- `TitleBar` is rendered at the top of the `VStack` in `body`, inside `#if os(iOS)`, and only when `toolbarVisible == true`. When `toolbarVisible == false` (Magic Assistant mode), no title bar appears.
+- The New Chat button calls the existing `newChat()` method.
+
+#### Animated Title Color During Generation
+
+While `responseIsGenerating == true`, the "MagicChat" title text in `TitleBar` cycles through a four-color sequence: pink → orange → purple → blue. When idle, it is static `Color.takeNotePink`.
+
+- A file-scope constant `private let titleColors: [Color] = [.takeNotePink, .orange, .purple, .blue]` is defined inside `#if os(iOS)`.
+- `@State private var titleColorPhase: Int = 0` tracks the current position in the cycle.
+- `@Environment(\.accessibilityReduceMotion) private var reduceMotion` is read to suppress animation when the user has enabled Reduce Motion.
+- A `.task(id: responseIsGenerating)` modifier drives the cycling loop: when `responseIsGenerating` becomes `true` and `reduceMotion` is `false`, an `async while` loop sleeps 500ms then increments `titleColorPhase = (titleColorPhase + 1) % titleColors.count`. When `responseIsGenerating` becomes `false` or `reduceMotion` is `true`, the task resets `titleColorPhase = 0` and returns.
+- The title `Text` in `TitleBar` uses `responseIsGenerating && !reduceMotion ? titleColors[titleColorPhase] : Color.takeNotePink` as its foreground style, with `.animation(.easeInOut(duration: 0.4), value: titleColorPhase)` applied.
+- All animation state and the task are inside `#if os(iOS)` blocks; macOS and visionOS are unaffected.
+
+#### iOS Toolbar New Chat Button Removed
+
+The toolbar `ToolbarItem` containing the New Chat button is now wrapped in `#if os(macOS)` and `#if os(visionOS)` blocks so it no longer renders on iOS (where the equivalent button lives in `TitleBar`). macOS and visionOS toolbar buttons are preserved exactly as before.
+
 ---
 
 ## AI Summary

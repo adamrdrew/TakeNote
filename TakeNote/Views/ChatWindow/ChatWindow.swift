@@ -28,6 +28,11 @@ struct ConversationEntry: Identifiable, Hashable {
     }
 }
 
+// Title color cycle used for animated generation feedback on iOS.
+#if os(iOS)
+private let titleColors: [Color] = [.takeNotePink, .orange, .purple, .blue]
+#endif
+
 struct ChatWindow: View {
     @Environment(SearchIndexService.self) private var search
 
@@ -47,6 +52,14 @@ struct ChatWindow: View {
     var useHistory: Bool = true
 
     @FocusState private var textFieldFocused: Bool
+
+    // MARK: - iOS-only state
+
+    #if os(iOS)
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var titleColorPhase: Int = 0
+    #endif
 
     // MARK: - Actions
 
@@ -161,7 +174,7 @@ struct ChatWindow: View {
 
         responseIsGenerating = false
     }
-    
+
     private func newChat() {
         conversation.removeAll()
         userQuery = ""
@@ -169,10 +182,72 @@ struct ChatWindow: View {
         textFieldFocused = true
     }
 
+    // MARK: - iOS Sub-Views
+
+    #if os(iOS)
+    /// Centered placeholder shown when the conversation is empty. iOS only.
+    var EmptyStatePlaceholder: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            Text("MagicChat")
+                .font(.title2)
+                .bold()
+                .foregroundStyle(.secondary)
+            Text("Chat with your notes using natural language and on-device, private AI.")
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 32)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// Title bar shown at the top of the iOS chat overlay when toolbarVisible is true.
+    var TitleBar: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                // Centered title
+                Text("MagicChat")
+                    .font(.headline)
+                    .foregroundStyle(
+                        responseIsGenerating && !reduceMotion
+                            ? titleColors[titleColorPhase]
+                            : Color.takeNotePink
+                    )
+                    .animation(.easeInOut(duration: 0.4), value: titleColorPhase)
+
+                // New Chat button pinned to the trailing edge
+                HStack {
+                    Spacer()
+                    Button {
+                        newChat()
+                    } label: {
+                        Image(systemName: "plus.message")
+                            .foregroundStyle(Color.takeNotePink)
+                    }
+                    .help("New Chat")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+        }
+    }
+    #endif
+
     // MARK: - View
 
     var body: some View {
         VStack(spacing: 0) {
+
+            // iOS title bar (replaces toolbar New Chat button on iOS)
+            #if os(iOS)
+            if toolbarVisible {
+                TitleBar
+            }
+            #endif
 
             // Messages
             ScrollViewReader { proxy in
@@ -203,6 +278,14 @@ struct ChatWindow: View {
                 .onAppear {
                     proxy.scrollTo("BOTTOM", anchor: .bottom)
                 }
+                // iOS empty-state placeholder layered inside the scroll area
+                #if os(iOS)
+                .overlay {
+                    if conversation.isEmpty {
+                        EmptyStatePlaceholder
+                    }
+                }
+                #endif
             }
 
             Divider()
@@ -233,6 +316,8 @@ struct ChatWindow: View {
             .background(.bar)  // blends like a toolbar at the bottom
         }
         .toolbar {
+            // On iOS the New Chat button lives in the TitleBar; on macOS and visionOS use the toolbar.
+            #if os(macOS)
             if toolbarVisible {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
@@ -240,16 +325,44 @@ struct ChatWindow: View {
                     } label: {
                         Label("New Chat", systemImage: "plus.message")
                     }
-                    #if !os(visionOS)
                     .glassEffect()
-                    #endif
                     .help("New Chat")
                 }
             }
-
+            #endif
+            #if os(visionOS)
+            if toolbarVisible {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        newChat()
+                    } label: {
+                        Label("New Chat", systemImage: "plus.message")
+                    }
+                    .help("New Chat")
+                }
+            }
+            #endif
         }
         .onAppear {
             textFieldFocused = true
         }
+        // S001: Dismiss iOS chat overlay when a takenote:// citation link is tapped.
+        // SwiftUI URL propagation allows both this handler and MainWindow's onOpenURL to fire.
+        #if os(iOS)
+        .onOpenURL { _ in
+            dismiss()
+        }
+        // S004: Start/stop color cycling when generation state changes.
+        .task(id: responseIsGenerating) {
+            guard responseIsGenerating, !reduceMotion else {
+                titleColorPhase = 0
+                return
+            }
+            while responseIsGenerating && !reduceMotion {
+                try? await Task.sleep(for: .milliseconds(500))
+                titleColorPhase = (titleColorPhase + 1) % titleColors.count
+            }
+        }
+        #endif
     }
 }

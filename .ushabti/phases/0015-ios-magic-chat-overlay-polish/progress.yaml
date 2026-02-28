@@ -1,0 +1,54 @@
+phase:
+  id: "0015"
+  slug: ios-magic-chat-overlay-polish
+  title: iOS Magic Chat Overlay Polish
+  status: complete
+
+steps:
+  - id: S001
+    title: Add dismiss-on-citation-link-tap (iOS only)
+    implemented: true
+    reviewed: true
+    notes: "Added @Environment(\.dismiss) and .onOpenURL { _ in dismiss() } inside #if os(iOS) guard. Both this handler and MainWindow's onOpenURL fire due to SwiftUI URL propagation."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S002
+    title: Add empty-state placeholder (iOS only)
+    implemented: true
+    reviewed: true
+    notes: "Added EmptyStatePlaceholder computed sub-view (UpperCamelCase) inside #if os(iOS). Uses VStack with Spacers for vertical centering, .secondary foreground for both title and subtitle texts. Overlaid on the ScrollView via .overlay { if conversation.isEmpty { EmptyStatePlaceholder } }."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S003
+    title: Add iOS title bar to ChatWindow
+    implemented: true
+    reviewed: true
+    notes: "Added TitleBar computed sub-view inside #if os(iOS). Uses ZStack for true centering of title text with HStack pinning New Chat button to trailing edge. Wrapped in VStack with Divider below. Shown in body only when toolbarVisible == true, inside #if os(iOS)."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S004
+    title: Animate title color during generation (iOS only)
+    implemented: true
+    reviewed: true
+    notes: "Added @State titleColorPhase: Int = 0, @Environment(\.accessibilityReduceMotion), and private let titleColors constant inside #if os(iOS). TitleBar title uses conditional color expression. .task(id: responseIsGenerating) drives the async cycling loop: when generating and not reduceMotion, increments titleColorPhase every 500ms; otherwise resets to 0. .animation(.easeInOut(duration: 0.4), value: titleColorPhase) applied to title text."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S005
+    title: Remove iOS toolbar New Chat button
+    implemented: true
+    reviewed: true
+    notes: "Moved toolbar ToolbarItem content into separate #if os(macOS) and #if os(visionOS) blocks. iOS no longer renders a toolbar New Chat button; it uses TitleBar instead. macOS and visionOS toolbar buttons remain. The visionOS block omits .glassEffect() as the original code guarded it with #if !os(visionOS)."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S006
+    title: Update ai-features.md
+    implemented: true
+    reviewed: true
+    notes: "Added '### iOS Overlay Polish (Phase 0015)' subsection to the Magic Chat section in ai-features.md. Documents all four features: dismiss-on-citation-link, empty-state placeholder, iOS title bar, animated title color cycling (including accessibilityReduceMotion behavior and titleColorPhase loop), and removal of toolbar New Chat button on iOS."
+    touched:
+      - .ushabti/docs/ai-features.md
