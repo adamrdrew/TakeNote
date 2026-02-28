@@ -136,10 +136,14 @@ internal final class SearchIndex {
         }
     }
     /// Bulk (re)index many notes efficiently.
+    /// Checks `Task.isCancelled` before each note so the operation can exit promptly
+    /// when the owning Task is cancelled. A cancellation leaves the SQLite transaction
+    /// uncommitted; SQLite rolls it back automatically, preserving the previous index state.
     func reindex(_ notes: [(UUID, String)]) {
         do {
             try db.transaction {
                 for (id, md) in notes {
+                    if Task.isCancelled { return }
                     try db.run(fts.filter(note_id == id.uuidString).delete())
                     for c in chunker.chunks(for: md) {
                         try db.run(

@@ -347,6 +347,9 @@ struct NoteList: View {
                 showFileImportError = false
             }
         }
+        .onChange(of: notes.count) { _, _ in
+            search.reindexAll(notes.map { ($0.uuid, $0.content) })
+        }
 
     }
 }

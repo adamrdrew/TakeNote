@@ -25,13 +25,12 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 | `index` | `SearchIndex` | The FTS5 index. In-memory in DEBUG; on-disk in release. |
 | `hits` | `[SearchHit]` | Last search results (observable). |
 | `isIndexing` | `Bool` | `true` while a bulk reindex is running. |
-| `lastReindexAllDate` | `Date` | Timestamp of the last full reindex. |
+| `reindexTask` | `Task<Void, Never>?` (private) | Holds the in-flight bulk reindex task. Cancelled and replaced on each new `reindexAll` call. |
 
 ### Methods
 
-- `canReindexAllNotes() -> Bool` — returns `true` only if: not currently indexing, and at least 10 minutes have elapsed since the last full reindex. (The chat feature flag no longer gates this method; indexing is always-on to support note list search.)
 - `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. Always runs regardless of chat feature flag state.
-- `reindexAll(_ noteData: [(UUID, String)])` — rate-limited bulk reindex. Only runs if `canReindexAllNotes()` returns `true`. Sets `isIndexing` and resets `lastReindexAllDate`.
+- `reindexAll(_ noteData: [(UUID, String)])` — cancel-and-restart bulk reindex. Cancels any in-flight `reindexTask` before starting, sets `isIndexing = true`, assigns a new `Task` to `reindexTask`. Inside the task, calls `index.reindex(noteData)`, then sets `isIndexing = false`. If the task was cancelled while `index.reindex` was running, `isIndexing` is set to `false` and the task exits without logging completion. There is no rate-limit or throttle; each call always starts a fresh reindex.
 - `dropAll()` — clears all indexed data. Always runs regardless of chat feature flag state.
 - `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. Always runs regardless of chat feature flag state. Logs at debug level.
 - `searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID]` — returns deduplicated note UUIDs in BM25 rank order by delegating to `index.searchNoteIDs`. Used by `NoteList.filteredNotes` for FTS-backed note list search.
@@ -46,8 +45,9 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 - **Single note — app backgrounding/quit**: `TakeNoteApp.onChange(of: scenePhase)` reindexes `takeNoteVM.openNote` when the scene transitions to `.inactive` or `.background`, capturing mid-edit changes before the process suspends.
 - **Single note — detached editor window note change**: `NoteEditorWindow.onChange(of: editorWindowVM.openNote)` reindexes the previous note when the window switches to a different note.
 - **Single note — detached editor window close**: `NoteEditorWindow.onDisappear` reindexes the current `editorWindowVM.openNote` when the editor window is closed.
-- **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync), subject to the 10-minute rate limit.
-- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true` and `canReindexAllNotes()` is satisfied (feature flag on, not currently indexing, 10-minute cooldown elapsed). Runs at app launch before any user interaction with Magic Chat. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
+- **Note count change**: triggered from `NoteList.onChange(of: notes.count)` whenever the count of notes in `@Query() var notes` changes — covering note additions, deletions, and CloudKit arrivals (including first hydration on iPhone). This is the primary defense against the startup race condition where the FTS index is built before CloudKit has synced. The cancellation mechanism ensures that rapid successive triggers do not waste resources: each new call cancels the previous in-flight task.
+- **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync). Fires unconditionally; no rate-limit gate.
+- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true`. Fires unconditionally; no rate-limit gate. Runs at app launch. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
 
 ### When Index Deletion Runs
 

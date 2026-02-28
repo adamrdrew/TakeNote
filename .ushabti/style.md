@@ -184,7 +184,9 @@ self.session = LanguageModelSession(...)  // stored property — do not do this
 
 #### Feature flag checks for Magic Chat surfaces
 
-Any code path that touches the chat UI, the search index (for RAG), or the Chat toolbar button must check `chatFeatureFlagEnabled` before executing. Read the flag from the global computed variable in `ChatFeatureFlagEnabled.swift`.
+The Magic Chat UI surfaces — the Chat window/popover and the Chat toolbar button — must check `chatFeatureFlagEnabled` before rendering or executing. Read the flag from the global computed variable in `ChatFeatureFlagEnabled.swift`.
+
+FTS indexing (`SearchIndexService.reindex` and `reindexAll`) is unconditional and must NOT be gated on `chatFeatureFlagEnabled`. Note list search depends on FTS regardless of whether Magic Chat is enabled; the two concerns are independent (see L07).
 
 #### AppIntents access state through AppDependencyManager
 
@@ -318,7 +320,7 @@ LLM model methods (`Note.generateSummary()`) swallow errors with `try?`. This is
 ## Performance and Resource Use
 
 - **Search index rate limiting:** `SearchIndexService.reindexAll()` is rate-limited to once per 10 minutes via `canReindexAllNotes()`. Do not call `reindexAll()` without going through this gate.
-- **Chat feature flag check before indexing:** `reindex(note:)` and `reindexAll()` return immediately when `chatFeatureFlagEnabled == false`. This must be preserved on any new indexing path.
+- **FTS indexing is always-on:** `reindex(note:)` and `reindexAll()` run unconditionally. Do not add a `chatFeatureFlagEnabled` guard to any indexing path (see L07).
 - **Snapshot writes:** `SnapshotController.takeSnapshot()` runs on scene phase changes and every 10 minutes while active. New triggers should be justified; this is already frequent.
 - **Widget reload:** `WidgetCenter.shared.reloadAllTimelines()` is called on every note mutation (in `Note` initializer and mutating methods). This is the existing pattern; do not add additional `reloadAllTimelines()` calls without good reason.
 - **In-memory search index in DEBUG:** `SearchIndex` uses an in-memory connection in DEBUG builds. This is intentional and must be preserved so development builds do not leave stale on-disk search data.
@@ -343,8 +345,8 @@ Reviewers verify each of these items for any pull request that touches the liste
 - [ ] No third-party LLM API calls or framework imports (L04).
 
 **Magic Chat feature flag**
-- [ ] Any new chat UI surface checks `chatFeatureFlagEnabled` (L07).
-- [ ] Any new search indexing call checks `chatFeatureFlagEnabled` (L07).
+- [ ] Any new chat UI surface (Chat window/popover, Chat toolbar button) checks `chatFeatureFlagEnabled` (L07).
+- [ ] No new `chatFeatureFlagEnabled` guard is added to any FTS indexing path; indexing must remain unconditional (L07).
 
 **CommandRegistry**
 - [ ] Any new list item that registers commands also unregisters them in `.onDisappear` (L15).

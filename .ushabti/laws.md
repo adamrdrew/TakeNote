@@ -63,11 +63,11 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ---
 
-### L07 — Magic Chat Feature Flag Must Gate All Chat Surfaces
+### L07 — Magic Chat Feature Flag Gates Only Chat UI; FTS Indexing Is Always-On
 
-- **Rule:** The `MagicChatEnabled` Info.plist boolean MUST gate all three of: (1) the Chat window/popover UI, (2) search indexing for chat RAG (`SearchIndexService.reindex` and `reindexAll`), and (3) the Chat toolbar button. When `chatFeatureFlagEnabled` is `false`, none of these may be reachable.
-- **Rationale:** Magic Chat is a separately controllable feature. Indexing notes when chat is disabled wastes resources and is unexpected behavior. Exposing chat UI when disabled is a product invariant violation.
-- **Enforcement:** Reviewer checks that all three surfaces consult `chatFeatureFlagEnabled` before executing. A change that adds a new chat entry point MUST also gate it on this flag.
+- **Rule:** FTS indexing (`SearchIndexService.reindex` and `reindexAll`) MUST run unconditionally, regardless of the value of `chatFeatureFlagEnabled`. The `MagicChatEnabled` Info.plist boolean (`chatFeatureFlagEnabled`) MUST gate only the Magic Chat UI surfaces: (1) the Chat window/popover, and (2) the Chat toolbar button. When `chatFeatureFlagEnabled` is `false`, those two UI surfaces MUST NOT be reachable, but FTS indexing MUST continue to operate normally.
+- **Rationale:** Note list search depends on FTS regardless of whether Magic Chat is enabled. Gating indexing on the chat feature flag causes note list search to break silently when Magic Chat is disabled. FTS is a search index, not a chat feature; its lifecycle is independent of the chat flag. (This was the deliberate architectural change made in phase 0011.)
+- **Enforcement:** Reviewer verifies that `SearchIndexService.reindex` and `reindexAll` contain no guard or early return conditioned on `chatFeatureFlagEnabled`. Reviewer checks that the Chat window/popover and Chat toolbar button each consult `chatFeatureFlagEnabled` before rendering or executing. A change that adds a new chat UI entry point MUST also gate it on this flag.
 - **Exceptions:** Magic Assistant (inline text transformation inside NoteEditor) is distinct from Magic Chat and is not gated by this flag.
 
 ---

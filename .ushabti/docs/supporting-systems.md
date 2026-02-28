@@ -39,10 +39,10 @@ The bootstrap function creates a temporary SQLite file (not the app's main store
 
 Wires up the `SystemFolderReconciler` with notification observers. Returns a `ReconcilerHarness` (reconciler + observer tokens) that must be retained to keep observations alive.
 
-- Listens for `NSPersistentStoreRemoteChange` — runs reconciler + bulk search reindex on CloudKit sync.
+- Listens for `NSPersistentStoreRemoteChange` — runs reconciler + bulk search reindex on CloudKit sync. The reindex is called unconditionally; no `canReindexAllNotes()` guard is applied.
 - Optionally listens for `NSManagedObjectContextDidSave` — the parameter default is `false`, but **in `TakeNoteApp.init()` it is called with `listenForLocalSaves: true`**. This means the reconciler runs on both remote changes AND every local save in production.
 - Runs reconciler once on startup if `runOnStartup` is `true` (also `true` in the actual call).
-- When `runOnStartup` is `true` and the chat feature flag is enabled, also triggers a startup `reindexAll` immediately after the reconciler runs. This is gated on `searchIndexService.canReindexAllNotes()` (feature flag on, not currently indexing, 10-minute cooldown elapsed). The startup reindex fetches all `Note` records from `container.mainContext` and passes their `(uuid, content)` tuples to `searchIndexService.reindexAll`, ensuring the FTS5 search index is populated before any Magic Chat interaction in the session.
+- When `runOnStartup` is `true`, also triggers a startup `reindexAll` immediately after the reconciler runs. The call is unconditional — no `canReindexAllNotes()` gate. The startup reindex fetches all `Note` records from `container.mainContext` and passes their `(uuid, content)` tuples to `searchIndexService.reindexAll`. If a `NoteList.onChange(of: notes.count)` reindex fires concurrently, `SearchIndexService`'s cancel-and-restart mechanism resolves the overlap: whichever fires last wins.
 
 The returned `ReconcilerHarness` holds the reconciler instance and notification observer tokens. It is stored in `TakeNoteApp.reconcilerHarness` (a `private var`). The tokens must be retained for the lifetime of the app to keep notifications active.
 

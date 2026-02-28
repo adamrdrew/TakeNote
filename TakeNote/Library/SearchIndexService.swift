@@ -23,28 +23,26 @@ class SearchIndexService {
     #else
     let index = try! SearchIndex()
     #endif
-    
+
     var hits: [SearchHit] = []
     var isIndexing: Bool = false
-    var lastReindexAllDate: Date = .distantPast
     var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
-
-    func canReindexAllNotes() -> Bool {
-        if isIndexing { return false }
-        return Date().timeIntervalSince(lastReindexAllDate) >= 10 * 60
-    }
+    private var reindexTask: Task<Void, Never>?
 
     func reindex(note: Note) {
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
     func reindexAll(_ noteData: [(UUID, String)]) {
-        if !canReindexAllNotes() { return }
+        reindexTask?.cancel()
         logger.info("FTS search reindex running.")
-        lastReindexAllDate = Date()
         isIndexing = true
-        Task {
+        reindexTask = Task {
             index.reindex(noteData)
+            if Task.isCancelled {
+                isIndexing = false
+                return
+            }
             isIndexing = false
             #if DEBUG
             logger.info("FTS search reindex complete. \(noteData.count) notes indexed, \(self.index.rowCount) chunks in index.")

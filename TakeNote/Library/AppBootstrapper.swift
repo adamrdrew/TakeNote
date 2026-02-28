@@ -144,13 +144,11 @@ struct AppBootstrapper {
             ) { [weak reconciler] _ in
                 Task { @MainActor in
                     try? reconciler?.runOnce()
-                    if searchIndexService.canReindexAllNotes() {
-                        // Obtain the main context on the main actor to avoid capturing it in the @Sendable closure
-                        let ctx = container.mainContext
-                        let notes = try? ctx.fetch(FetchDescriptor<Note>())
-                        if let n = notes {
-                            searchIndexService.reindexAll(n.map { note in (note.uuid, note.content) })
-                        }
+                    // Obtain the main context on the main actor to avoid capturing it in the @Sendable closure
+                    let ctx = container.mainContext
+                    let notes = try? ctx.fetch(FetchDescriptor<Note>())
+                    if let n = notes {
+                        searchIndexService.reindexAll(n.map { note in (note.uuid, note.content) })
                     }
                 }
             }
@@ -172,14 +170,12 @@ struct AppBootstrapper {
         if runOnStartup {
             try? reconciler.runOnce()
             Task { @MainActor in
-                if searchIndexService.canReindexAllNotes() {
-                    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "AppBootstrapper")
-                    logger.info("RAG search startup reindex triggered.")
-                    let ctx = container.mainContext
-                    let notes = try? ctx.fetch(FetchDescriptor<Note>())
-                    if let n = notes {
-                        searchIndexService.reindexAll(n.map { note in (note.uuid, note.content) })
-                    }
+                let logger = Logger(subsystem: "com.adamdrew.takenote", category: "AppBootstrapper")
+                logger.info("RAG search startup reindex triggered.")
+                let ctx = container.mainContext
+                let notes = try? ctx.fetch(FetchDescriptor<Note>())
+                if let n = notes {
+                    searchIndexService.reindexAll(n.map { note in (note.uuid, note.content) })
                 }
             }
         }

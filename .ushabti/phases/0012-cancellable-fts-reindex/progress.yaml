@@ -1,0 +1,47 @@
+phase:
+  id: 0012
+  slug: cancellable-fts-reindex
+  title: Cancellable FTS Reindex with Note-Count Trigger
+  status: complete
+
+steps:
+  - id: S001
+    title: Add cancellation check inside SearchIndex.reindex(_ notes:)
+    implemented: true
+    reviewed: true
+    notes: "Added Task.isCancelled check at top of for loop in SearchIndex.reindex(_ notes:). Early return leaves transaction uncommitted; SQLite rolls back automatically."
+    touched:
+      - TakeNote/Library/SearchIndex.swift
+
+  - id: S002
+    title: Refactor SearchIndexService.reindexAll to use a stored cancellable Task
+    implemented: true
+    reviewed: true
+    notes: "Added private reindexTask: Task<Void, Never>?. Removed lastReindexAllDate and canReindexAllNotes(). Rewrote reindexAll to cancel any prior task, set isIndexing=true, assign new task to reindexTask, check Task.isCancelled after index.reindex returns, and set isIndexing=false on exit."
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+
+  - id: S003
+    title: Remove canReindexAllNotes() guards from AppBootstrapper.installReconciler
+    implemented: true
+    reviewed: true
+    notes: Removed canReindexAllNotes() guard from both the NSPersistentStoreRemoteChange observer block and the runOnStartup block. Both now call reindexAll unconditionally.
+    touched:
+      - TakeNote/Library/AppBootstrapper.swift
+
+  - id: S004
+    title: Add onChange(of notes.count) handler in NoteList
+    implemented: true
+    reviewed: true
+    notes: "Added .onChange(of: notes.count) modifier on the outermost VStack in NoteList.body. Handler calls search.reindexAll(notes.map { ($0.uuid, $0.content) })."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S005
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated search-system.md: removed lastReindexAllDate from properties table; replaced with reindexTask. Removed canReindexAllNotes() from methods. Updated reindexAll description to describe cancel-and-restart pattern. Added NoteList.onChange(of: notes.count) trigger to When Indexing Runs section; updated Bulk and Startup entries to note unconditional firing. Updated supporting-systems.md: installReconciler description now reflects unconditional reindexAll calls in both remote-change and startup paths."
+    touched:
+      - .ushabti/docs/search-system.md
+      - .ushabti/docs/supporting-systems.md
