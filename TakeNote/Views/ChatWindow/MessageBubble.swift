@@ -64,23 +64,24 @@ struct MessageBubble: View {
                         alignment: isHuman ? .trailing : .leading
                     )
 
-                if !isHuman, let handler = onBotMessageClick {
+                if !isHuman && entry.isComplete, let handler = onBotMessageClick {
                     // Button hugs content and stays left under the 520px column
                     HStack(spacing: 0) {
-                        Button {
-                            handler(entry.text)
-                        } label: {
-                            Label("Accept", systemImage: "checkmark")
-                                .symbolRenderingMode(.monochrome)
-                        }
-                        .padding(10)
-                        #if !os(visionOS)
-                        .glassEffect(.regular.tint(.green).interactive())
-                        #endif
-                        .foregroundStyle(.white)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .help("Accept AI changes")
+ 
 
+                        
+                        Button{  handler(entry.text)} label:  {
+                            Label("Accept", systemImage: "checkmark")
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(.background)
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 3)
+                        }
+                        .background(Color.green, in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityLabel("Accept this suggestion")
+                        .accessibilityHint("Accept the AI formatting suggestion")
+                        
+                        
                         Spacer(minLength: 0)
                     }
                 }

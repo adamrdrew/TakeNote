@@ -23,11 +23,11 @@ struct ContextBubble: View {
         Label(text, systemImage: "apple.intelligence")
             .fontDesign(.monospaced)
             .padding()
-            .border(Color.primary.opacity(0.25), width: 2)
+            //.border(Color.primary.opacity(0.25), width: 2)
             .textSelection(.enabled)
             .font(.body)
             .overlay(
-                RoundedRectangle(cornerRadius: 8)
+                RoundedRectangle(cornerRadius: 32)
                     .stroke(.primary.opacity(0.25), lineWidth: 2)
             )
             .padding(.vertical, 10)

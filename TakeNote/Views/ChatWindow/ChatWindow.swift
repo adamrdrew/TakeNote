@@ -50,6 +50,9 @@ struct ChatWindow: View {
     var onBotMessageClick: ((String) -> Void)?
     var toolbarVisible: Bool = true
     var useHistory: Bool = true
+    var windowTitleText = "Magic Chat"
+    var windowTitleDescription = "Chat with your notes using natural language and on-device, private AI."
+    var chatBoxPlaceholder = "What do you want to know?"
 
     @FocusState private var textFieldFocused: Bool
 
@@ -146,13 +149,14 @@ struct ChatWindow: View {
 
         let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
 
+        // Capture prompt BEFORE appending bot entry — makePrompt() reads conversation.last
+        let assembledPrompt = makePrompt()
+
         // Append bot entry before streaming begins so SwiftUI renders the bubble immediately
         var botEntry = ConversationEntry(sender: .bot, text: "")
         botEntry.sources = sources
         conversation.append(botEntry)
         let botIndex = conversation.count - 1
-
-        let assembledPrompt = makePrompt()
         #if DEBUG
         let logger = search.logger
         logger.debug("Assembled prompt for LLM:\n\(assembledPrompt)")
@@ -188,11 +192,11 @@ struct ChatWindow: View {
     var EmptyStatePlaceholder: some View {
         VStack(spacing: 12) {
             Spacer()
-            Text("MagicChat")
+            Text(windowTitleText)
                 .font(.title2)
                 .bold()
                 .foregroundStyle(.secondary)
-            Text("Chat with your notes using natural language and on-device, private AI.")
+            Text(windowTitleDescription)
                 .font(.subheadline)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
@@ -210,7 +214,7 @@ struct ChatWindow: View {
         VStack(spacing: 0) {
             ZStack {
                 // Centered title
-                Text("MagicChat")
+                Text("Magic Chat")
                     .font(.headline)
                     .foregroundStyle(
                         responseIsGenerating && !reduceMotion
@@ -294,7 +298,7 @@ struct ChatWindow: View {
             HStack(spacing: 8) {
                 // Rounded, iMessage-like input
                 HStack(spacing: 8) {
-                    TextField("Ask anything", text: $userQuery)
+                    TextField(chatBoxPlaceholder, text: $userQuery)
                         .textFieldStyle(.plain)
                         .focused($textFieldFocused)
                         .onSubmit(askQuestion)

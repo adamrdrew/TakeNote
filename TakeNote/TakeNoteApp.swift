@@ -211,7 +211,7 @@ struct TakeNoteApp: App {
         }
         .modelContainer(container)
 
-        WindowGroup("TakeNote - AI Chat", id: "chat-window") {
+        WindowGroup("TakeNote - Magic Chat", id: "chat-window") {
             if chatFeatureFlagEnabled {
                 ChatWindow()
                     .environment(search)

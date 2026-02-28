@@ -418,13 +418,15 @@ struct NoteEditor: View {
                             ChatWindow(
                                 context: selectedText,
                                 instructions: MAGIC_ASSISTANT_PROMPT,
-                                prompt:
-                                    "Perform the instructions in the {{USER_REQUEST}} based on the {{CONTEXT}}:\n\nUSER_REQUEST:\n",
+                                prompt: "USER_REQUEST:\n",
                                 searchEnabled: false,
                                 onBotMessageClick:
                                     assistantSelectionReplacement,
                                 toolbarVisible: false,
-                                useHistory: false
+                                useHistory: false,
+                                windowTitleText: "Magic Assistant",
+                                windowTitleDescription: "Describe how you want this text formatted, and let AI do the work!",
+                                chatBoxPlaceholder: "How do you want this formatted?"
 
                             )
                             .frame(minWidth: 300, minHeight: 400)

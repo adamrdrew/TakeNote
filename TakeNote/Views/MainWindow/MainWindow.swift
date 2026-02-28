@@ -110,13 +110,13 @@ struct MainWindow: View {
                     Button(action: openChatWindow) {
                         Label("Chat", systemImage: "message")
                     }
-                    .help("AI Chat")
+                    .help("Magic Chat")
                 #endif
                 #if os(iOS)
                     Button(action: doShowChatPopover) {
                         Label("Chat", systemImage: "message")
                     }
-                    .help("AI Chat")
+                    .help("Magic Chat")
                     .popover(
                         isPresented: $showChatPopover,
                         arrowEdge: .trailing
@@ -159,10 +159,12 @@ struct MainWindow: View {
                         )
                     #endif
                     .toolbar {
+                        #if os(iOS)
                         if #available(iOS 26.0, *) {
                             DefaultToolbarItem(kind: .search, placement: .bottomBar)
                             ToolbarSpacer(.flexible, placement: .bottomBar)
                         }
+                        #endif
                         ToolbarItem(placement: toolbarPlacement) {
 
                             Button(action: {
@@ -186,7 +188,7 @@ struct MainWindow: View {
                                 Button(action: doShowSidebarChatPopover) {
                                     Label("Chat", systemImage: "message")
                                 }
-                                .help("AI Chat")
+                                .help("Magic Chat")
                                 .popover(
                                     isPresented: $showSidebarChatPopover,
                                     arrowEdge: .trailing
