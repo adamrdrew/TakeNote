@@ -1,0 +1,44 @@
+phase:
+  id: "0014"
+  slug: fix-magic-chat-typing-indicator
+  title: Fix Magic Chat Typing Indicator
+  status: complete
+
+steps:
+  - id: S001
+    title: Move typing indicator into MessageBubble
+    implemented: true
+    reviewed: true
+    notes: "Added TypingIndicator private struct to MessageBubble.swift. The bubble computed property now branches on !isHuman && entry.text.isEmpty && !entry.isComplete to render TypingIndicator wrapped in the same glass-effect padding as normal bot bubbles."
+    touched:
+      - TakeNote/Views/ChatWindow/MessageBubble.swift
+
+  - id: S002
+    title: Implement continuously cycling dot animation
+    implemented: true
+    reviewed: true
+    notes: "TypingIndicator uses PhaseAnimator(phases: [0,1,2]) for a continuously cycling wave: each phase highlights one dot at 1.4x scale while others sit at 1.0x. reduce-motion path uses staticDots (all dots at uniform scale, no animation)."
+    touched:
+      - TakeNote/Views/ChatWindow/MessageBubble.swift
+
+  - id: S003
+    title: Remove standalone typing indicator from ChatWindow
+    implemented: true
+    reviewed: true
+    notes: "Removed standalone if-let typing indicator HStack from LazyVStack, removed @State private var dotPhase, and removed @Environment(\.accessibilityReduceMotion) private var reduceMotion from ChatWindow. Both reduceMotion and dotPhase had no other usages in the file."
+    touched:
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S004
+    title: Update ai-features.md
+    implemented: true
+    reviewed: true
+    notes: Updated Loading Indicator section to describe PhaseAnimator-based implementation in MessageBubble. Updated ChatWindow Properties table to remove dotPhase and reduceMotion rows with a note that they moved to MessageBubble. Added MessageBubble Changes (Phase 0014) table documenting TypingIndicator struct and bubble branching logic.
+    touched:
+      - .ushabti/docs/ai-features.md
+  - id: S005
+    title: Fix PhaseAnimator to cycle continuously: replace trigger-based init with no-trigger init
+    implemented: false
+    reviewed: true
+    notes: ""
+    touched: []

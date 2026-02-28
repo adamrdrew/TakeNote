@@ -163,7 +163,9 @@ The `TextField` container `HStack` has `.disabled(responseIsGenerating)` applied
 
 ### Loading Indicator (Animated Dots)
 
-While the last `ConversationEntry` is a bot entry with empty text (i.e., waiting for the first streaming token), a three-dot animated pulse indicator is displayed left-aligned in the message list. The dots disappear automatically when `conversation.last?.text` becomes non-empty (first token arrives and mutates the entry's text in-place). The animation respects `@Environment(\.accessibilityReduceMotion)`: when `reduceMotion` is `true`, no animation is applied. `ChatWindow` holds `@State private var dotPhase: Double = 0` to drive the animation.
+While a bot `ConversationEntry` has `text == ""` and `isComplete == false` (i.e., waiting for the first streaming token), `MessageBubble` renders a three-dot animated typing indicator **inside** the bot glass-effect bubble — the same styled container used for all bot messages. The dots disappear automatically when `entry.text` becomes non-empty (first token arrives and mutates the entry's text in-place), which causes `MessageBubble` to switch to the text rendering branch.
+
+The indicator is implemented as a private `TypingIndicator` struct inside `MessageBubble.swift`. It uses `PhaseAnimator` with phases `[0, 1, 2]` to produce a continuously cycling sequential wave: in each phase, the corresponding dot (index 0, 1, or 2) renders at 1.4× scale while the others stay at 1.0×. The animation loops indefinitely while the view is on screen. `TypingIndicator` reads `@Environment(\.accessibilityReduceMotion)` directly: when `reduceMotion` is `true`, all three dots render at uniform scale with no `PhaseAnimator` applied. Animation state and the `reduceMotion` environment property live entirely in `MessageBubble.swift` — `ChatWindow` holds neither.
 
 ### AI Availability Gate
 
@@ -180,8 +182,8 @@ After streaming completes (`entry.isComplete == true`), `MessageBubble` renders 
 | Property | Type | Description |
 |---|---|---|
 | `allNotes` | `@Query() [Note]` | All notes from SwiftData, used for citation title lookup. |
-| `reduceMotion` | `@Environment(\.accessibilityReduceMotion) Bool` | Disables dot animation when true. |
-| `dotPhase` | `@State Double` | Animation phase driver for the three-dot loading indicator. |
+
+Note: `reduceMotion` and `dotPhase` were added in Phase 0013 but removed in Phase 0014. The typing indicator and its animation state moved to `MessageBubble` (see below).
 
 ### `MessageBubble` Changes (Phase 0013)
 
@@ -191,6 +193,13 @@ After streaming completes (`entry.isComplete == true`), `MessageBubble` renders 
 | `noteTitle(for:)` | Private helper that finds a note by UUID and returns its title. |
 | `deduplicated(_:)` | Private helper that filters `[SearchHit]` to unique `noteID` values. |
 | Citation links block | Renders in `VStack` after the Accept button row, gated on `!isHuman && entry.isComplete && !entry.sources.isEmpty`. |
+
+### `MessageBubble` Changes (Phase 0014)
+
+| Addition | Description |
+|---|---|
+| `TypingIndicator` (private struct) | A `PhaseAnimator`-based three-dot typing indicator defined in `MessageBubble.swift`. Reads `@Environment(\.accessibilityReduceMotion)` and shows static dots when reduce motion is enabled. Cycles through phases `[0, 1, 2]`, highlighting one dot at 1.4× scale per phase. |
+| `bubble` branching logic | The `bubble` computed property now branches on `!isHuman && entry.text.isEmpty && !entry.isComplete` to render `TypingIndicator` inside the glass-effect bubble styling, rather than `Text(entry.text)`. When `entry.text` becomes non-empty, SwiftUI switches to the text rendering branch and `TypingIndicator` is torn down, stopping the animation. |
 
 ---
 

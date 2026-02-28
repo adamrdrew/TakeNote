@@ -47,9 +47,6 @@ struct ChatWindow: View {
     var useHistory: Bool = true
 
     @FocusState private var textFieldFocused: Bool
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var dotPhase: Double = 0
-
 
     // MARK: - Actions
 
@@ -190,31 +187,6 @@ struct ChatWindow: View {
                                 .id(entry.id)
                                 .padding(.horizontal, 12)
                                 .padding(.top, 2)
-                        }
-
-                        // Three-dot animated indicator while waiting for first streaming token
-                        if let lastEntry = conversation.last, lastEntry.sender == .bot, lastEntry.text.isEmpty {
-                            HStack(spacing: 4) {
-                                ForEach(0..<3, id: \.self) { i in
-                                    Circle()
-                                        .fill(Color.secondary.opacity(0.6))
-                                        .frame(width: 8, height: 8)
-                                        .scaleEffect(dotPhase > Double(i) * (1.0 / 3.0) ? 1.3 : 1.0)
-                                        .animation(
-                                            reduceMotion ? nil : .easeInOut(duration: 0.4).delay(Double(i) * 0.15),
-                                            value: dotPhase
-                                        )
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .onAppear {
-                                guard !reduceMotion else { return }
-                                withAnimation(.linear(duration: 0.9).repeatForever(autoreverses: true)) {
-                                    dotPhase = 1.0
-                                }
-                            }
                         }
 
                         // Bottom spacer to anchor scroll
