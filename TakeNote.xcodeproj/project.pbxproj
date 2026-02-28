@@ -71,9 +71,11 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				AppIntents/NewNoteIntent.swift,
+				Library/NoteImageManager.swift,
 				Library/SnapshotController.swift,
 				Models/Note.swift,
 				Models/NoteContainer.swift,
+				Models/NoteImage.swift,
 				Models/NoteLink.swift,
 				TakeNoteVM.swift,
 			);
