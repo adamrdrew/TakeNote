@@ -7,7 +7,7 @@ TakeNote is a multi-platform (macOS, iOS, visionOS) notes app built with SwiftUI
 Key files:
 - Entry point: `/Users/adam/Development/TakeNote/TakeNote/TakeNoteApp.swift`
 - Central state: `/Users/adam/Development/TakeNote/TakeNote/TakeNoteVM.swift`
-- Models: `/Users/adam/Development/TakeNote/TakeNote/Models/` (Note, NoteContainer, NoteLink)
+- Models: `/Users/adam/Development/TakeNote/TakeNote/Models/` (Note, NoteContainer, NoteLink, NoteImage)
 - Library: `/Users/adam/Development/TakeNote/TakeNote/Library/`
 - Widget: `/Users/adam/Development/TakeNote/NewNoteControl/`
 - Laws: `/Users/adam/Development/TakeNote/.ushabti/laws.md`
@@ -17,7 +17,7 @@ Key files:
 ## Architecture Summary
 
 - `TakeNoteVM` is `@Observable @MainActor`, shared via SwiftUI environment
-- SwiftData with CloudKit (`iCloud.com.adamdrew.takenote`), three @Model types: Note, NoteContainer, NoteLink
+- SwiftData with CloudKit (`iCloud.com.adamdrew.takenote`), four @Model types: Note, NoteContainer, NoteLink, NoteImage
 - `SearchIndexService` wraps `SearchIndex` (FTS5/SQLite) for RAG search; `VectorSearchIndex` exists but is NOT wired into production
 - `MagicFormatter` for inline AI formatting; `ChatWindow` for Magic Chat (feature-flagged)
 - `CommandRegistry` pattern for menu bar bridging to list items
@@ -85,7 +85,7 @@ The user's actual request ("make this bold", "make this a link") is completely a
 - R004 RESOLVED: `ChatWindow.generateResponse()` DOES have an availability guard — compliant with L05
 - R008: `ckBootstrapVersionCurrent` inside `#if DEBUG` is intentional — see CloudKit Schema Management Workflow above
 - L01: Deployment targets are macOS 26 and iOS 26 — confirmed compliant
-- L02/L03: Only Note, NoteContainer, NoteLink are `@Model` types — confirmed
+- L02/L03: Only Note, NoteContainer, NoteLink, NoteImage are `@Model` types — confirmed
 - L04: No third-party LLM imports — confirmed
 - L06: `MagicFormatter` reassigns session to a fresh instance at the start of every `magicFormat()` call — compliant per style guide exception
 - L07: Chat surfaces all gated on `chatFeatureFlagEnabled` — confirmed
@@ -101,18 +101,18 @@ The user's actual request ("make this bold", "make this a link") is completely a
 - R006: Production `print()` calls outside `#if DEBUG` in TakeNoteVM, CommandRegistry, SystemFolderReconciler, NoteLinkManager, EditCommands
 - R013: Direct property sets bypassing model mutating methods in several places (NoteList cut/paste, NoteEditor content set)
 
-## Images-in-Notes Feature (planned, Phase 0011+)
+## Images-in-Notes Feature (shipped, branch paste-images is current)
 
-Design spike completed Feb 2026. Key architectural decisions:
-- New `@Model` class `NoteImage` required (law L02 update needed)
-- Images stored as `Data` (binary) in SwiftData — base64 is unnecessary overhead since SwiftData/CloudKit handles binary natively
-- UUID field on `NoteImage` is stable cross-device identifier
-- URL scheme: `takenote://image/<UUID>` (new handler alongside existing `takenote://note/<UUID>`)
-- Markdown references: `![alt](takenote://image/<UUID>)`
-- MarkdownUI 2.4.1 supports custom image providers via `.markdownImageProvider()`
-- Orphan culling: scan `NoteImage` records and check if any Note.content contains their UUID
-- Image picker: `PhotosPickerItem` (PhotosUI framework) — no new entitlements needed for standard photo picker
-- Drag and drop: `.dropDestination(for: Data.self)` or `for: URL.self` with image UTType filtering
+NoteImage model is live. The complete pipeline:
+- `NoteImage` @Model: `imageUUID` (UUID, private(set)), `imageData` (Data), `mimeType` (String), `createdDate` (Date)
+- `NoteImageManager`: `@Observable @MainActor` service, provides `cullOrphanedImages()`. Holds `modelContext`.
+- `NoteImageStore`: static enum, `loadImage(uuid:modelContext:)` fetches by UUID from SwiftData
+- `TakeNoteImageProvider`: implements MarkdownUI `ImageProvider`, resolves `takenote://image/<UUID>` URLs to inline SwiftUI images
+- `NoteEditor.insertImage(data:)`: calls `downsize()`, creates `NoteImage`, inserts into context, saves, calls `insertAtCaret("![image](takenote://image/<UUID>)")`
+- `NoteEditor.downsize()`: static, platform-branched (UIImage/NSImage), caps longest side at 2048px, re-encodes as JPEG at 0.85 quality
+- Drag-and-drop: `.dropDestination(for: Data.self)` on NoteEditor ZStack, validates data as image before calling `insertImage`
+- Photo picker: `PhotosPicker` toolbar button, `selectedPhotoItem: PhotosPickerItem?` state, loads transferable Data then calls `insertImage`
+- No existing paste-image handling
 
 ## Key Doc Inaccuracies (audit Feb 2026)
 
@@ -153,7 +153,7 @@ None recorded yet.
 - [WidgetKit Documentation](https://developer.apple.com/documentation/widgetkit)
 - [AppIntents Documentation](https://developer.apple.com/documentation/appintents)
 - [CloudKit Documentation](https://developer.apple.com/documentation/cloudkit)
-- [PhotosUI Documentation](https://developer.apple.com/documentation/photosuit)
+- [PhotosUI Documentation](https://developer.apple.com/documentation/photosui)
 
 ### Libraries
 - [SQLite.swift](https://github.com/stephencelis/SQLite.swift)

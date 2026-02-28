@@ -1,0 +1,56 @@
+phase:
+  id: "0018"
+  slug: paste-image-support
+  title: Paste Image Support in NoteEditor
+  status: complete
+
+steps:
+  - id: S001
+    title: Add iOS "Paste Image" toolbar button
+    implemented: true
+    reviewed: true
+    notes: "Added iOS paste image toolbar button (doc.on.clipboard) after PhotosPicker item, disabled when showPreview is true."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S002
+    title: Implement pasteImageFromClipboard() on iOS
+    implemented: true
+    reviewed: true
+    notes: "Implemented pasteImageFromClipboard() in #if os(iOS) guard: checks showPreview, hasImages, reads UIImage, converts via jpegData(compressionQuality:1.0), calls insertImage(data:)."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S003
+    title: Add macOS Cmd+V interception via .onKeyPress
+    implemented: true
+    reviewed: true
+    notes: "Added #if os(macOS) .onKeyPress(.init(v), phases: .down) modifier to the ZStack; checks .command modifier, showPreview guard, dispatches to pasteImageFromMacOSClipboard()."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S004
+    title: Implement pasteImageFromMacOSClipboard() on macOS
+    implemented: true
+    reviewed: true
+    notes: "Implemented pasteImageFromMacOSClipboard() in #if os(macOS) guard: checks NSPasteboard.general.types for .tiff/.png, reads data, validates NSImage, calls insertImage(data:), returns Bool."
+    touched:
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+  - id: S005
+    title: Update views.md documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated views.md: added doc.on.clipboard paste button to toolbar items list; expanded Image insertion section from two paths to three, documenting iOS pasteImageFromClipboard() and macOS pasteImageFromMacOSClipboard() paths."
+    touched:
+      - .ushabti/docs/views.md
+  - id: S006
+    title: Bump CURRENT_PROJECT_VERSION to 21 and MARKETING_VERSION to 1.1.17 in project.pbxproj
+    implemented: true
+    reviewed: true
+    notes: Bumped CURRENT_PROJECT_VERSION from 20 to 21 and MARKETING_VERSION from 1.1.16 to 1.1.17 in all eight occurrences (Debug/Release for TakeNote and NewNoteControl targets).
+    touched:
+      - TakeNote.xcodeproj/project.pbxproj
+  - id: S007
+    title: Resolve AC6 conflict: update phase.md to align AC6 with the deliberate privacy-safe design or implement hasImages-based disabling
+    implemented: true
+    reviewed: true
+    notes: "Updated AC6 in phase.md to reflect the privacy-safe implementation: button disabled state is controlled only by showPreview; hasImages check is deferred to the action body (pasteImageFromClipboard()) to avoid spurious iOS privacy prompts. No code change required."
+    touched:
+      - .ushabti/phases/0018-paste-image-support/phase.md

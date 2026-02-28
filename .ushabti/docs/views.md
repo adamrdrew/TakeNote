@@ -137,6 +137,7 @@ Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit
 - Toolbar items:
   - Toggle preview (eye icon)
   - Insert Photo button (`photo.badge.plus` icon) — opens `PhotosPicker` for image insertion. Disabled when `showPreview == true`.
+  - Paste Image button (`doc.on.clipboard` icon, iOS only) — pastes an image from the clipboard. Disabled when `showPreview == true`. The `UIPasteboard.general.hasImages` check occurs inside the action, not in the button's disabled expression, to avoid spurious privacy prompts.
   - Backlinks popover (link icon, shown only if note has incoming links)
   - Magic Format button (wand icon, shown only if AI available)
   - Magic Assistant button (apple.intelligence icon, shown only if text is selected)
@@ -145,11 +146,15 @@ Detail column. Dual-mode: preview (rendered Markdown via MarkdownUI) or raw edit
 
 **MagicFormatter usage:** `NoteEditor` holds `@State private var magicFormatter = MagicFormatter()`. Because `MagicFormatter` is `@Observable`, a `@Bindable var formatter = magicFormatter` is created inside the view body to produce the `$formatter.formatterIsBusy` binding used for the progress sheet.
 
-**Image insertion:** `NoteEditor` provides two paths for inserting images into the note:
+**Image insertion:** `NoteEditor` provides three paths for inserting images into the note:
 
 1. **PhotosPicker toolbar button:** `@State private var selectedPhotoItem: PhotosPickerItem?` drives a `PhotosPicker(selection:matching:)` toolbar item. Disabled when `showPreview == true`. On selection, `loadTransferable(type: Data.self)` loads the image data in a `Task`, then `insertImage(data:)` is called on `MainActor`. After processing, `selectedPhotoItem` is reset to `nil`.
 
 2. **Drag and drop:** `.dropDestination(for: Data.self)` on the root `ZStack` accepts image data dragged onto the editor body. The `perform` closure: (a) returns `false` immediately if `showPreview` is true, (b) validates each item as image data via `UIImage(data:)` / `NSImage(data:)`, (c) calls `insertImage(data:)` for each valid item, (d) returns `true` if at least one image was inserted.
+
+3. **Clipboard paste:**
+   - **iOS:** A "Paste Image" toolbar button (`doc.on.clipboard` SF Symbol) is shown alongside the PhotosPicker button. It is disabled when `showPreview == true`. Tapping it calls `pasteImageFromClipboard()`, which: guards `showPreview == false`; guards `UIPasteboard.general.hasImages == true`; reads `UIPasteboard.general.image` (a `UIImage?`); converts it to `Data` via `jpegData(compressionQuality: 1.0)` for raw fidelity before the downsize pass; calls `insertImage(data:)`. The `hasImages` check is deferred to the action body (not in `.disabled`) to avoid spurious privacy prompts.
+   - **macOS:** A `.onKeyPress(.init("v"), phases: .down)` modifier on the root `ZStack` intercepts Cmd+V. If the modifier key is not `.command`, or if `showPreview == true`, the event is returned as `.ignored` and normal paste proceeds. Otherwise `pasteImageFromMacOSClipboard()` is called. That method checks `NSPasteboard.general.types` for `.tiff` or `.png`, reads the first available image data, validates it as `NSImage`, calls `insertImage(data:)`, and returns `true` (causing the key event to be consumed as `.handled`). If the clipboard contains no image data, the method returns `false` and the `.ignored` response allows the normal text paste to proceed.
 
 **`insertImage(data:)` (private):** Downsizes the image so the longest dimension is at most 2048px using `NoteEditor.downsize(imageData:)`, creates a `NoteImage(imageData:mimeType:)` record, inserts it via `modelContext.insert`, saves with `try? modelContext.save()`, constructs `![image](takenote://image/<UUID>)`, and calls `insertAtCaret(_:)`.
 

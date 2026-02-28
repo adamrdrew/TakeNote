@@ -84,7 +84,6 @@ struct MarkdownShortcutBar: View {
 struct NoteEditor: View {
     @Environment(\.modelContext) var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
-
     @State private var position: CodeEditor.Position = CodeEditor.Position()
     @State private var messages: Set<TextLocated<Message>> = Set()
     @State private var showPreview: Bool = true
@@ -96,6 +95,10 @@ struct NoteEditor: View {
 
     @State private var magicFormatter = MagicFormatter()
     @State private var selectedPhotoItem: PhotosPickerItem?
+
+    #if os(iOS)
+        @State private var showNoImageInClipboardAlert: Bool = false
+    #endif
 
     @FocusState var isInputActive: Bool
     @Binding var openNote: Note?
@@ -198,6 +201,38 @@ struct NoteEditor: View {
         insertAtCaret(markdownString)
         logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
     }
+
+    #if os(iOS)
+        private func pasteImageFromClipboard() {
+            guard !showPreview else { return }
+            guard UIPasteboard.general.hasImages, let image = UIPasteboard.general.image,
+                let data = image.jpegData(compressionQuality: 1.0)
+            else {
+                showNoImageInClipboardAlert = true
+                return
+            }
+            insertImage(data: data)
+            logger.info("Inserted image from clipboard via paste button")
+        }
+    #endif
+
+    #if os(macOS)
+        @discardableResult
+        private func pasteImageFromMacOSClipboard() -> Bool {
+            let pasteboard = NSPasteboard.general
+            let availableTypes = pasteboard.types ?? []
+            guard availableTypes.contains(.tiff) || availableTypes.contains(.png) else {
+                return false
+            }
+            let rawData =
+                pasteboard.data(forType: .tiff) ?? pasteboard.data(forType: .png)
+            guard let data = rawData else { return false }
+            guard NSImage(data: data) != nil else { return false }
+            insertImage(data: data)
+            logger.info("Inserted image from macOS clipboard via Cmd+V")
+            return true
+        }
+    #endif
 
     /// Downsizes image data so the longest dimension is at most 2048px.
     /// Returns the downsized data and its MIME type.
@@ -424,6 +459,16 @@ struct NoteEditor: View {
                 }
                 return inserted
             }
+            #if os(macOS)
+                .onKeyPress(.init("v"), phases: .down) { keyPress in
+                    guard keyPress.modifiers.contains(.command) else { return .ignored }
+                    guard !showPreview else { return .ignored }
+                    if pasteImageFromMacOSClipboard() {
+                        return .handled
+                    }
+                    return .ignored
+                }
+            #endif
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
                 setShowBacklinks()
@@ -445,6 +490,11 @@ struct NoteEditor: View {
             .onAppear {
                 setShowBacklinks()
             }
+            #if os(iOS)
+                .alert("No image in clipboard", isPresented: $showNoImageInClipboardAlert) {
+                    Button("OK", role: .cancel) {}
+                }
+            #endif
             .sheet(isPresented: $formatter.formatterIsBusy) {
                 VStack {
                     AIMessage(message: "Magic Format", font: .largeTitle)
@@ -511,6 +561,18 @@ struct NoteEditor: View {
                     .disabled(showPreview)
                     .help("Insert Photo")
                 }
+
+                #if os(iOS)
+                    ToolbarItem(placement: toolbarPosition) {
+                        Button(action: {
+                            pasteImageFromClipboard()
+                        }) {
+                            Image(systemName: "doc.on.clipboard")
+                        }
+                        .disabled(showPreview)
+                        .help("Paste Image")
+                    }
+                #endif
 
                 if openNoteHasBacklinks {
                     ToolbarItem(placement: toolbarPosition) {
