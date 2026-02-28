@@ -80,7 +80,7 @@ Left-most column. Contains the full navigation hierarchy.
 
 Middle column. Renders notes for the selected container.
 
-- Filters notes by search text against title and content.
+- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When `noteSearchText` is empty, returns all container notes unchanged. FTS results are deduplicated by note UUID and initially ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
 - Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
 - Groups starred notes in a separate section above non-starred notes. The `folderHasStarredNotes()` function determines whether the Starred section renders. It has two branches: when `selectedContainer?.isAllNotes == true` it checks `sortedNotes.contains { $0.starred }` (using the already-computed, filtered array), because the All Notes virtual container's `NoteContainer.notes` computed property always returns an empty array and would otherwise suppress the Starred section unconditionally. For all other containers it falls back to `selectedContainer?.notes.contains { $0.starred } ?? false`.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.

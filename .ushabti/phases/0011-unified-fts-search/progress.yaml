@@ -1,0 +1,61 @@
+phase:
+  id: "0011"
+  slug: unified-fts-search
+  title: Unified FTS Search for Note List
+  status: complete
+
+steps:
+  - id: S001
+    title: Remove chat feature flag guards from SearchIndexService indexing methods
+    implemented: true
+    reviewed: true
+    notes: "Removed all chatFeatureFlagEnabled guards from reindex, reindexAll, deleteFromIndex, dropAll, and canReindexAllNotes. Updated log message from 'RAG search reindex running.' to 'FTS search reindex running.' to reflect broadened purpose. L07 policy note: this is a deliberate decoupling — chat UI and toolbar button remain gated; only indexing is now always-on to support note list search."
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+
+  - id: S002
+    title: Add searchNoteIDs to SearchIndex
+    implemented: true
+    reviewed: true
+    notes: "Added searchNoteIDs(_:limit:) to SearchIndex. Calls searchNatural with the given limit, deduplicates by noteID preserving first-occurrence (highest BM25 rank) order, and returns [UUID]."
+    touched:
+      - TakeNote/Library/SearchIndex.swift
+
+  - id: S003
+    title: Expose searchNoteIDs through SearchIndexService
+    implemented: true
+    reviewed: true
+    notes: "Added searchNoteIDs(_:limit:) wrapper to SearchIndexService delegating to index.searchNoteIDs."
+    touched:
+      - TakeNote/Library/SearchIndexService.swift
+
+  - id: S004
+    title: Replace NoteList.filteredNotes string filtering with FTS
+    implemented: true
+    reviewed: true
+    notes: "Replaced localizedStandardContains filtering in NoteList.filteredNotes with FTS-backed search via search.searchNoteIDs(). Empty search text preserves existing behavior. Non-empty text: calls searchNoteIDs(noteSearchText), builds a Set<UUID> for O(1) membership, filters candidate pool, then sorts by FTS rank order using an index map. Applies to both All Notes and container-specific branches."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S005
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated search-system.md: removed chat-flag preconditions from all method descriptions, added searchNoteIDs documentation to both SearchIndex and SearchIndexService sections, updated index deletion section, added new 'Usage in Note List Search' section. Updated views.md: NoteList now described as using FTS-backed search via SearchIndexService.searchNoteIDs()."
+    touched:
+      - .ushabti/docs/search-system.md
+      - .ushabti/docs/views.md
+  - id: S006
+    title: Fix inaccurate join-operator description in search-system.md
+    implemented: true
+    reviewed: true
+    notes: "Corrected searchNatural description in search-system.md: removed false claim that the code uses AND as the join separator. Both the source comment and the actual code (SearchIndex.swift line 219) use OR. Updated description now accurately states tokens are joined with OR and gives an example query form."
+    touched:
+      - .ushabti/docs/search-system.md
+  - id: S007
+    title: Bump CURRENT_PROJECT_VERSION and MARKETING_VERSION in project.pbxproj
+    implemented: true
+    reviewed: true
+    notes: Bumped all four CURRENT_PROJECT_VERSION entries from 13 to 14 and all four MARKETING_VERSION entries from 1.1.9 to 1.1.10 in project.pbxproj. Satisfies L20.
+    touched:
+      - TakeNote.xcodeproj/project.pbxproj

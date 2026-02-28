@@ -78,19 +78,26 @@ struct NoteList: View {
             if noteSearchText.isEmpty {
                 return allNotesSource
             } else {
-                return allNotesSource.filter {
-                    $0.title.localizedStandardContains(noteSearchText)
-                        || $0.content.localizedStandardContains(noteSearchText)
+                let matchedIDs = search.searchNoteIDs(noteSearchText)
+                let matchedSet = Set(matchedIDs)
+                let filtered = allNotesSource.filter { matchedSet.contains($0.uuid) }
+                let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
+                return filtered.sorted { (lhs, rhs) in
+                    (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
                 }
             }
         }
         if noteSearchText.isEmpty {
             return takeNoteVM.selectedContainer?.notes ?? []
         } else {
-            return takeNoteVM.selectedContainer?.notes.filter {
-                $0.title.localizedStandardContains(noteSearchText)
-                    || $0.content.localizedStandardContains(noteSearchText)
-            } ?? []
+            let matchedIDs = search.searchNoteIDs(noteSearchText)
+            let matchedSet = Set(matchedIDs)
+            let candidateNotes = takeNoteVM.selectedContainer?.notes ?? []
+            let filtered = candidateNotes.filter { matchedSet.contains($0.uuid) }
+            let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
+            return filtered.sorted { (lhs, rhs) in
+                (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
+            }
         }
     }
 

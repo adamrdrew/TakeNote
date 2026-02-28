@@ -30,40 +30,39 @@ class SearchIndexService {
     var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
 
     func canReindexAllNotes() -> Bool {
-        if chatFeatureFlagEnabled == false { return false }
         if isIndexing { return false }
         return Date().timeIntervalSince(lastReindexAllDate) >= 10 * 60
     }
-    
+
     func reindex(note: Note) {
-        if chatFeatureFlagEnabled == false { return }
         Task { index.reindex(noteID: note.uuid, markdown: note.content) }
     }
 
     func reindexAll(_ noteData: [(UUID, String)]) {
-        if chatFeatureFlagEnabled == false { return }
         if !canReindexAllNotes() { return }
-        logger.info("RAG search reindex running.")
+        logger.info("FTS search reindex running.")
         lastReindexAllDate = Date()
         isIndexing = true
         Task {
             index.reindex(noteData)
             isIndexing = false
             #if DEBUG
-            logger.info("RAG search reindex complete. \(noteData.count) notes indexed, \(self.index.rowCount) chunks in index.")
+            logger.info("FTS search reindex complete. \(noteData.count) notes indexed, \(self.index.rowCount) chunks in index.")
             #endif
         }
     }
-    
+
     func dropAll() {
-        if chatFeatureFlagEnabled == false { return }
         Task { index.dropAll() }
     }
 
     func deleteFromIndex(noteID: UUID) {
-        if chatFeatureFlagEnabled == false { return }
         logger.debug("Removing note \(noteID) from FTS index.")
         Task { index.delete(noteID: noteID) }
+    }
+
+    func searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID] {
+        index.searchNoteIDs(text, limit: limit)
     }
 
 }

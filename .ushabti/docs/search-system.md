@@ -4,7 +4,7 @@
 
 TakeNote has one search index:
 
-1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The sole implementation used in production for chat RAG retrieval.
+1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The sole implementation used in production for both note list search and chat RAG retrieval.
 
 It is managed through `SearchIndexService`, which is the `@Observable` service consumed by the UI.
 
@@ -29,11 +29,12 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 
 ### Methods
 
-- `canReindexAllNotes() -> Bool` — returns `true` only if: chat feature flag is enabled, not currently indexing, and at least 10 minutes have elapsed since the last full reindex.
-- `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. No-op if chat is disabled.
+- `canReindexAllNotes() -> Bool` — returns `true` only if: not currently indexing, and at least 10 minutes have elapsed since the last full reindex. (The chat feature flag no longer gates this method; indexing is always-on to support note list search.)
+- `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. Always runs regardless of chat feature flag state.
 - `reindexAll(_ noteData: [(UUID, String)])` — rate-limited bulk reindex. Only runs if `canReindexAllNotes()` returns `true`. Sets `isIndexing` and resets `lastReindexAllDate`.
-- `dropAll()` — clears all indexed data.
-- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. No-op if chat is disabled. Logs at debug level.
+- `dropAll()` — clears all indexed data. Always runs regardless of chat feature flag state.
+- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. Always runs regardless of chat feature flag state. Logs at debug level.
+- `searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID]` — returns deduplicated note UUIDs in BM25 rank order by delegating to `index.searchNoteIDs`. Used by `NoteList.filteredNotes` for FTS-backed note list search.
 
 ### When Indexing Runs
 
@@ -50,7 +51,7 @@ The service layer that wraps `SearchIndex`. Injected into the SwiftUI environmen
 
 ### When Index Deletion Runs
 
-All deletion paths are gated on `chatFeatureFlagEnabled` via `SearchIndexService.deleteFromIndex(noteID:)`, which is a no-op when chat is disabled.
+All deletion paths run unconditionally via `SearchIndexService.deleteFromIndex(noteID:)`. The chat feature flag no longer gates deletion; the FTS index is always-on.
 
 - **Move to Trash — single note**: `NoteListEntry.moveToTrash()` calls `search.deleteFromIndex(noteID: note.uuid)` immediately after `takeNoteVM.moveNoteToTrash()`. This covers swipe-to-trash, the context menu "Move to Trash" item, and the `noteDeleteRegistry` menu bar command (all routes through `moveToTrash()`).
 - **Move to Trash — multi-select**: `NoteListEntry.moveSelectedNotesToTrash()` calls `search.deleteFromIndex(noteID: sn.uuid)` for each note in the selection after its `moveNoteToTrash` call.
@@ -92,7 +93,8 @@ struct SearchHit: Identifiable {
 - `delete(noteID: UUID)` — removes all chunks for one note.
 - `dropAll()` — clears all rows; runs FTS5 `optimize`, WAL checkpoint, and `VACUUM`. Has a fallback path: if the initial clear fails (e.g., table doesn't exist or is corrupted), it drops and recreates the entire FTS table, then checkpoints and vacuums.
 - `search(_ query: String, limit: Int = 5) -> [SearchHit]` — raw FTS5 MATCH query ordered by BM25 relevance.
-- `searchNatural(_ text: String, limit: Int = 5) -> [SearchHit]` — NLP-normalized search. Lemmatizes tokens via `NLTagger`, strips stop words, adds prefix wildcards (`*`) to tokens of 3+ characters, joins with `AND`. **Note:** A source comment on line 216 of `SearchIndex.swift` says "join with OR so any token can match" but the actual code on line 218 uses `" AND "` as the separator. The code is correct (AND gives more relevant results with BM25 ranking); the comment is stale/misleading.
+- `searchNatural(_ text: String, limit: Int = 5) -> [SearchHit]` — NLP-normalized search. Lemmatizes tokens via `NLTagger`, strips stop words, adds prefix wildcards (`*`) to tokens of 3+ characters, then joins tokens with `" OR "` so any token can match. Results are ordered by BM25 relevance. Example query form: `"note* OR takenot*"`.
+- `searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID]` — calls `searchNatural(text, limit: limit)`, deduplicates `SearchHit` results by `noteID` preserving first-occurrence (highest BM25 rank) order, and returns the ordered `[UUID]` list. Purpose-built for note list search in `NoteList.filteredNotes`.
 - `normalizeQuery(_ text: String, locale: Locale) -> [String]` — returns lemmatized, stop-word-filtered tokens.
 
 ### Chunking
@@ -110,6 +112,19 @@ struct NoteChunk {
     let text: String
 }
 ```
+
+---
+
+## Usage in Note List Search
+
+When `NoteList.filteredNotes` is evaluated with a non-empty `noteSearchText`:
+
+1. `search.searchNoteIDs(noteSearchText)` is called (delegates to `index.searchNoteIDs` with a limit of 500).
+2. A `Set<UUID>` is built from the result for O(1) membership tests.
+3. The candidate note pool (all non-trash/non-buffer notes for All Notes, or the container's notes for other containers) is filtered to only notes whose `uuid` is in the result set.
+4. The filtered notes are sorted by the UUID's index in the FTS result array (BM25 rank order). Note: `sortedNotes` subsequently re-sorts by date/updated order, so FTS rank is used for deduplication but not preserved in the final display order.
+
+When `noteSearchText` is empty, `filteredNotes` returns all candidate notes unchanged (existing behavior).
 
 ---
 

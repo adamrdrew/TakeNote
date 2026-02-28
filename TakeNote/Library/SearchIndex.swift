@@ -264,6 +264,21 @@ internal final class SearchIndex {
         }
     }
 
+    /// Returns deduplicated note UUIDs in BM25 rank order for use in note list search.
+    /// Calls `searchNatural` and collapses multiple chunks per note to a single UUID,
+    /// preserving the first-occurrence order (highest BM25 rank for that note).
+    func searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID] {
+        let hits = searchNatural(text, limit: limit)
+        var seen = Set<UUID>()
+        var result: [UUID] = []
+        for hit in hits {
+            if seen.insert(hit.noteID).inserted {
+                result.append(hit.noteID)
+            }
+        }
+        return result
+    }
+
     // MARK: Diagnostics
 
     var rowCount: Int {
