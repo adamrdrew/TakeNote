@@ -190,6 +190,7 @@ struct MainWindow: View {
                                     arrowEdge: .trailing
                                 ) {
                                     ChatWindow()
+                                    .frame(minWidth: 400, minHeight: 500)
                                 }
                             }
                         }

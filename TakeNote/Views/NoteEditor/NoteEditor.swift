@@ -638,7 +638,7 @@ struct NoteEditor: View {
                                 chatBoxPlaceholder: "How do you want this formatted?"
 
                             )
-                            .frame(minWidth: 300, minHeight: 400)
+                            .frame(minWidth: 400, minHeight: 500)
                         }
 
                     }
