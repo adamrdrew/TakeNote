@@ -337,8 +337,21 @@ struct NoteList: View {
             search.reindexAll(notes.filter { $0.folder?.isArchive != true }.map { ($0.uuid, $0.content) })
         }
         .onChange(of: notes) { _, _ in rebuildNoteCache() }
-        .onChange(of: takeNoteVM.noteSearchText) { _, _ in rebuildNoteCache() }
-        .onChange(of: takeNoteVM.selectedContainer) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
+            if !newValue.isEmpty, takeNoteVM.selectedContainer !== takeNoteVM.allNotesFolder {
+                takeNoteVM.isSearchNavigating = true
+                takeNoteVM.selectedContainer = takeNoteVM.allNotesFolder
+            }
+            rebuildNoteCache()
+        }
+        .onChange(of: takeNoteVM.selectedContainer) { _, _ in
+            if takeNoteVM.isSearchNavigating {
+                takeNoteVM.isSearchNavigating = false
+            } else {
+                takeNoteVM.noteSearchText = ""
+            }
+            rebuildNoteCache()
+        }
         .onChange(of: takeNoteVM.sortBy) { _, _ in rebuildNoteCache() }
         .onChange(of: takeNoteVM.sortOrder) { _, _ in rebuildNoteCache() }
         .onAppear { rebuildNoteCache() }

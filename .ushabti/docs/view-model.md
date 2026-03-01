@@ -67,6 +67,7 @@ enum SortOrder: Int {
 | `errorAlertMessage` | `String` | Message for generic error alert. |
 | `errorAlertIsVisible` | `Bool` | Controls generic error alert. |
 | `showMultiNoteView` | `Bool` | When true, the detail column shows `MultiNoteViewer` instead of `NoteEditor`. |
+| `isSearchNavigating` | `Bool` | Coordination flag set by the search submit handler before programmatically switching to All Notes. Suppresses the search-text-clear in `NoteList.onChange(of: selectedContainer)` for that one event cycle. Reset to `false` by `NoteList` after reading. |
 
 ### Sort Preferences
 

@@ -49,6 +49,10 @@ class TakeNoteVM {
     var errorAlertIsVisible: Bool = false
     var showMultiNoteView: Bool = false
     var noteSearchText: String = ""
+    // Coordination flag: set true by the search submit handler before programmatically
+    // switching selectedContainer to All Notes. NoteList reads and resets it to suppress
+    // the search-text-clear that would otherwise fire on that container change.
+    var isSearchNavigating: Bool = false
 
     let userDefaults = UserDefaults.standard
     

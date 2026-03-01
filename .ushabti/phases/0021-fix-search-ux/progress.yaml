@@ -1,0 +1,39 @@
+phase:
+  id: "0021"
+  slug: fix-search-ux
+  title: "Fix Search UX — Auto-Navigate and Clear on Folder Switch"
+  status: complete
+
+steps:
+  - id: S001
+    title: Add isSearchNavigating flag to TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added isSearchNavigating: Bool = false to UI State block in TakeNoteVM, alongside noteSearchText. Inline comment explains coordination purpose."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S002
+    title: Add .onSubmit(of:.search) to MainWindow.swift
+    implemented: true
+    reviewed: true
+    notes: "Added .onSubmit(of: .search) immediately after .searchable() in MainWindow.swift. Sets isSearchNavigating = true and navigates to allNotesFolder when search text is non-empty."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+
+  - id: S003
+    title: Modify .onChange(of: selectedContainer) in NoteList.swift
+    implemented: true
+    reviewed: true
+    notes: "Replaced single-line .onChange(of: takeNoteVM.selectedContainer) handler with conditional block: resets isSearchNavigating flag if true (suppressing clear), otherwise clears noteSearchText. rebuildNoteCache() always called after."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S004
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated view-model.md: added isSearchNavigating row to UI State table. Updated views.md: expanded NoteList onChange description to document conditional clear logic; added .onSubmit(of: .search) description to MainWindow section; updated Multi-Platform Adaptations search paragraph."
+    touched:
+      - .ushabti/docs/view-model.md
+      - .ushabti/docs/views.md
