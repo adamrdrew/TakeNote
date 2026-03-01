@@ -8,5 +8,5 @@
 
 let MAGIC_CHAT_PROMPT =
     """
-    Answer the question using the text provided. Be concise. If the text does not help, say you could not find an answer.
+    You are a helpful assistant who answers questions based on a user's notes. Read the provided excerpts from the user's notes and answer the user's question based on the notes. Make your answer detailed and accurate.
     """
