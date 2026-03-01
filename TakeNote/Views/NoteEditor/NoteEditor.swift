@@ -100,7 +100,7 @@ struct NoteEditor: View {
         @State private var showNoImageInClipboardAlert: Bool = false
     #endif
 
-    @FocusState var isInputActive: Bool
+    @FocusState private var isInputActive: Bool
     @Binding var openNote: Note?
 
     #if os(macOS)
@@ -114,7 +114,7 @@ struct NoteEditor: View {
         return GCKeyboard.coalesced != nil
     }
 
-    let logger = Logger(
+    static let logger = Logger(
         subsystem: "com.adamdrew.takenote",
         category: "NoteEditor"
     )
@@ -159,7 +159,7 @@ struct NoteEditor: View {
             }
             let currentContentHash = magicFormatter.hashFor(openNote!.content)
             if currentContentHash != result.inputHash {
-                logger.critical(
+                Self.logger.critical(
                     "Mismatch between MagicFormat input and current note content."
                 )
                 magicFormatterErrorIsPresented = true
@@ -199,7 +199,7 @@ struct NoteEditor: View {
         try? modelContext.save()
         let markdownString = "![image](takenote://image/\(newImage.imageUUID.uuidString))"
         insertAtCaret(markdownString)
-        logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
+        Self.logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
     }
 
     #if os(iOS)
@@ -212,7 +212,7 @@ struct NoteEditor: View {
                 return
             }
             insertImage(data: data)
-            logger.info("Inserted image from clipboard via paste button")
+            Self.logger.info("Inserted image from clipboard via paste button")
         }
     #endif
 
@@ -229,7 +229,7 @@ struct NoteEditor: View {
             guard let data = rawData else { return false }
             guard NSImage(data: data) != nil else { return false }
             insertImage(data: data)
-            logger.info("Inserted image from macOS clipboard via Cmd+V")
+            Self.logger.info("Inserted image from macOS clipboard via Cmd+V")
             return true
         }
     #endif

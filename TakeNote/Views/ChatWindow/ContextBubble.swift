@@ -32,7 +32,7 @@ struct ContextBubble: View {
             )
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
-            .foregroundColor(.primary)
+            .foregroundStyle(.primary)
             .shadow(color: .black.opacity(0.8), radius: 2, x: 0, y: 1)
             .animatedAIGradient()
             .lineLimit(4)

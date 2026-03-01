@@ -11,11 +11,11 @@ import SwiftUI
 struct NoteContainerDetailsEditor: View {
     @Environment(\.modelContext) private var modelContext
 
-    @State var newTagColor: Color = .takeNotePink
+    @State private var newTagColor: Color = .takeNotePink
     @Binding var showColorPopover: Bool
     @State var noteContainer: NoteContainer
-    @State var newSymbol: String = "folder"
-    @State var newName: String = ""
+    @State private var newSymbol: String = "folder"
+    @State private var newName: String = ""
     @State private var isPresented = false
 
     var body: some View {

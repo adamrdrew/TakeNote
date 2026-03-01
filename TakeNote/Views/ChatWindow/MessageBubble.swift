@@ -4,7 +4,6 @@
 //
 //  Created by Adam Drew on 8/13/25.
 //
-import SwiftData
 import SwiftUI
 
 // Three-dot typing indicator rendered inside a bot bubble while waiting for the first streaming token.
@@ -48,7 +47,7 @@ private struct TypingIndicator: View {
 struct MessageBubble: View {
     let entry: ConversationEntry
     var onBotMessageClick: ((String) -> Void)?
-    var notes: [Note] = []
+    var noteTitles: [UUID: String] = [:]
 
     var isHuman: Bool { entry.sender == .human }
 
@@ -110,7 +109,7 @@ struct MessageBubble: View {
     }
 
     private func noteTitle(for noteID: UUID) -> String {
-        notes.first(where: { $0.uuid == noteID })?.title ?? "Note"
+        noteTitles[noteID] ?? "Note"
     }
 
     private func deduplicated(_ hits: [SearchHit]) -> [SearchHit] {
@@ -141,7 +140,7 @@ struct MessageBubble: View {
                     .font(.body)
                     .padding(.vertical, 10)
                     .padding(.horizontal, 12)
-                    .foregroundColor(isHuman ? .white : .primary)
+                    .foregroundStyle(isHuman ? .white : .primary)
                 #if !os(visionOS)
                     .glassEffect(
                         .regular.tint(isHuman ? .takeNotePink : .secondary.opacity(0.2))

@@ -114,17 +114,21 @@ struct Sidebar: View {
         }
     ) var systemFolders: [NoteContainer]
 
-    @State var folderSectionExpanded: Bool = true
-    @State var tagSectionExpanded: Bool = true
-    @State var showImportError: Bool = false
-    @State var importErrorMessage: String = ""
+    @State private var folderSectionExpanded: Bool = true
+    @State private var tagSectionExpanded: Bool = true
+    @State private var showImportError: Bool = false
+    @State private var importErrorMessage: String = ""
 
-    @State var containerDeleteRegistry: CommandRegistry = CommandRegistry()
-    @State var containerRenameRegistry: CommandRegistry = CommandRegistry()
-    @State var tagSetColorRegistry: CommandRegistry = CommandRegistry()
+    @State private var containerDeleteRegistry: CommandRegistry = CommandRegistry()
+    @State private var containerRenameRegistry: CommandRegistry = CommandRegistry()
+    @State private var tagSetColorRegistry: CommandRegistry = CommandRegistry()
 
     var tagsExist: Bool {
         return tags.isEmpty == false
+    }
+
+    private var sortedSystemFolders: [NoteContainer] {
+        systemFolders.sorted(by: { systemFolderSortOrder($0) < systemFolderSortOrder($1) })
     }
 
     var body: some View {
@@ -132,7 +136,7 @@ struct Sidebar: View {
         List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 content: {
-                    ForEach(systemFolders.sorted(by: { systemFolderSortOrder($0) < systemFolderSortOrder($1) }), id: \.self) { folder in
+                    ForEach(sortedSystemFolders, id: \.self) { folder in
                         FolderListEntry(
                             folder: folder
                         )

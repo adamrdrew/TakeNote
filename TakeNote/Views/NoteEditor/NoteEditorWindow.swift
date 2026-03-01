@@ -11,7 +11,7 @@ import SwiftUI
 struct NoteEditorWindow: View {
     @Binding var noteID: NoteIDWrapper?
     
-    @State var windowTitle : String = ""
+    @State private var windowTitle: String = ""
 
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var editorWindowVM

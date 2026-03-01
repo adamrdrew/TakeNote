@@ -26,16 +26,16 @@ struct MainWindow: View {
     @Query() var noteLinks: [NoteLink]
     @Query() var noteImages: [NoteImage]
 
-    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MainWindow")
+    static let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MainWindow")
 
-    @State var notesInBufferMessagePresented: Bool = false
-    @State var showDeleteEverythingAlert: Bool = false
+    @State private var notesInBufferMessagePresented: Bool = false
+    @State private var showDeleteEverythingAlert: Bool = false
 
     @State private var preferredColumn = NavigationSplitViewColumn.sidebar
 
-    @State var showChatPopover: Bool = false
-    @State var showSidebarChatPopover: Bool = false
-    @State var showSortPopover: Bool = false
+    @State private var showChatPopover: Bool = false
+    @State private var showSidebarChatPopover: Bool = false
+    @State private var showSortPopover: Bool = false
 
     var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
@@ -317,7 +317,7 @@ struct MainWindow: View {
         })
         .onOpenURL(perform: { url in
             if url.host == "image" {
-                logger.info("Received image URL in onOpenURL — ignoring as in-process only")
+                Self.logger.info("Received image URL in onOpenURL — ignoring as in-process only")
                 return
             }
             takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)

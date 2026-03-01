@@ -12,9 +12,24 @@ struct NoteListHeader: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
     @Query() var allNotes: [Note]
 
-    @State var inEditMode: Bool = false
-    @State var newName: String = ""
-    @FocusState var nameInputFocused: Bool
+    @State private var inEditMode: Bool = false
+    @State private var newName: String = ""
+    @FocusState private var nameInputFocused: Bool
+    @State private var cachedNoteCount: Int = 0
+
+    private func rebuildNoteCount() {
+        guard let container = takeNoteVM.selectedContainer else {
+            cachedNoteCount = 0
+            return
+        }
+        if container.isAllNotes {
+            cachedNoteCount = allNotes.filter {
+                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
+            }.count
+        } else {
+            cachedNoteCount = container.notes.count
+        }
+    }
 
     var folderSymbol: String {
         guard let container = takeNoteVM.selectedContainer else {
@@ -31,24 +46,16 @@ struct NoteListHeader: View {
 
     var noteCountLabel: String {
         let noNotes = "No notes"
-        guard let container = takeNoteVM.selectedContainer else {
+        guard takeNoteVM.selectedContainer != nil else {
             return noNotes
         }
-        let count: Int
-        if container.isAllNotes {
-            count = allNotes.filter {
-                $0.folder?.isTrash != true && $0.folder?.isBuffer != true
-            }.count
-        } else {
-            count = container.notes.count
-        }
-        if count == 0 {
+        if cachedNoteCount == 0 {
             return noNotes
         }
-        if count == 1 {
-            return "\(count) note"
+        if cachedNoteCount == 1 {
+            return "\(cachedNoteCount) note"
         }
-        return "\(count) notes"
+        return "\(cachedNoteCount) notes"
     }
 
     var ContainerNameEditor: some View {
@@ -90,7 +97,7 @@ struct NoteListHeader: View {
             )
         } icon: {
             Image(systemName: folderSymbol)
-                .foregroundColor(takeNoteVM.selectedContainer?.getColor() ?? .takeNotePink)
+                .foregroundStyle(takeNoteVM.selectedContainer?.getColor() ?? .takeNotePink)
         }
         .font(.title)
         .fontWeight(.bold)
@@ -141,6 +148,9 @@ struct NoteListHeader: View {
                     .regularMaterial
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 0))
+                .onChange(of: allNotes) { _, _ in rebuildNoteCount() }
+                .onChange(of: takeNoteVM.selectedContainer) { _, _ in rebuildNoteCount() }
+                .onAppear { rebuildNoteCount() }
         }
     }
 }

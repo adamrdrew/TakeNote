@@ -55,6 +55,10 @@ struct ChatWindow: View {
 
     @FocusState private var textFieldFocused: Bool
 
+    private var noteTitleMap: [UUID: String] {
+        Dictionary(uniqueKeysWithValues: allNotes.map { ($0.uuid, $0.title) })
+    }
+
     // MARK: - iOS-only state
 
     #if os(iOS)
@@ -259,7 +263,7 @@ struct ChatWindow: View {
                             ContextBubble(text: context ?? "")
                         }
                         ForEach(conversation) { entry in
-                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick, notes: allNotes)
+                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick, noteTitles: noteTitleMap)
                                 .id(entry.id)
                                 .padding(.horizontal, 12)
                                 .padding(.top, 2)

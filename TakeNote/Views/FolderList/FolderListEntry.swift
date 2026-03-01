@@ -10,7 +10,6 @@ import SwiftUI
 
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) var takeNoteVM
     @Environment(\.containerRenameRegistry) var containerRenameRegistry
     @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
@@ -26,7 +25,7 @@ struct FolderListEntry: View {
     @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
-    @State var inDeleteMode: Bool = false
+    @State private var inDeleteMode: Bool = false
 
     func startDelete() {
         inDeleteMode = true
@@ -107,13 +106,10 @@ struct FolderListEntry: View {
                 HStack {
                     Label {
                         Text(folder.name)
-                            .foregroundColor(
-                                colorScheme == .light
-                                    ? Color.primary : Color.white
-                            )
+                            .foregroundStyle(.primary)
                     } icon: {
                             Image(systemName: folder.getSystemImageName())
-                            .foregroundColor(folder.isSystemFolder ? .takeNotePink :  folder.getColor())
+                            .foregroundStyle(folder.isSystemFolder ? .takeNotePink : folder.getColor())
                     }
                     Spacer()
                     HStack {

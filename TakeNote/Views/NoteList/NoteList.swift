@@ -59,38 +59,54 @@ extension EnvironmentValues {
 struct NoteList: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
-    @State var showFileImportError: Bool = false
-    @State var fileImportErrorMessage: String = ""
+    @State private var showFileImportError: Bool = false
+    @State private var fileImportErrorMessage: String = ""
     @Query() var notes: [Note]
 
-    @State var noteDeleteRegistry: CommandRegistry = CommandRegistry()
-    @State var noteRenameRegistry: CommandRegistry = CommandRegistry()
-    @State var noteStarToggleRegistry: CommandRegistry = CommandRegistry()
-    @State var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
-    @State var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
+    @State private var noteDeleteRegistry: CommandRegistry = CommandRegistry()
+    @State private var noteRenameRegistry: CommandRegistry = CommandRegistry()
+    @State private var noteStarToggleRegistry: CommandRegistry = CommandRegistry()
+    @State private var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
+    @State private var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
-    var filteredNotes: [Note] {
+    @State private var cachedFilteredNotes: [Note] = []
+    @State private var cachedSortedNotes: [Note] = []
+    @State private var cachedStarredNotes: [Note] = []
+    @State private var cachedUnstarredNotes: [Note] = []
+
+    var showUnstarredNoteList: Bool {
+        if cachedSortedNotes.isEmpty {
+            return false
+        }
+        if cachedSortedNotes.contains(where: { !$0.starred }) {
+            return true
+        }
+        return false
+    }
+
+    @Environment(SearchIndexService.self) private var search
+
+    private func rebuildNoteCache() {
         let allNotesSource = notes.filter {
             $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true
         }
+        let filtered: [Note]
         if !takeNoteVM.noteSearchText.isEmpty {
             // Global search: search across all non-trash/non-buffer notes regardless of selected container
             let matchedIDs = search.searchNoteIDs(takeNoteVM.noteSearchText)
             let matchedSet = Set(matchedIDs)
-            let filtered = allNotesSource.filter { matchedSet.contains($0.uuid) }
+            let matchedNotes = allNotesSource.filter { matchedSet.contains($0.uuid) }
             let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
-            return filtered.sorted { (lhs, rhs) in
+            filtered = matchedNotes.sorted { (lhs, rhs) in
                 (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
             }
+        } else if takeNoteVM.selectedContainer?.isAllNotes == true {
+            filtered = allNotesSource
+        } else {
+            filtered = takeNoteVM.selectedContainer?.notes ?? []
         }
-        if takeNoteVM.selectedContainer?.isAllNotes == true {
-            return allNotesSource
-        }
-        return takeNoteVM.selectedContainer?.notes ?? []
-    }
-
-    var sortedNotes: [Note] {
-        filteredNotes.sorted { lhs, rhs in
+        cachedFilteredNotes = filtered
+        cachedSortedNotes = filtered.sorted { lhs, rhs in
             switch takeNoteVM.sortBy {
             case .created:
                 if takeNoteVM.sortOrder == .newestFirst {
@@ -106,19 +122,9 @@ struct NoteList: View {
                 }
             }
         }
+        cachedStarredNotes = cachedSortedNotes.filter { $0.starred }
+        cachedUnstarredNotes = cachedSortedNotes.filter { !$0.starred }
     }
-
-    var showUnstarredNoteList: Bool {
-        if sortedNotes.isEmpty {
-            return false
-        }
-        if sortedNotes.contains(where: { !$0.starred }) {
-            return true
-        }
-        return false
-    }
-
-    @Environment(SearchIndexService.self) private var search
 
     func playSystemErrorSound() {
         #if os(macOS)
@@ -174,11 +180,30 @@ struct NoteList: View {
         }
     }
 
-    func folderHasStarredNotes() -> Bool {
-        if takeNoteVM.selectedContainer?.isAllNotes == true {
-            return sortedNotes.contains { $0.starred }
+    var folderHasStarredNotes: Bool {
+        !cachedStarredNotes.isEmpty
+    }
+
+    private func handleNoteSelectionChange(old: Set<Note>, new: Set<Note>) {
+        // We look in the new selected notes array so we can run the callback on the selected notes
+        if new.count == 1 {
+            if let note = new.first {
+                takeNoteVM.onNoteSelect(note)
+            }
         }
-        return takeNoteVM.selectedContainer?.notes.contains { $0.starred } ?? false
+        // We look in the previously selected notes so we can generate summaries, link objects, and reindex
+        for note in old {
+            Task { await note.generateSummary() }
+            if note.contentHasChanged() {
+                search.reindex(note: note)
+                NoteLinkManager(modelContext: modelContext)
+                    .generateLinksFor(note)
+                note.setTitle()
+            }
+        }
+
+        // Cull any NoteImage records that are no longer referenced by any active note
+        NoteImageManager(modelContext: modelContext).cullOrphanedImages()
     }
 
     var body: some View {
@@ -188,34 +213,28 @@ struct NoteList: View {
 
             List(selection: $takeNoteVM.selectedNotes) {
 
-                if folderHasStarredNotes() {
+                if folderHasStarredNotes {
                     Section(header: Text("Starred").font(.headline)) {
-                        ForEach(sortedNotes, id: \.self) { note in
-                            if note.starred {
-                                NoteListEntry(
-                                    note: note,
-                                )
-
-                            }
+                        ForEach(cachedStarredNotes, id: \.self) { note in
+                            NoteListEntry(
+                                note: note,
+                            )
                         }
                     }
 
                 }
                 if showUnstarredNoteList {
                     Section(header: Text("Notes").font(.headline)) {
-                        ForEach(sortedNotes, id: \.self) { note in
-                            if !note.starred {
-                                NoteListEntry(
-                                    note: note,
-                                )
-                            }
-
+                        ForEach(cachedUnstarredNotes, id: \.self) { note in
+                            NoteListEntry(
+                                note: note,
+                            )
                         }
                     }
                 }
 
             }
-            .id(sortedNotes.isEmpty ? "empty" : "populated")
+            .id(cachedSortedNotes.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
                     .frame(maxHeight: 80)
@@ -253,27 +272,7 @@ struct NoteList: View {
                 takeNoteVM.selectedNotes
             )
             .onChange(of: takeNoteVM.selectedNotes) { oldValue, newValue in
-                // We look in the new selected notes array so we can run the callback on the selected notes
-                if newValue.count == 1 {
-                    if let note = newValue.first {
-                        takeNoteVM.onNoteSelect(note)
-                    }
-                }
-                // We look in the previously selected notes so we can generate summaries, link objects, and reindex
-                for note in oldValue {
-                    Task { await note.generateSummary() }
-                    if note.contentHasChanged() {
-                        search.reindex(note: note)
-                        NoteLinkManager(modelContext: modelContext)
-                            .generateLinksFor(note)
-                        note.setTitle()
-                    }
-
-                }
-
-                // Cull any NoteImage records that are no longer referenced by any active note
-                NoteImageManager(modelContext: modelContext).cullOrphanedImages()
-
+                handleNoteSelectionChange(old: oldValue, new: newValue)
             }
         }
         #if os(macOS)
@@ -337,6 +336,12 @@ struct NoteList: View {
         .onChange(of: notes.count) { _, _ in
             search.reindexAll(notes.filter { $0.folder?.isArchive != true }.map { ($0.uuid, $0.content) })
         }
+        .onChange(of: notes) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.noteSearchText) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.selectedContainer) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.sortBy) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.sortOrder) { _, _ in rebuildNoteCache() }
+        .onAppear { rebuildNoteCache() }
 
     }
 }

@@ -11,17 +11,16 @@ import SwiftUI
 internal struct TagListEntry: View {
     var tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
-    @Environment(\.colorScheme) var colorScheme
     @Environment(TakeNoteVM.self) private var takeNoteVM
-    @State var inDeleteMode: Bool = false
+    @State private var inDeleteMode: Bool = false
 
     @Environment(\.containerRenameRegistry) var containerRenameRegistry
     @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
     @Environment(\.tagSetColorRegistry) var tagSetColorRegistry
 
-    @State var inRenameMode: Bool = false
-    @State var newTagName: String = ""
-    @State var showEditDetailsPopover: Bool = false
+    @State private var inRenameMode: Bool = false
+    @State private var newTagName: String = ""
+    @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
     func startDelete() {
@@ -80,13 +79,11 @@ internal struct TagListEntry: View {
                     }
             } else {
                 Image(systemName: "tag.fill")
-                    .foregroundColor(tag.getColor())
+                    .foregroundStyle(tag.getColor())
                 Text(tag.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .foregroundStyle(
-                        colorScheme == .light ? Color.primary : Color.white
-                    )
+                    .foregroundStyle(.primary)
                 Spacer()
                 HStack {
                     Text("\(tag.notes.count)")

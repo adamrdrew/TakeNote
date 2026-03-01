@@ -1,0 +1,119 @@
+phase:
+  id: "0020"
+  slug: swiftui-best-practices-polish
+  title: SwiftUI Best Practices & Performance Polish
+  status: complete
+
+steps:
+  - id: S001
+    title: Replace foregroundColor() with foregroundStyle()
+    implemented: true
+    reviewed: true
+    notes: Replaced all foregroundColor() calls with foregroundStyle() in all six files. FolderListEntry colorScheme-branching call converted to foregroundStyle (colorScheme logic will be cleaned up in S009).
+    touched:
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+      - TakeNote/Views/NoteList/NoteListHeader.swift
+      - TakeNote/Views/FolderList/FolderListEntry.swift
+      - TakeNote/Views/TagList/TagListEntry.swift
+      - TakeNote/Views/ChatWindow/MessageBubble.swift
+      - TakeNote/Views/ChatWindow/ContextBubble.swift
+
+  - id: S002
+    title: Add private to all @State and @FocusState declarations
+    implemented: true
+    reviewed: true
+    notes: Added private modifier to all @State and @FocusState declarations across all specified view files. @Binding var showColorPopover in NoteContainerDetailsEditor correctly left as-is.
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+      - TakeNote/Views/NoteList/NoteList.swift
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+      - TakeNote/Views/NoteList/NoteListHeader.swift
+      - TakeNote/Views/MainWindow/Sidebar.swift
+      - TakeNote/Views/FolderList/FolderListEntry.swift
+      - TakeNote/Views/TagList/TagListEntry.swift
+      - TakeNote/Views/TagList/NoteContainerDetailsEditor.swift
+      - TakeNote/Views/NoteEditor/NoteEditorWindow.swift
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S003
+    title: Cache NoteList filter and sort results
+    implemented: true
+    reviewed: true
+    notes: "Removed filteredNotes and sortedNotes computed properties. Added @State cachedFilteredNotes, cachedSortedNotes, cachedStarredNotes, cachedUnstarredNotes. Added rebuildNoteCache() method with full filter/sort logic. Wired onChange for all 5 inputs (notes, noteSearchText, selectedContainer, sortBy, sortOrder) and onAppear. Updated body ForEach sections to use pre-split starred/unstarred arrays. Changed folderHasStarredNotes() from a function to a computed var using cachedStarredNotes."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S004
+    title: Cache NoteListHeader note count
+    implemented: true
+    reviewed: true
+    notes: "Added cachedNoteCount @State and rebuildNoteCount() method. Updated noteCountLabel to use cached count. Wired onChange(of: allNotes) and onChange(of: selectedContainer) plus onAppear to populate cache."
+    touched:
+      - TakeNote/Views/NoteList/NoteListHeader.swift
+
+  - id: S005
+    title: Cache Sidebar system folder sort
+    implemented: true
+    reviewed: true
+    notes: "Added private computed property sortedSystemFolders that returns systemFolders.sorted(by: systemFolderSortOrder). ForEach in body now iterates sortedSystemFolders instead of inline .sorted(by:)."
+    touched:
+      - TakeNote/Views/MainWindow/Sidebar.swift
+
+  - id: S006
+    title: Replace [Note] with [UUID:String] in MessageBubble and ChatWindow
+    implemented: true
+    reviewed: true
+    notes: "Changed MessageBubble.notes: [Note] to noteTitles: [UUID: String]. Updated noteTitle(for:) to use dictionary lookup. Removed now-unneeded SwiftData import from MessageBubble. Added noteTitleMap computed property to ChatWindow and updated MessageBubble call to pass noteTitles: noteTitleMap."
+    touched:
+      - TakeNote/Views/ChatWindow/MessageBubble.swift
+      - TakeNote/Views/ChatWindow/ChatWindow.swift
+
+  - id: S007
+    title: Replace AnyView in TakeNoteImageProvider with @ViewBuilder
+    implemented: true
+    reviewed: true
+    notes: "Replaced AnyView with @ViewBuilder on makeImage(url:). Converted guard/return pattern to if-let pattern with direct view expressions. Preserved #if os(macOS)/#else branching exactly. EmptyView() replaces all AnyView(EmptyView()) fallthrough cases."
+    touched:
+      - TakeNote/Library/TakeNoteImageProvider.swift
+
+  - id: S008
+    title: Extract onChange selectedNotes body into named method
+    implemented: true
+    reviewed: true
+    notes: "Extracted inline onChange(of: takeNoteVM.selectedNotes) body into private method handleNoteSelectionChange(old:new:). Closure body is now a single method call."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S009
+    title: Remove unnecessary colorScheme branching in FolderListEntry and TagListEntry
+    implemented: true
+    reviewed: true
+    notes: Replaced colorScheme-branching foregroundStyle/foregroundColor with .foregroundStyle(.primary) in both FolderListEntry and TagListEntry. Removed now-unused @Environment(\.colorScheme) injection from both files.
+    touched:
+      - TakeNote/Views/FolderList/FolderListEntry.swift
+      - TakeNote/Views/TagList/TagListEntry.swift
+
+  - id: S010
+    title: Remove redundant outer ZStack in MultiNoteViewer
+    implemented: true
+    reviewed: true
+    notes: "Removed redundant outer ZStack that wrapped GeometryReader. GeometryReader is now the direct body content. Moved .frame(maxWidth:.infinity, maxHeight:.infinity) to a modifier on the GeometryReader itself. Inner PaperCard ZStack is unchanged."
+    touched:
+      - TakeNote/Views/Helpers/MultiNoteViewer.swift
+
+  - id: S011
+    title: Make Logger properties static let
+    implemented: true
+    reviewed: true
+    notes: "Changed let logger to static let logger in both MainWindow.swift and NoteEditor.swift. Call sites remain unqualified (logger.info, logger.critical) which Swift resolves correctly for static members within instance methods."
+    touched:
+      - TakeNote/Views/MainWindow/MainWindow.swift
+      - TakeNote/Views/NoteEditor/NoteEditor.swift
+
+  - id: S012
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated views.md: NoteList section rewritten to describe @State cached arrays and rebuildNoteCache() pattern; folderHasStarredNotes updated; handleNoteSelectionChange noted. NoteListHeader section updated to describe cachedNoteCount and rebuildNoteCount(). ChatWindow/MessageBubble section updated to document noteTitles: [UUID:String] interface and noteTitleMap."
+    touched:
+      - .ushabti/docs/views.md

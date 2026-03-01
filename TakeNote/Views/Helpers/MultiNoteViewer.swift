@@ -26,33 +26,29 @@ struct MultiNoteViewer: View {
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
         GeometryReader { geo in
+            // Cards
             ZStack {
+                ForEach(Array(notesArray.enumerated()), id: \.element.id) {
+                    idx,
+                    note in
+                    PaperCard(note: note)
+                        .frame(
+                            width: paperWidth(in: geo.size),
+                            height: paperHeight(in: geo.size)
+                        )
+                        .rotationEffect(.degrees(jitterAngle(note)))
+                        .offset(
+                            x: jitterX(note),
+                            y: jitterY(note) + CGFloat(idx) * 4
+                        )  // tiny cascade
+                        .zIndex(Double(idx))
 
-                // Cards
-                ZStack {
-                    ForEach(Array(notesArray.enumerated()), id: \.element.id) {
-                        idx,
-                        note in
-                        PaperCard(note: note)
-                            .frame(
-                                width: paperWidth(in: geo.size),
-                                height: paperHeight(in: geo.size)
-                            )
-                            .rotationEffect(.degrees(jitterAngle(note)))
-                            .offset(
-                                x: jitterX(note),
-                                y: jitterY(note) + CGFloat(idx) * 4
-                            )  // tiny cascade
-                            .zIndex(Double(idx))
-
-                    }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(24)
-
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Sizing helpers

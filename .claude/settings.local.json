@@ -7,6 +7,7 @@
     ]
   },
   "enabledPlugins": {
-    "ushabti@adamdrew": true
+    "ushabti@adamdrew": true,
+    "swiftui-expert@swiftui-expert-skill": true
   }
 }

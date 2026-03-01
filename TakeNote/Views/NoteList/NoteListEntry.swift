@@ -17,7 +17,7 @@ import SwiftUI
 
 struct MovePopoverContent: View {
     @Environment(TakeNoteVM.self) var takeNoteVM
-    @State var selectedContainer: NoteContainer?
+    @State private var selectedContainer: NoteContainer?
 
     var note: Note
     var onSelect: () -> Void
@@ -193,7 +193,7 @@ struct NoteListEntry: View {
                 } icon: {
                     Image(systemName: "note.text")
                         .symbolRenderingMode(.monochrome)
-                        .foregroundColor(iconColor)
+                        .foregroundStyle(iconColor)
                 }
                 .labelStyle(.titleAndIcon)
             }
@@ -245,7 +245,7 @@ struct NoteListEntry: View {
 
                         Image(systemName: note.folder?.symbol ?? "folder")
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(iconColor)
+                            .foregroundStyle(iconColor)
                             .imageScale(.medium)
                     }
                 } else if let noteLabel = note.tag {
@@ -258,7 +258,7 @@ struct NoteListEntry: View {
 
                         Image(systemName: "tag.fill")
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundColor(noteLabel.getColor())
+                            .foregroundStyle(noteLabel.getColor())
                             .imageScale(.medium)
                     }
                 }
@@ -328,18 +328,18 @@ struct NoteListEntry: View {
         ZStack {
             RoundedRectangle(cornerRadius: 1.0, style: .continuous)
                 .frame(width: 24, height: 32)
-                .foregroundColor(.white)
+                .foregroundStyle(.white)
                 .border(.gray, width: 1)
             VStack {
                 Rectangle()
                     .frame(width: 12, height: 2)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                 Rectangle()
                     .frame(width: 12, height: 2)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
                 Rectangle()
                     .frame(width: 12, height: 2)
-                    .foregroundColor(.gray)
+                    .foregroundStyle(.gray)
             }
         }
     }

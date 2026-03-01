@@ -12,39 +12,38 @@ struct TakeNoteImageProvider: ImageProvider {
 
     let modelContext: ModelContext
 
+    @ViewBuilder
     func makeImage(url: URL?) -> some View {
-        guard
+        if
             let url = url,
             url.scheme == "takenote",
             url.host == "image",
             let uuidString = url.pathComponents.last,
             let uuid = UUID(uuidString: uuidString),
             let data = NoteImageStore.loadImage(uuid: uuid, modelContext: modelContext)
-        else {
-            return AnyView(EmptyView())
-        }
-
-        #if os(macOS)
-            if let nsImage = NSImage(data: data) {
-                return AnyView(
+        {
+            #if os(macOS)
+                if let nsImage = NSImage(data: data) {
                     Image(nsImage: nsImage)
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: 400)
-                )
-            }
-        #else
-            if let uiImage = UIImage(data: data) {
-                return AnyView(
+                } else {
+                    EmptyView()
+                }
+            #else
+                if let uiImage = UIImage(data: data) {
                     Image(uiImage: uiImage)
                         .resizable()
                         .scaledToFit()
                         .frame(maxWidth: 400)
-                )
-            }
-        #endif
-
-        return AnyView(EmptyView())
+                } else {
+                    EmptyView()
+                }
+            #endif
+        } else {
+            EmptyView()
+        }
     }
 
 }

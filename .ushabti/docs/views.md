@@ -82,17 +82,16 @@ Left-most column. Contains the full navigation hierarchy.
 Middle column. Renders notes for the selected container.
 
 - Search text state lives in `TakeNoteVM.noteSearchText` (not a local `@State` on `NoteList`). This is the single source of truth for search text shared across platforms.
-- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When search text is non-empty the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search). FTS results are ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
-- When search text is empty: returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected), unchanged from the pre-search behavior.
+- Filters and sorts notes via `rebuildNoteCache()`, which is called on `.onAppear` and via `onChange` whenever any of the five cache inputs change: `notes` (the `@Query` array), `takeNoteVM.noteSearchText`, `takeNoteVM.selectedContainer`, `takeNoteVM.sortBy`, or `takeNoteVM.sortOrder`. The results are stored in four `@State private` arrays: `cachedFilteredNotes`, `cachedSortedNotes`, `cachedStarredNotes`, and `cachedUnstarredNotes`. The body uses these cached arrays directly; there are no computed `filteredNotes` or `sortedNotes` properties evaluated on every render.
+- `rebuildNoteCache()` logic: when `noteSearchText` is non-empty, the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search); FTS results are ordered by BM25 rank. When search text is empty, returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected). Results are then sorted by `sortBy`/`sortOrder` from `TakeNoteVM`. The sorted result is split into `cachedStarredNotes` and `cachedUnstarredNotes` to avoid per-render `filter` calls in `ForEach`.
 - The `.searchable()` modifier placement differs by platform:
   - **macOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `List` inside `NoteList`.
   - **iOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern — search bar appears at the bottom of the sidebar column on iPhone).
-- Sorts by `sortBy`/`sortOrder` from `TakeNoteVM`.
-- Groups starred notes in a separate section above non-starred notes. The `folderHasStarredNotes()` function determines whether the Starred section renders. It has two branches: when `selectedContainer?.isAllNotes == true` it checks `sortedNotes.contains { $0.starred }` (using the already-computed, filtered array), because the All Notes virtual container's `NoteContainer.notes` computed property always returns an empty array and would otherwise suppress the Starred section unconditionally. For all other containers it falls back to `selectedContainer?.notes.contains { $0.starred } ?? false`.
+- Groups starred notes in a separate section above non-starred notes. The `ForEach` sections iterate `cachedStarredNotes` and `cachedUnstarredNotes` directly. The `folderHasStarredNotes` computed property returns `!cachedStarredNotes.isEmpty`.
 - Manages five `CommandRegistry` instances: delete, rename, star toggle, copy Markdown link, open editor window.
 - On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
 - Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
-- On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, `NoteLinkManager.generateLinksFor()`, and `NoteImageManager.cullOrphanedImages()`.
+- On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, `NoteLinkManager.generateLinksFor()`, and `NoteImageManager.cullOrphanedImages()`. This logic lives in the named private method `handleNoteSelectionChange(old:new:)`, called from the `onChange(of: takeNoteVM.selectedNotes)` closure.
 - The `onChange(of: notes.count)` reindex handler filters out archived notes before passing to `reindexAll`, matching the archive-exclusion applied at the `AppBootstrapper` reindex call sites.
 
 **FocusedValues exposed:** `\.noteDeleteRegistry`, `\.noteRenameRegistry`, `\.noteStarToggleRegistry`, `\.noteCopyMarkdownLinkRegistry`, `\.noteOpenEditorWindowRegistry`, `\.selectedNotes`
@@ -123,7 +122,7 @@ Displayed as `safeAreaInset` at the top of the NoteList. Shows the selected cont
 - Reads `TakeNoteVM` from the environment.
 - Holds `@Query() var allNotes: [Note]` to support accurate note counting when All Notes is selected.
 - Displays the container's SF symbol (with special cases: `"trash"` for Trash, `"tag.fill"` for tags, otherwise the container's `symbol` field) and color via `getColor()`.
-- Shows a note count label ("No notes", "1 note", "N notes"). When the selected container `isAllNotes`, the count is computed from `allNotes` filtered to exclude Trash and Buffer notes (matching `NoteList.filteredNotes`). For all other containers, the count is `container.notes.count`.
+- Shows a note count label ("No notes", "1 note", "N notes"). The count is cached in `@State private var cachedNoteCount: Int`, populated by `rebuildNoteCount()`, which is called on `.onAppear` and via `onChange(of: allNotes)` and `onChange(of: takeNoteVM.selectedContainer)`. When the selected container `isAllNotes`, the count filters `allNotes` to exclude Trash and Buffer notes. For all other containers, the count is `container.notes.count`.
 - Supports inline rename: single-tap or context menu "Rename" enters edit mode (only if `takeNoteVM.canRenameSelectedContainer` is true). On submit, sets `container.name` directly.
 - Uses `UpperCamelCase` computed sub-view properties: `ContainerNameEditor`, `NoteCountLabel`, `ContainerNameLabel`, `RenameButton`, `Header`.
 
@@ -221,7 +220,7 @@ AI chat interface. Flexible enough to serve two purposes:
 ### Supporting Views
 
 - `ContextBubble` — styled bubble displaying the injected `context` string at the top of the conversation.
-- `MessageBubble` — individual message bubble. Bot messages are tappable if `onBotMessageClick` is provided.
+- `MessageBubble` — individual message bubble. Bot messages are tappable if `onBotMessageClick` is provided. Accepts `noteTitles: [UUID: String]` (a pre-computed title map) instead of `notes: [Note]`, to avoid full-list re-renders on any note change. `ChatWindow` pre-computes `noteTitleMap` as a computed property mapping `allNotes` UUIDs to titles, and passes it to each `MessageBubble`.
 
 ---
 
