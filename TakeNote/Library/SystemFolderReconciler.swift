@@ -31,6 +31,7 @@ final class SystemFolderReconciler {
         let buffer = try reconcile(match: #Predicate { $0.isBuffer })
         let starred = try reconcile(match: #Predicate { $0.isStarred })
         let allNotes = try reconcile(match: #Predicate { $0.isAllNotes })
+        let archive = try reconcile(match: #Predicate { $0.isArchive })
 
         // Even if reconcile() returned nil (because count == 0 or 1),
         // we still want the VM to hold the current canonical (if one exists).
@@ -39,6 +40,7 @@ final class SystemFolderReconciler {
         vm.bufferFolder = buffer ?? fetchSingle(#Predicate { $0.isBuffer })
         vm.starredFolder = starred ?? fetchSingle(#Predicate { $0.isStarred })
         vm.allNotesFolder = allNotes ?? fetchSingle(#Predicate { $0.isAllNotes })
+        vm.archiveFolder = archive ?? fetchSingle(#Predicate { $0.isArchive })
     }
     
     private func fetchSingle(_ p: Predicate<NoteContainer>) -> NoteContainer? {

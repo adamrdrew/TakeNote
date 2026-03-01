@@ -53,6 +53,7 @@ enum SortOrder: Int {
 | `bufferFolder` | `NoteContainer?` | Reference to the hidden Buffer folder used for cut/paste. |
 | `starredFolder` | `NoteContainer?` | Reference to the Starred system folder. |
 | `allNotesFolder` | `NoteContainer?` | Reference to the All Notes system container. |
+| `archiveFolder` | `NoteContainer?` | Reference to the Archive system folder. |
 
 ### UI State
 
@@ -85,6 +86,7 @@ enum SortOrder: Int {
 | `inboxFolderName` | `"Inbox"` | Name of the Inbox system folder. |
 | `trashFolderName` | `"Trash"` | Name of the Trash system folder. |
 | `allNotesFolderName` | `"All Notes"` | Name of the All Notes system container. |
+| `archiveFolderName` | `"Archive"` | Name of the Archive system folder. |
 | `chatWindowID` | `"chat-window"` | SwiftUI window ID for the Chat window. |
 
 ---
@@ -93,8 +95,8 @@ enum SortOrder: Int {
 
 | Property | Returns | Description |
 |---|---|---|
-| `canAddNote` | `Bool` | `true` if `selectedContainer` is not Trash, not a tag, not Starred, and not All Notes. |
-| `canRenameSelectedContainer` | `Bool` | `true` if container is not Inbox, Trash, Starred, or All Notes. |
+| `canAddNote` | `Bool` | `true` if `selectedContainer` is not Trash, not a tag, not Starred, not All Notes, and not Archive. |
+| `canRenameSelectedContainer` | `Bool` | `true` if container is not Inbox, Trash, Starred, All Notes, or Archive. |
 | `bufferIsEmpty` | `Bool` | `true` if Buffer folder has no notes. |
 | `bufferNotesCount` | `Int` | Number of notes in Buffer folder. |
 | `canEmptyTrash` | `Bool` | `true` if Trash is selected and not empty. |
@@ -128,7 +130,11 @@ enum SortOrder: Int {
 
 ### System Folder Creation (called by folderInit)
 
-- `createInboxFolder(_:)`, `createTrashFolder(_:)`, `createBufferFolder(_:)`, `createStarredFolder(_:)`, `createAllNotesFolder(_:)` — idempotent; only creates if not already present.
+- `createInboxFolder(_:)`, `createTrashFolder(_:)`, `createBufferFolder(_:)`, `createStarredFolder(_:)`, `createAllNotesFolder(_:)`, `createArchiveFolder(_:)` — idempotent; only creates if not already present.
+
+### Archive Operations
+
+- `moveNoteToArchive(_ note: Note, modelContext: ModelContext)` — moves a note to the Archive folder via `note.setFolder(archiveFolder!)`, then saves. Callers are responsible for removing the note from the search index (`search.deleteFromIndex(noteID:)`).
 
 ### Buffer Operations
 

@@ -87,7 +87,8 @@ private func systemFolderSortOrder(_ folder: NoteContainer) -> Int {
     if folder.isStarred { return 1 }
     if folder.isAllNotes { return 2 }
     if folder.isTrash { return 3 }
-    return 4
+    if folder.isArchive { return 4 }
+    return 5
 }
 
 struct Sidebar: View {
@@ -103,13 +104,13 @@ struct Sidebar: View {
     @Query(
         filter: #Predicate<NoteContainer> { folder in
             !folder.isTag && !folder.isTrash && !folder.isInbox
-                && !folder.isBuffer && !folder.isAllNotes
+                && !folder.isBuffer && !folder.isAllNotes && !folder.isArchive
         }
     ) var folders: [NoteContainer]
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in
-            folder.isTrash || folder.isInbox || folder.isStarred || folder.isAllNotes
+            folder.isTrash || folder.isInbox || folder.isStarred || folder.isAllNotes || folder.isArchive
         }
     ) var systemFolders: [NoteContainer]
 

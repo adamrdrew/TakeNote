@@ -26,6 +26,7 @@ class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     static let allNotesFolderName = "All Notes"
+    static let archiveFolderName = "Archive"
     static let chatWindowID = "chat-window"
 
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "TakeNoteVM")
@@ -83,6 +84,7 @@ class TakeNoteVM {
     var bufferFolder: NoteContainer?
     var starredFolder: NoteContainer?
     var allNotesFolder: NoteContainer?
+    var archiveFolder: NoteContainer?
 
     var navigationTitle: String {
         #if DEBUG
@@ -102,11 +104,12 @@ class TakeNoteVM {
             && selectedContainer?.isTag == false
             && selectedContainer?.isStarred == false
             && selectedContainer?.isAllNotes == false
+            && selectedContainer?.isArchive == false
     }
 
     var canRenameSelectedContainer: Bool {
         guard let sc = selectedContainer else { return false }
-        if sc.isInbox || sc.isTrash || sc.isStarred || sc.isAllNotes {
+        if sc.isInbox || sc.isTrash || sc.isStarred || sc.isAllNotes || sc.isArchive {
             return false
         }
         return true
@@ -301,6 +304,43 @@ class TakeNoteVM {
         }
     }
 
+    func createArchiveFolder(_ modelContext: ModelContext) {
+        if self.archiveFolder != nil { return }
+        let archiveFolder = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: false,
+            isStarred: false,
+            name: TakeNoteVM.archiveFolderName,
+            symbol: "archivebox",
+            isTag: false,
+        )
+        archiveFolder.isArchive = true
+        modelContext.insert(archiveFolder)
+        self.archiveFolder = archiveFolder
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
+
+    func moveNoteToArchive(_ note: Note, modelContext: ModelContext) {
+        guard let archive = archiveFolder else {
+            errorAlertMessage = "Could not find archive folder"
+            errorAlertIsVisible = true
+            return
+        }
+        note.setFolder(archive)
+        do {
+            try modelContext.save()
+        } catch {
+            errorAlertMessage = error.localizedDescription
+            errorAlertIsVisible = true
+        }
+    }
+
     func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
         guard let trash = trashFolder else {
@@ -355,6 +395,7 @@ class TakeNoteVM {
         createBufferFolder(modelContext)
         createStarredFolder(modelContext)
         createAllNotesFolder(modelContext)
+        createArchiveFolder(modelContext)
         #if os(macOS)
             selectedContainer = inboxFolder
         #endif

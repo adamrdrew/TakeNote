@@ -77,32 +77,34 @@ A single model class that serves multiple conceptual roles: folder, tag, and sys
 | `folderNotes` | `[Note]?` | Notes whose `folder` is this container. |
 | `tagNotes` | `[Note]?` | Notes whose `tag` is this container. |
 | `starredNotes` | `[Note]?` | Notes whose `starredFolder` is this container. |
-| `canBeDeleted` | `Bool` | `false` for system containers (Inbox, Trash, Starred). |
+| `canBeDeleted` | `Bool` | `false` for system containers (Inbox, Trash, Starred, Archive). |
 | `isTrash` | `Bool` | This is the Trash folder. |
 | `isInbox` | `Bool` | This is the Inbox folder. |
 | `isStarred` | `Bool` | This is the Starred folder. |
 | `isTag` | `Bool` | This is a tag (not a folder). |
 | `isBuffer` | `Bool` | This is the hidden Buffer folder used for cut/paste. |
-| `isAllNotes` | `Bool` | This is the All Notes system container. When selected, shows every non-trashed, non-buffered note from all folders and tags. |
+| `isAllNotes` | `Bool` | This is the All Notes system container. When selected, shows every non-trashed, non-buffered, non-archived note from all folders and tags. |
+| `isArchive` | `Bool` | This is the Archive system container. Archived notes are hidden from All Notes and excluded from bulk search reindexing. |
 | `colorRGBA` | `UInt32` | Packed RGBA color as 32-bit integer. Default: `0xFF26B9FF` (TakeNote pink). |
 | `symbol` | `String` | SF Symbol name for display. Default: `"folder"`. |
 
 ### Computed Properties
 
 - `notes: [Note]` — routes to `tagNotes`, `starredNotes`, or `folderNotes` based on flags.
-- `isSystemFolder: Bool` — `true` if Trash, Inbox, Starred, or All Notes.
+- `isSystemFolder: Bool` — `true` if Trash, Inbox, Starred, All Notes, or Archive.
 
 ### System Containers
 
-| Name | isInbox | isTrash | isStarred | isBuffer | isAllNotes | canBeDeleted |
-|---|---|---|---|---|---|---|
-| Inbox | true | false | false | false | false | false |
-| Trash | false | true | false | false | false | false |
-| Starred | false | false | true | false | false | false |
-| Buffer | false | false | false | true | false | false |
-| All Notes | false | false | false | false | true | false |
-| User folder | false | false | false | false | false | true |
-| Tag | false | false | false | false | false | true |
+| Name | isInbox | isTrash | isStarred | isBuffer | isAllNotes | isArchive | canBeDeleted |
+|---|---|---|---|---|---|---|---|
+| Inbox | true | false | false | false | false | false | false |
+| Trash | false | true | false | false | false | false | false |
+| Starred | false | false | true | false | false | false | false |
+| Buffer | false | false | false | true | false | false | false |
+| All Notes | false | false | false | false | true | false | false |
+| Archive | false | false | false | false | false | true | false |
+| User folder | false | false | false | false | false | false | true |
+| Tag | false | false | false | false | false | false | true |
 
 ### Key Methods
 

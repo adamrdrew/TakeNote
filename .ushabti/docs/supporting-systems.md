@@ -39,10 +39,10 @@ The bootstrap function creates a temporary SQLite file (not the app's main store
 
 Wires up the `SystemFolderReconciler` with notification observers. Returns a `ReconcilerHarness` (reconciler + observer tokens) that must be retained to keep observations alive.
 
-- Listens for `NSPersistentStoreRemoteChange` — runs reconciler + bulk search reindex on CloudKit sync. The reindex is called unconditionally; no `canReindexAllNotes()` guard is applied.
+- Listens for `NSPersistentStoreRemoteChange` — runs reconciler + bulk search reindex on CloudKit sync. The reindex is called unconditionally; no `canReindexAllNotes()` guard is applied. Archived notes (where `folder?.isArchive == true`) are filtered out before passing to `reindexAll`.
 - Optionally listens for `NSManagedObjectContextDidSave` — the parameter default is `false`, but **in `TakeNoteApp.init()` it is called with `listenForLocalSaves: true`**. This means the reconciler runs on both remote changes AND every local save in production.
 - Runs reconciler once on startup if `runOnStartup` is `true` (also `true` in the actual call).
-- When `runOnStartup` is `true`, also triggers a startup `reindexAll` immediately after the reconciler runs. The call is unconditional — no `canReindexAllNotes()` gate. The startup reindex fetches all `Note` records from `container.mainContext` and passes their `(uuid, content)` tuples to `searchIndexService.reindexAll`. If a `NoteList.onChange(of: notes.count)` reindex fires concurrently, `SearchIndexService`'s cancel-and-restart mechanism resolves the overlap: whichever fires last wins.
+- When `runOnStartup` is `true`, also triggers a startup `reindexAll` immediately after the reconciler runs. The call is unconditional — no `canReindexAllNotes()` gate. The startup reindex fetches all `Note` records from `container.mainContext`, filters out archived notes (`folder?.isArchive == true`), and passes the remaining `(uuid, content)` tuples to `searchIndexService.reindexAll`. If a `NoteList.onChange(of: notes.count)` reindex fires concurrently, `SearchIndexService`'s cancel-and-restart mechanism resolves the overlap: whichever fires last wins.
 
 The returned `ReconcilerHarness` holds the reconciler instance and notification observer tokens. It is stored in `TakeNoteApp.reconcilerHarness` (a `private var`). The tokens must be retained for the lifetime of the app to keep notifications active.
 
@@ -58,13 +58,13 @@ CloudKit sync can create duplicate system folders (Inbox, Trash, Starred, Buffer
 
 ### runOnce()
 
-Reconciles all five system folder types (Inbox, Trash, Buffer, Starred, All Notes). For each type:
+Reconciles all six system folder types (Inbox, Trash, Buffer, Starred, All Notes, Archive). For each type:
 1. Fetches all matching containers.
 2. If system folder has wrong color (not `0xFF26B9FF`), corrects it and saves.
 3. If only one exists, skips.
 4. If multiple exist: picks a canonical (most notes, then lowest ID hash), moves all notes from duplicates to the canonical, updates `TakeNoteVM` if the selected container was a duplicate, deletes duplicates, saves.
 
-After reconciliation, updates `TakeNoteVM`'s system folder references (`inboxFolder`, `trashFolder`, `bufferFolder`, `starredFolder`, `allNotesFolder`).
+After reconciliation, updates `TakeNoteVM`'s system folder references (`inboxFolder`, `trashFolder`, `bufferFolder`, `starredFolder`, `allNotesFolder`, `archiveFolder`).
 
 ### chooseCanonical(from:)
 

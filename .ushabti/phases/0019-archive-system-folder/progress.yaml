@@ -1,0 +1,74 @@
+phase:
+  id: "0019"
+  slug: archive-system-folder
+  title: Archive System Folder
+  status: complete
+
+steps:
+  - id: S001
+    title: Add isArchive field to NoteContainer and bump schema version
+    implemented: true
+    reviewed: true
+    notes: "Added isArchive field to NoteContainer, updated isSystemFolder computed property to include isArchive, bumped ckBootstrapVersionCurrent from 10 to 11"
+    touched:
+      - TakeNote/Models/NoteContainer.swift
+      - TakeNote/TakeNoteApp.swift
+
+  - id: S002
+    title: Add archiveFolder property and archive methods to TakeNoteVM
+    implemented: true
+    reviewed: true
+    notes: "Added archiveFolderName constant, archiveFolder property, createArchiveFolder, moveNoteToArchive methods. Updated canAddNote and canRenameSelectedContainer to exclude archive. Updated folderInit to call createArchiveFolder."
+    touched:
+      - TakeNote/TakeNoteVM.swift
+
+  - id: S003
+    title: Update SystemFolderReconciler to reconcile the archive folder
+    implemented: true
+    reviewed: true
+    notes: Added archive reconciliation call and vm.archiveFolder assignment in SystemFolderReconciler.runOnce()
+    touched:
+      - TakeNote/Library/SystemFolderReconciler.swift
+
+  - id: S004
+    title: Update Sidebar.swift queries and sort order for the archive folder
+    implemented: true
+    reviewed: true
+    notes: "Updated systemFolders query to include isArchive, updated folders query to exclude isArchive, updated systemFolderSortOrder to place archive at 4 (after Trash at 3); unknown fallback is now 5."
+    touched:
+      - TakeNote/Views/MainWindow/Sidebar.swift
+
+  - id: S005
+    title: Exclude archived notes from search reindex in AppBootstrapper.swift
+    implemented: true
+    reviewed: true
+    notes: Both reindexAll call sites in AppBootstrapper now filter out archived notes before passing to the search index.
+    touched:
+      - TakeNote/Library/AppBootstrapper.swift
+
+  - id: S006
+    title: Exclude archived notes from NoteList.swift reindex and All Notes view
+    implemented: true
+    reviewed: true
+    notes: "allNotesSource in filteredNotes now excludes archived notes. onChange(of: notes.count) reindex now filters out archived notes."
+    touched:
+      - TakeNote/Views/NoteList/NoteList.swift
+
+  - id: S007
+    title: Add archive swipe action and context menu item to NoteListEntry.swift
+    implemented: true
+    reviewed: true
+    notes: "Added archiveNote() method. Added cross-platform leading-edge swipe action (blue Archive button, guarded for non-archive, non-trash notes). Added Move to Archive context menu item with same guard."
+    touched:
+      - TakeNote/Views/NoteList/NoteListEntry.swift
+
+  - id: S008
+    title: Update documentation
+    implemented: true
+    reviewed: true
+    notes: "Updated data-models.md (isArchive field, isSystemFolder, System Containers table), view-model.md (archiveFolder property, archiveFolderName constant, createArchiveFolder, moveNoteToArchive, canAddNote and canRenameSelectedContainer descriptions), supporting-systems.md (runOnce 6 types, archive exclusion in reindexAll), views.md (Sidebar queries and sort order, NoteList archive exclusion, NoteListEntry swipe and context menu)."
+    touched:
+      - .ushabti/docs/data-models.md
+      - .ushabti/docs/view-model.md
+      - .ushabti/docs/supporting-systems.md
+      - .ushabti/docs/views.md

@@ -36,9 +36,9 @@ The root view of the main window scene.
 Left-most column. Contains the full navigation hierarchy.
 
 - Renders three `List` sections: system folders, user folders, tags.
-- System folders query: `isTrash || isInbox || isStarred || isAllNotes`.
-- System folders are sorted by a private file-scope helper `systemFolderSortOrder(_ folder: NoteContainer) -> Int` that maps Inbox→0, Starred→1, AllNotes→2, Trash→3, unknown→4. This replaces the previous alphabetical sort and ensures deterministic order regardless of folder names.
-- User folders query: `!isTag && !isTrash && !isInbox && !isBuffer && !isAllNotes`.
+- System folders query: `isTrash || isInbox || isStarred || isAllNotes || isArchive`.
+- System folders are sorted by a private file-scope helper `systemFolderSortOrder(_ folder: NoteContainer) -> Int` that maps Inbox→0, Starred→1, AllNotes→2, Trash→3, Archive→4, unknown→5. This replaces the previous alphabetical sort and ensures deterministic order regardless of folder names.
+- User folders query: `!isTag && !isTrash && !isInbox && !isBuffer && !isAllNotes && !isArchive`.
 - Tags query: `isTag == true`.
 - Accepts folder drag/drop via `folderImport()`.
 - Manages three `CommandRegistry` instances for delete, rename, and set-color operations, injecting them into the environment and FocusedValues.
@@ -82,8 +82,8 @@ Left-most column. Contains the full navigation hierarchy.
 Middle column. Renders notes for the selected container.
 
 - Search text state lives in `TakeNoteVM.noteSearchText` (not a local `@State` on `NoteList`). This is the single source of truth for search text shared across platforms.
-- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When search text is non-empty the candidate pool is **all non-trash/non-buffer notes** regardless of the selected container (global search). FTS results are ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
-- When search text is empty: returns notes scoped to the selected container (or all non-trash/non-buffer notes if All Notes is selected), unchanged from the pre-search behavior.
+- Filters notes by FTS5-backed search via `SearchIndexService.searchNoteIDs()` when `noteSearchText` is non-empty. When search text is non-empty the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search). FTS results are ordered by BM25 rank before `sortedNotes` re-sorts by date/updated order.
+- When search text is empty: returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected), unchanged from the pre-search behavior.
 - The `.searchable()` modifier placement differs by platform:
   - **macOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `List` inside `NoteList`.
   - **iOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern — search bar appears at the bottom of the sidebar column on iPhone).
@@ -93,6 +93,7 @@ Middle column. Renders notes for the selected container.
 - On macOS: supports `.copyable`, `.cuttable` (moves note to Buffer folder via `note.setFolder(bf)`, correctly updating `updatedDate` and triggering widget reload), and `.pasteDestination` (moves/copies from Buffer or pastes copy). In `pasteNote()`, the cut-paste path (buffer folder) calls `note.setFolder()` correctly. The copy-paste path creates a new `Note(folder:)` — which already calls `WidgetCenter.shared.reloadAllTimelines()` in the initializer — and then sets fields (`content`, `title`, `aiSummary`, etc.) via direct assignment before `modelContext.insert`. Direct assignment is intentional here: the object is uninserted and calling `setContent()`/`setTitle()` would fire redundant widget reloads for each field.
 - Accepts string drop (creates new note from dropped text) and file URL drop (`fileImport`).
 - On note deselection (oldValue): triggers `generateSummary()`, `SearchIndexService.reindex()`, `NoteLinkManager.generateLinksFor()`, and `NoteImageManager.cullOrphanedImages()`.
+- The `onChange(of: notes.count)` reindex handler filters out archived notes before passing to `reindexAll`, matching the archive-exclusion applied at the `AppBootstrapper` reindex call sites.
 
 **FocusedValues exposed:** `\.noteDeleteRegistry`, `\.noteRenameRegistry`, `\.noteStarToggleRegistry`, `\.noteCopyMarkdownLinkRegistry`, `\.noteOpenEditorWindowRegistry`, `\.selectedNotes`
 
@@ -103,11 +104,14 @@ Middle column. Renders notes for the selected container.
 Individual note row. Displays TitleRow (title + star button), MetadataRow (created date + folder/tag badge), and SummaryRow (AI summary or raw content preview).
 
 - Registers five commands in CommandRegistry on `.onAppear`, unregisters on `.onDisappear`.
-- Supports swipe actions (trailing: trash + star; leading on iOS: move via `MovePopoverContent`, which uses `note.setTag(container)` / `note.setFolder(container)` to correctly update `updatedDate` and trigger widget reload).
+- Supports swipe actions:
+  - Trailing (left swipe, all platforms): Trash + Star.
+  - Leading (right swipe, all platforms): Archive — blue `archivebox` button. Only shown when `note.folder?.isArchive != true && note.folder?.isTrash != true`. Calls `archiveNote()`, which moves the note to the archive folder and removes it from the search index.
+  - Leading (right swipe, iOS only): Move via `MovePopoverContent`, which uses `note.setTag(container)` / `note.setFolder(container)` to correctly update `updatedDate` and trigger widget reload.
 - Supports draggable `NoteIDWrapper` for drag/drop.
 - Double-tap opens a detached `NoteEditorWindow`.
 - `MetadataRow` shows the source folder name and icon badge when `selectedContainer` is a tag, Starred, or All Notes (`isTag == true || isStarred == true || isAllNotes == true`). When viewing a user folder, the tag badge is shown instead (if the note has a tag).
-- Context menu: Move to Trash, Rename, Go to Note Folder (shown when `isTag || isStarred || isAllNotes`), Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
+- Context menu: Move to Archive (shown when `note.folder?.isArchive != true && note.folder?.isTrash != true`), Move to Trash, Rename, Go to Note Folder (shown when `isTag || isStarred || isAllNotes`), Open Editor Window, Export, Copy URL, Copy Markdown Link, Regenerate Summary, Remove Tag.
 - File export via `.fileExporter` saves note as a `.md` file.
 
 ### NoteListHeader

@@ -147,6 +147,11 @@ struct NoteListEntry: View {
         takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
     }
 
+    func archiveNote() {
+        takeNoteVM.moveNoteToArchive(note, modelContext: modelContext)
+        search.deleteFromIndex(noteID: note.uuid)
+    }
+
     var isOpenNote: Bool {
         #if os(iOS)
             if UIDevice.current.userInterfaceIdiom == .phone {
@@ -362,13 +367,21 @@ struct NoteListEntry: View {
             }
             .tint(.yellow)
         }
-        #if os(iOS)
-            // leading = right swipe
-            .swipeActions(edge: .leading) {
+        // leading = right swipe
+        .swipeActions(edge: .leading) {
+            if note.folder?.isArchive != true && note.folder?.isTrash != true {
+                Button(action: { archiveNote() }) {
+                    Label("Archive", systemImage: "archivebox")
+                }
+                .tint(.blue)
+            }
+            #if os(iOS)
                 Button(action: { inMoveToContainerMode = true }) {
                     Label("Move", systemImage: "arrow.down.app")
                 }
-            }
+            #endif
+        }
+        #if os(iOS)
             .popover(isPresented: $inMoveToContainerMode) {
                 MovePopoverContent(
                     note: note,
@@ -390,6 +403,12 @@ struct NoteListEntry: View {
                 .onEnded { openEditorWindow() }
         )
         .contextMenu {
+
+            if note.folder?.isArchive != true && note.folder?.isTrash != true {
+                Button(action: { archiveNote() }) {
+                    Label("Move to Archive", systemImage: "archivebox")
+                }
+            }
 
             if takeNoteVM.selectedContainer?.isTrash == false {
                 Button(

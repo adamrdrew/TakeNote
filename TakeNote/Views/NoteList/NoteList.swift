@@ -71,7 +71,7 @@ struct NoteList: View {
 
     var filteredNotes: [Note] {
         let allNotesSource = notes.filter {
-            $0.folder?.isTrash != true && $0.folder?.isBuffer != true
+            $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true
         }
         if !takeNoteVM.noteSearchText.isEmpty {
             // Global search: search across all non-trash/non-buffer notes regardless of selected container
@@ -335,7 +335,7 @@ struct NoteList: View {
             }
         }
         .onChange(of: notes.count) { _, _ in
-            search.reindexAll(notes.map { ($0.uuid, $0.content) })
+            search.reindexAll(notes.filter { $0.folder?.isArchive != true }.map { ($0.uuid, $0.content) })
         }
 
     }
