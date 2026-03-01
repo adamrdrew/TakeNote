@@ -119,18 +119,7 @@ struct MainWindow: View {
                     }
                     .help("Magic Chat")
                 #endif
-                #if os(iOS)
-                    Button(action: doShowChatPopover) {
-                        Label("Chat", systemImage: "message")
-                    }
-                    .help("Magic Chat")
-                    .popover(
-                        isPresented: $showChatPopover,
-                        arrowEdge: .trailing
-                    ) {
-                        ChatWindow()
-                    }
-                #endif
+
             }
             if takeNoteVM.canEmptyTrash {
                 Button(action: takeNoteVM.showEmptyTrashAlert) {
