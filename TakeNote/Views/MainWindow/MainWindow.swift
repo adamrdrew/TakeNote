@@ -219,6 +219,9 @@ struct MainWindow: View {
             }
         }
         .searchable(text: $takeNoteVM.noteSearchText)
+        .onSubmit(of: .search) {
+            takeNoteVM.searchSubmitted()
+        }
         .onChange(of: takeNoteVM.multipleNotesSelected) { _, newValue in
             withAnimation {
                 takeNoteVM.showMultiNoteView = newValue

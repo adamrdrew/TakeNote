@@ -54,6 +54,12 @@ class TakeNoteVM {
     // the search-text-clear that would otherwise fire on that container change.
     var isSearchNavigating: Bool = false
 
+    func searchSubmitted() {
+        guard !noteSearchText.isEmpty else { return }
+        isSearchNavigating = true
+        selectedContainer = allNotesFolder
+    }
+
     let userDefaults = UserDefaults.standard
     
     var sortBy: SortBy {

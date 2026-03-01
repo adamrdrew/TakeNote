@@ -338,10 +338,23 @@ struct NoteList: View {
         }
         .onChange(of: notes) { _, _ in rebuildNoteCache() }
         .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
+            // On Mac/iPad, switch to All Notes as the user types so the sidebar
+            // reflects that search is global. On iPhone this is deferred to
+            // .onSubmit(of: .search) because changing the container mid-typing
+            // collapses the search bar in the stacked NavigationSplitView.
+            #if os(macOS)
             if !newValue.isEmpty, takeNoteVM.selectedContainer !== takeNoteVM.allNotesFolder {
                 takeNoteVM.isSearchNavigating = true
                 takeNoteVM.selectedContainer = takeNoteVM.allNotesFolder
             }
+            #else
+            if UIDevice.current.userInterfaceIdiom != .phone,
+               !newValue.isEmpty,
+               takeNoteVM.selectedContainer !== takeNoteVM.allNotesFolder {
+                takeNoteVM.isSearchNavigating = true
+                takeNoteVM.selectedContainer = takeNoteVM.allNotesFolder
+            }
+            #endif
             rebuildNoteCache()
         }
         .onChange(of: takeNoteVM.selectedContainer) { _, _ in
