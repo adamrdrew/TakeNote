@@ -144,10 +144,7 @@ struct NoteListHeader: View {
     var body: some View {
         if takeNoteVM.selectedContainer != nil {
             Header
-                .background(
-                    .regularMaterial
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 0))
+                .glassEffect(in: .rect)
                 .onChange(of: allNotes) { _, _ in rebuildNoteCount() }
                 .onChange(of: takeNoteVM.selectedContainer) { _, _ in rebuildNoteCount() }
                 .onAppear { rebuildNoteCount() }
