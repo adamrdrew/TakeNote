@@ -31,6 +31,12 @@ struct WelcomeView: View {
                     "Drag and Drop or Import images and add them to your notes.",
                 systemImage: "photo"
             )
+            WelcomeRow(
+                title: "Archived Notes",
+                text:
+                    "Add notes to Archived to hide them from search and Magic Chat.",
+                systemImage: "archivebox"
+            )
 
             Button("Continue", action: onDone)
                 .keyboardShortcut(.defaultAction)
