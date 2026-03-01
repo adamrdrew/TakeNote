@@ -53,6 +53,7 @@ class TakeNoteVM {
     // switching selectedContainer to All Notes. NoteList reads and resets it to suppress
     // the search-text-clear that would otherwise fire on that container change.
     var isSearchNavigating: Bool = false
+    var noteListRefreshTrigger: Int = 0
 
     func searchSubmitted() {
         guard !noteSearchText.isEmpty else { return }
@@ -517,6 +518,7 @@ class TakeNoteVM {
     func onMoveToFolder() {
         selectedNotes.removeAll()
         openNote = nil
+        noteListRefreshTrigger += 1
     }
 
     func onNoteSelect(_ note: Note) {

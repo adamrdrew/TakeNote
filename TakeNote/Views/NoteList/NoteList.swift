@@ -367,6 +367,7 @@ struct NoteList: View {
         }
         .onChange(of: takeNoteVM.sortBy) { _, _ in rebuildNoteCache() }
         .onChange(of: takeNoteVM.sortOrder) { _, _ in rebuildNoteCache() }
+        .onChange(of: takeNoteVM.noteListRefreshTrigger) { _, _ in rebuildNoteCache() }
         .onAppear { rebuildNoteCache() }
 
     }
