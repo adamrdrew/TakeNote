@@ -97,7 +97,7 @@ struct NoteEditor: View {
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     #if os(iOS)
-        @State private var showNoImageInClipboardAlert: Bool = false
+        @State private var showNothingToPasteAlert: Bool = false
     #endif
 
     @FocusState private var isInputActive: Bool
@@ -203,16 +203,20 @@ struct NoteEditor: View {
     }
 
     #if os(iOS)
-        private func pasteImageFromClipboard() {
+        private func pasteFromClipboard() {
             guard !showPreview else { return }
-            guard UIPasteboard.general.hasImages, let image = UIPasteboard.general.image,
+            let pasteboard = UIPasteboard.general
+            if pasteboard.hasImages, let image = pasteboard.image,
                 let data = image.jpegData(compressionQuality: 1.0)
-            else {
-                showNoImageInClipboardAlert = true
-                return
+            {
+                insertImage(data: data)
+                Self.logger.info("Inserted image from clipboard via paste button")
+            } else if pasteboard.hasStrings, let text = pasteboard.string {
+                insertAtCaret(text)
+                Self.logger.info("Inserted text from clipboard via paste button")
+            } else {
+                showNothingToPasteAlert = true
             }
-            insertImage(data: data)
-            Self.logger.info("Inserted image from clipboard via paste button")
         }
     #endif
 
@@ -491,7 +495,7 @@ struct NoteEditor: View {
                 setShowBacklinks()
             }
             #if os(iOS)
-                .alert("No image in clipboard", isPresented: $showNoImageInClipboardAlert) {
+                .alert("Nothing to paste", isPresented: $showNothingToPasteAlert) {
                     Button("OK", role: .cancel) {}
                 }
             #endif
@@ -565,12 +569,12 @@ struct NoteEditor: View {
                 #if os(iOS)
                     ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
-                            pasteImageFromClipboard()
+                            pasteFromClipboard()
                         }) {
                             Image(systemName: "doc.on.clipboard")
                         }
                         .disabled(showPreview)
-                        .help("Paste Image")
+                        .help("Paste")
                     }
                 #endif
 
