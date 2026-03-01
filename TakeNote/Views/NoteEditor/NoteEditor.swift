@@ -620,7 +620,7 @@ struct NoteEditor: View {
                             )
                         }
                         .help("Magic Assistant")
-                        .popover(
+                        .adaptivePopover(
                             isPresented: $isAssistantPopoverPresented,
                             attachmentAnchor: .point(.center),
                             arrowEdge: .bottom

@@ -185,7 +185,7 @@ struct MainWindow: View {
                                     Label("Chat", systemImage: "message")
                                 }
                                 .help("Magic Chat")
-                                .popover(
+                                .adaptivePopover(
                                     isPresented: $showSidebarChatPopover,
                                     arrowEdge: .trailing
                                 ) {
