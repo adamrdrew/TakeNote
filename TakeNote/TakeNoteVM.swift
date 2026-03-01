@@ -51,7 +51,7 @@ class TakeNoteVM {
 
     let userDefaults = UserDefaults.standard
     
-    public var sortBy: SortBy {
+    var sortBy: SortBy {
             get {
                 access(keyPath: \.sortBy)
                 let raw = userDefaults.object(forKey: "SortBy") as? Int
@@ -64,7 +64,7 @@ class TakeNoteVM {
             }
         }
 
-        public var sortOrder: SortOrder {
+        var sortOrder: SortOrder {
             get {
                 access(keyPath: \.sortOrder)
                 let raw = userDefaults.object(forKey: "SortOrder") as? Int
@@ -124,10 +124,6 @@ class TakeNoteVM {
         return trashFolderSelected && !selectedContainerIsEmpty
     }
 
-    var inboxFolderExists: Bool {
-        return inboxFolder != nil
-    }
-
     var multipleNotesSelected: Bool {
         return selectedNotes.count > 1
     }
@@ -179,7 +175,6 @@ class TakeNoteVM {
 
     func addTag(
         _ name: String = "New Tag",
-        color: Color = .takeNotePink,
         modelContext: ModelContext
     ) {
         let newTag = NoteContainer(

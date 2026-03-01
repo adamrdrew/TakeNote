@@ -90,13 +90,6 @@ struct FolderListEntry: View {
         return folder.notes.count
     }
 
-    var iconColor: Color {
-        if folder == takeNoteVM.selectedContainer {
-            return .primary
-        }
-        return .takeNotePink
-    }
-
     var body: some View {
         HStack {
             if inRenameMode {

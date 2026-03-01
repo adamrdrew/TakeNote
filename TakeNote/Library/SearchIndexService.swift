@@ -10,9 +10,9 @@ import os
 
 // MARK: Result type
 struct SearchHit: Identifiable, Hashable {
-    public let id: Int64  // rowid inside FTS table
-    public let noteID: UUID
-    public let chunk: String  // the stored chunk text
+    let id: Int64  // rowid inside FTS table
+    let noteID: UUID
+    let chunk: String  // the stored chunk text
 }
 
 @MainActor
@@ -48,10 +48,6 @@ class SearchIndexService {
             logger.info("FTS search reindex complete. \(noteData.count) notes indexed, \(self.index.rowCount) chunks in index.")
             #endif
         }
-    }
-
-    func dropAll() {
-        Task { index.dropAll() }
     }
 
     func deleteFromIndex(noteID: UUID) {

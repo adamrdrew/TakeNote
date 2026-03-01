@@ -17,7 +17,6 @@ private let onboardingVersionKey = "onboarding.version.seen"
 
 @main
 struct TakeNoteApp: App {
-    @Environment(\.modelContext) var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage(onboardingVersionKey) private var onboardingVersionSeen: Int = 0
     @State private var showOnboarding = false

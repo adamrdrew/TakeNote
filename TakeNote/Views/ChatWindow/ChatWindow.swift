@@ -45,7 +45,6 @@ struct ChatWindow: View {
 
     var context: String?
     var instructions: String?
-    var prompt: String?
     var searchEnabled: Bool = true
     var onBotMessageClick: ((String) -> Void)?
     var toolbarVisible: Bool = true
@@ -132,10 +131,6 @@ struct ChatWindow: View {
         }
         llmPrompt += "QUESTION: \(conversation.last?.text ?? "")\n"
         return llmPrompt
-    }
-
-    private func noteTitle(for noteID: UUID) -> String {
-        allNotes.first(where: { $0.uuid == noteID })?.title ?? "Note"
     }
 
     private func generateResponse(sources: [SearchHit]) async {

@@ -15,7 +15,6 @@ struct MagicFormatterResult {
     let formattedText: String
     let didSucceed: Bool
     let wasCancelled: Bool
-    let error: Error?
 }
 
 @MainActor
@@ -73,8 +72,7 @@ class MagicFormatter {
                 inputHash: inputHash,
                 formattedText: "Language model is not available.",
                 didSucceed: false,
-                wasCancelled: false,
-                error: nil
+                wasCancelled: false
             )
         }
         if session.isResponding {
@@ -84,8 +82,7 @@ class MagicFormatter {
                 formattedText:
                     "The Language Model is busy. Please try again later.",
                 didSucceed: false,
-                wasCancelled: false,
-                error: nil
+                wasCancelled: false
             )
         }
         formatterIsBusy = true
@@ -119,8 +116,7 @@ class MagicFormatter {
                 formattedText:
                     "MagicFormatter Error:\n \(error.localizedDescription)",
                 didSucceed: false,
-                wasCancelled: sessionCancelled,
-                error: error
+                wasCancelled: sessionCancelled
             )
         }
         let formattedDocument = response.content
@@ -133,16 +129,14 @@ class MagicFormatter {
                 formattedText:
                     "MagicFormat couldn't figure out how to format your document.",
                 didSucceed: false,
-                wasCancelled: false,
-                error: nil
+                wasCancelled: false
             )
         }
         return MagicFormatterResult(
             inputHash: inputHash,
             formattedText: unwrapMarkdownFence(formattedDocument),
             didSucceed: true,
-            wasCancelled: false,
-            error: nil
+            wasCancelled: false
         )
     }
 }

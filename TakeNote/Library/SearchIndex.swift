@@ -101,40 +101,6 @@ internal final class SearchIndex {
         }
     }
 
-    func dropAll() {
-        do {
-            // Fast path: wipe all rows from the FTS table.
-            // (This preserves the schema and is safe for both in-memory & on-disk.)
-            try db.run(fts.delete())
-
-            // FTS5 maintenance: compact internal index structures.
-            // This is optional; ignore if it ever errors on older SQLite builds.
-            try db.run("INSERT INTO fts(fts) VALUES('optimize')")
-
-            // Reclaim disk space (if on-disk). These are no-ops for in-memory.
-            // Must be outside a transaction.
-            try db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-            try db.run("VACUUM")
-        } catch {
-            // If the table doesn't exist or something went sideways, drop & recreate.
-            do {
-                try db.transaction {
-                    try db.run("DROP TABLE IF EXISTS fts")
-
-                    let cfg = FTS5Config()
-                        .column(note_id, [.unindexed])
-                        .column(chunk)
-
-                    try db.run(fts.create(.FTS5(cfg), ifNotExists: true))
-                }
-                // After a hard reset, also trim the file.
-                try db.run("PRAGMA wal_checkpoint(TRUNCATE)")
-                try db.run("VACUUM")
-            } catch {
-                logger.error("SearchIndex dropAll error: \(error.localizedDescription)")
-            }
-        }
-    }
     /// Bulk (re)index many notes efficiently.
     /// Checks `Task.isCancelled` before each note so the operation can exit promptly
     /// when the owning Task is cancelled. A cancellation leaves the SQLite transaction

@@ -7,7 +7,6 @@
 
 import SwiftData
 import SwiftUI
-import os
 
 struct FileCommands: Commands {
     @FocusedValue(TakeNoteVM.self) private var takeNoteVM: TakeNoteVM?
@@ -15,13 +14,6 @@ struct FileCommands: Commands {
         SearchIndexService?
     @FocusedValue(\.modelContext) private var modelContext: ModelContext?
     @FocusedValue(\.showDeleteEverything) private var showDeleteEverything : (() -> Void)?
-
-    let logger = Logger(
-        subsystem: "com.adamdrew.takenote",
-        category: "FileMenu"
-    )
-
-    @Query() var notes: [Note]
 
     var vmOrModelContextAreNil: Bool {
         takeNoteVM == nil || modelContext == nil

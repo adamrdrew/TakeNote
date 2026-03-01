@@ -628,7 +628,6 @@ struct NoteEditor: View {
                             ChatWindow(
                                 context: selectedText,
                                 instructions: MAGIC_ASSISTANT_PROMPT,
-                                prompt: "USER_REQUEST:\n",
                                 searchEnabled: false,
                                 onBotMessageClick:
                                     assistantSelectionReplacement,
