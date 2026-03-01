@@ -20,6 +20,7 @@ struct ConversationEntry: Identifiable, Hashable {
     var text: String
     var sources: [SearchHit] = []
     var isComplete: Bool = false
+    var toolCallStatus: String? = nil
 
     init(sender: Sender, text: String) {
         self.id = UUID()
@@ -35,12 +36,14 @@ private let titleColors: [Color] = [.takeNotePink, .orange, .purple, .blue]
 
 struct ChatWindow: View {
     @Environment(SearchIndexService.self) private var search
+    @Environment(\.modelContext) private var modelContext
 
     @Query() var allNotes: [Note]
 
     @State private var conversation: [ConversationEntry] = []
     @State private var userQuery: String = ""
-    @State private var searchResults: [SearchHit] = []
+    @State private var session: LanguageModelSession? = nil
+    @State private var pendingSources: [SearchHit] = []
     @State private var responseIsGenerating: Bool = false
 
     var context: String?
@@ -75,69 +78,17 @@ struct ChatWindow: View {
 
         responseIsGenerating = true
 
-        let conversationEntry = ConversationEntry(sender: .human, text: trimmed)
-        conversation.append(conversationEntry)
-
-        // Prepare retrieval and freeze sources at ask-time
-        if searchEnabled {
-            self.searchResults = search.index.searchNatural(trimmed)
-        }
-        let capturedSources = searchResults
+        conversation.append(ConversationEntry(sender: .human, text: trimmed))
+        pendingSources = []
 
         // Clear the field & keep focus
         self.userQuery = ""
         self.textFieldFocused = true
 
-        Task { await generateResponse(sources: capturedSources) }
+        Task { await generateResponse(userPrompt: trimmed) }
     }
 
-    private func makeConversationString() -> String {
-        // Generate a log of the conversation and senders
-        return conversation.map { entry in
-            "\(entry.sender == .human ? "User" : "Assistant"): \(entry.text)"
-        }.joined(separator: "\n")
-    }
-
-    private func stripMarkdown(_ text: String) -> String {
-        var s = text
-        // Remove images and links but keep link text
-        s = s.replacingOccurrences(of: #"!\[.*?\]\(.*?\)"#, with: "", options: .regularExpression)
-        s = s.replacingOccurrences(of: #"\[([^\]]*)\]\(.*?\)"#, with: "$1", options: .regularExpression)
-        // Remove fenced code blocks (``` ... ```)
-        s = s.replacingOccurrences(of: #"```[^`]*```"#, with: "", options: .regularExpression)
-        // Remove inline code
-        s = s.replacingOccurrences(of: #"`[^`]+`"#, with: "", options: .regularExpression)
-        // Remove heading markers, bold, italic, strikethrough
-        s = s.replacingOccurrences(of: #"#{1,6}\s*"#, with: "", options: .regularExpression)
-        s = s.replacingOccurrences(of: #"[*_~]{1,3}"#, with: "", options: .regularExpression)
-        // Remove checkbox markers
-        s = s.replacingOccurrences(of: #"- \[[ x]\] "#, with: "- ", options: .regularExpression)
-        // Collapse multiple blank lines
-        s = s.replacingOccurrences(of: #"\n{3,}"#, with: "\n\n", options: .regularExpression)
-        return s.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private func makePrompt() -> String {
-        var llmPrompt = ""
-        if searchEnabled {
-            llmPrompt += "TEXT FROM USER'S NOTES:\n\n"
-            for (index, result) in searchResults.enumerated() {
-                let cleaned = stripMarkdown(result.chunk)
-                guard !cleaned.isEmpty else { continue }
-                llmPrompt += "EXCERPT \(index + 1):\n\(cleaned)\n\n"
-            }
-        }
-        if context != nil {
-            llmPrompt += "CONTEXT:\n\(context ?? "")\n\n"
-        }
-        if useHistory && conversation.count > 1 {
-            llmPrompt += "CHAT HISTORY:\n\(makeConversationString())\n\n"
-        }
-        llmPrompt += "QUESTION: \(conversation.last?.text ?? "")\n"
-        return llmPrompt
-    }
-
-    private func generateResponse(sources: [SearchHit]) async {
+    private func generateResponse(userPrompt: String) async {
         guard SystemLanguageModel.default.availability == .available else {
             var unavailableEntry = ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device.")
             unavailableEntry.isComplete = true
@@ -146,40 +97,120 @@ struct ChatWindow: View {
             return
         }
 
-        let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
+        // Magic Assistant (useHistory == false) gets a fresh session each turn
+        if !useHistory {
+            session = nil
+        }
 
-        // Capture prompt BEFORE appending bot entry — makePrompt() reads conversation.last
-        let assembledPrompt = makePrompt()
+        // Lazily create session on first question (or after reset)
+        if session == nil {
+            let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
+            if searchEnabled {
+                let searchTool = NoteSearchTool(
+                    searchIndex: search.index,
+                    onSearchStart: { [self] query in
+                        let idx = conversation.count - 1
+                        if idx >= 0 { conversation[idx].toolCallStatus = "Searching notes..." }
+                    },
+                    onResults: { [self] hits in
+                        let idx = conversation.count - 1
+                        if idx >= 0 {
+                            if hits.isEmpty {
+                                conversation[idx].toolCallStatus = "No results found"
+                            } else {
+                                conversation[idx].toolCallStatus = "Found \(hits.count) result\(hits.count == 1 ? "" : "s")"
+                            }
+                        }
+                        pendingSources.append(contentsOf: hits)
+                    }
+                )
+                let createTool = CreateNoteTool(
+                    onStatusChange: { [self] status in
+                        let idx = conversation.count - 1
+                        if idx >= 0 { conversation[idx].toolCallStatus = status }
+                    },
+                    onCreate: { [self] title, content in
+                        createNoteInInbox(title: title, content: content)
+                    }
+                )
+                session = LanguageModelSession(tools: [searchTool, createTool], instructions: modelInstructions)
+            } else {
+                session = LanguageModelSession(instructions: modelInstructions)
+            }
+        }
+
+        // Build user prompt — include context for Magic Assistant if present
+        var prompt = userPrompt
+        if let context {
+            prompt = "CONTEXT:\n\(context)\n\nQUESTION: \(prompt)"
+        }
 
         // Append bot entry before streaming begins so SwiftUI renders the bubble immediately
-        var botEntry = ConversationEntry(sender: .bot, text: "")
-        botEntry.sources = sources
-        conversation.append(botEntry)
+        conversation.append(ConversationEntry(sender: .bot, text: ""))
         let botIndex = conversation.count - 1
+
         #if DEBUG
         let logger = search.logger
-        logger.debug("Assembled prompt for LLM:\n\(assembledPrompt)")
+        logger.debug("User prompt for LLM:\n\(prompt)")
         #endif
 
-        let session = LanguageModelSession(instructions: modelInstructions)
-        let stream = session.streamResponse(to: assembledPrompt)
-
         do {
+            let stream = session!.streamResponse(to: prompt)
             for try await partial in stream {
                 conversation[botIndex].text = partial.content
             }
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
+            conversation[botIndex].sources = pendingSources
+            conversation[botIndex].isComplete = true
+        } catch let error as LanguageModelSession.GenerationError where isContextOverflow(error) {
+            session = nil
+            conversation[botIndex].text = "The conversation grew too long. Starting a fresh session — please ask your question again."
             conversation[botIndex].isComplete = true
         } catch {
+            #if DEBUG
+            let logger = search.logger
+            logger.error("generateResponse error: \(error)")
+            #endif
             conversation[botIndex].text = "Something went wrong. Sorry."
             conversation[botIndex].isComplete = true
         }
 
         responseIsGenerating = false
+        textFieldFocused = true
+    }
+
+    private func isContextOverflow(_ error: LanguageModelSession.GenerationError) -> Bool {
+        if case .exceededContextWindowSize = error { return true }
+        return false
+    }
+
+    private func createNoteInInbox(title: String, content: String) -> UUID? {
+        let logger = search.logger
+        let inboxPredicate = #Predicate<NoteContainer> { $0.isInbox == true }
+        let descriptor = FetchDescriptor(predicate: inboxPredicate)
+        guard let inbox = try? modelContext.fetch(descriptor).first else {
+            logger.error("CreateNote failed: could not find Inbox folder")
+            return nil
+        }
+        let note = Note(folder: inbox)
+        modelContext.insert(note)
+        note.setTitle(title)
+        note.setContent(content)
+        do {
+            try modelContext.save()
+        } catch {
+            logger.error("CreateNote failed: \(error.localizedDescription)")
+            return nil
+        }
+        search.reindex(note: note)
+        logger.debug("CreateNote succeeded: \(note.uuid)")
+        return note.uuid
     }
 
     private func newChat() {
         conversation.removeAll()
+        session = nil
+        pendingSources = []
         userQuery = ""
         responseIsGenerating = false
         textFieldFocused = true

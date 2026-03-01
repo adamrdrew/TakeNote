@@ -63,6 +63,15 @@ struct MessageBubble: View {
                         alignment: isHuman ? .trailing : .leading
                     )
 
+                if !isHuman, let status = entry.toolCallStatus {
+                    Label(status, systemImage: toolStatusIcon(for: status))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                        .transition(.opacity)
+                        .animation(.easeInOut(duration: 0.2), value: entry.toolCallStatus)
+                }
+
                 if !isHuman && entry.isComplete, let handler = onBotMessageClick {
                     // Button hugs content and stays left under the 520px column
                     HStack(spacing: 0) {
@@ -108,6 +117,17 @@ struct MessageBubble: View {
         }
     }
 
+    private func markdownAttributedString(_ text: String) -> AttributedString {
+        (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
+    }
+
+    private func toolStatusIcon(for status: String) -> String {
+        if status.contains("earch") { return "magnifyingglass" }
+        if status.contains("reat") { return "note.text.badge.plus" }
+        if status.contains("ailed") { return "exclamationmark.triangle" }
+        return "sparkles"
+    }
+
     private func noteTitle(for noteID: UUID) -> String {
         noteTitles[noteID] ?? "Note"
     }
@@ -135,7 +155,7 @@ struct MessageBubble: View {
                         .move(edge: .leading).combined(with: .opacity)
                     )
             } else {
-                Text(entry.text)
+                Text(markdownAttributedString(entry.text))
                     .textSelection(.enabled)
                     .font(.body)
                     .padding(.vertical, 10)

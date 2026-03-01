@@ -275,3 +275,5 @@ internal final class SearchIndex {
     }
 
 }
+
+extension SearchIndex: @unchecked Sendable {}
