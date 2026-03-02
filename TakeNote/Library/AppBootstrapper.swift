@@ -12,6 +12,7 @@ import os
 struct AppBootstrapper {
     struct ReconcilerHarness {
         let reconciler: SystemFolderReconciler
+        let orphanRecovery: OrphanRecoveryService
         let tokens: [NSObjectProtocol]
     }
 
@@ -132,6 +133,7 @@ struct AppBootstrapper {
         searchIndexService: SearchIndexService
     ) -> ReconcilerHarness {
         let reconciler = SystemFolderReconciler(ctx: container.mainContext, vm: vm)
+        let orphanRecovery = OrphanRecoveryService(ctx: container.mainContext, vm: vm)
 
         var tokens: [NSObjectProtocol] = []
 
@@ -141,9 +143,10 @@ struct AppBootstrapper {
                 forName: .NSPersistentStoreRemoteChange,
                 object: nil,
                 queue: .main
-            ) { [weak reconciler] _ in
+            ) { [weak reconciler, weak orphanRecovery] _ in
                 Task { @MainActor in
                     try? reconciler?.runOnce()
+                    try? orphanRecovery?.sweep()
                     // Obtain the main context on the main actor to avoid capturing it in the @Sendable closure
                     let ctx = container.mainContext
                     let notes = try? ctx.fetch(FetchDescriptor<Note>())
@@ -169,6 +172,7 @@ struct AppBootstrapper {
 
         if runOnStartup {
             try? reconciler.runOnce()
+            try? orphanRecovery.sweep()
             Task { @MainActor in
                 let logger = Logger(subsystem: "com.adamdrew.takenote", category: "AppBootstrapper")
                 logger.info("RAG search startup reindex triggered.")
@@ -180,6 +184,6 @@ struct AppBootstrapper {
             }
         }
 
-        return ReconcilerHarness(reconciler: reconciler, tokens: tokens)
+        return ReconcilerHarness(reconciler: reconciler, orphanRecovery: orphanRecovery, tokens: tokens)
     }
 }

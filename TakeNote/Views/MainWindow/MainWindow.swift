@@ -298,6 +298,14 @@ struct MainWindow: View {
             Button("OK", action: { notesInBufferMessagePresented = false })
 
         }
+        .alert(
+            "Orphaned Notes Recovered",
+            isPresented: $takeNoteVM.orphanRecoveryAlertVisible
+        ) {
+            Button("OK", action: { takeNoteVM.orphanRecoveryAlertVisible = false })
+        } message: {
+            Text("Orphaned notes were found. These can be caused by sync problems or device crashes. Orphaned notes have been moved to a new \(takeNoteVM.orphanRecoveryFolderName) folder. No data was lost.")
+        }
         .onAppear(perform: {
             takeNoteVM.trashFolder = containers.first(where: { $0.isTrash })
             takeNoteVM.inboxFolder = containers.first(where: { $0.isInbox })

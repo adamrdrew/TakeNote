@@ -47,6 +47,8 @@ class TakeNoteVM {
     var tagSectionExpanded: Bool = true
     var errorAlertMessage: String = ""
     var errorAlertIsVisible: Bool = false
+    var orphanRecoveryAlertVisible: Bool = false
+    var orphanRecoveryFolderName: String = ""
     var showMultiNoteView: Bool = false
     var noteSearchText: String = ""
     // Coordination flag: set true by the search submit handler before programmatically
