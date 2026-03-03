@@ -356,16 +356,18 @@ struct NoteListEntry: View {
         }
         // trailing = left swipe
         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-            Button(role: .destructive, action: { moveToTrash() }) {
-                Label("Trash", systemImage: "trash")
+            if note.folder?.isTrash != true {
+                Button(role: .destructive, action: { moveToTrash() }) {
+                    Label("Trash", systemImage: "trash")
+                }
+                Button(action: { noteStarToggle() }) {
+                    Label(
+                        note.starred ? "Unstar" : "Star",
+                        systemImage: note.starred ? "star.slash" : "star"
+                    )
+                }
+                .tint(.yellow)
             }
-            Button(action: { noteStarToggle() }) {
-                Label(
-                    note.starred ? "Unstar" : "Star",
-                    systemImage: note.starred ? "star.slash" : "star"
-                )
-            }
-            .tint(.yellow)
         }
         // leading = right swipe
         .swipeActions(edge: .leading) {
@@ -374,12 +376,12 @@ struct NoteListEntry: View {
                     Label("Archive", systemImage: "archivebox")
                 }
                 .tint(.blue)
-            }
-            #if os(iOS)
+                #if os(iOS)
                 Button(action: { inMoveToContainerMode = true }) {
                     Label("Move", systemImage: "arrow.down.app")
                 }
-            #endif
+                #endif
+            }
         }
         #if os(iOS)
             .popover(isPresented: $inMoveToContainerMode) {

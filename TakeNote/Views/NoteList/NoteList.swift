@@ -69,30 +69,14 @@ struct NoteList: View {
     @State private var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State private var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
 
-    @State private var cachedFilteredNotes: [Note] = []
-    @State private var cachedSortedNotes: [Note] = []
-    @State private var cachedStarredNotes: [Note] = []
-    @State private var cachedUnstarredNotes: [Note] = []
-
-    var showUnstarredNoteList: Bool {
-        if cachedSortedNotes.isEmpty {
-            return false
-        }
-        if cachedSortedNotes.contains(where: { !$0.starred }) {
-            return true
-        }
-        return false
-    }
-
     @Environment(SearchIndexService.self) private var search
 
-    private func rebuildNoteCache() {
+    private var sortedNotes: [Note] {
         let allNotesSource = notes.filter {
             $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true
         }
         let filtered: [Note]
         if !takeNoteVM.noteSearchText.isEmpty {
-            // Global search: search across all non-trash/non-buffer notes regardless of selected container
             let matchedIDs = search.searchNoteIDs(takeNoteVM.noteSearchText)
             let matchedSet = Set(matchedIDs)
             let matchedNotes = allNotesSource.filter { matchedSet.contains($0.uuid) }
@@ -105,8 +89,7 @@ struct NoteList: View {
         } else {
             filtered = takeNoteVM.selectedContainer?.notes ?? []
         }
-        cachedFilteredNotes = filtered
-        cachedSortedNotes = filtered.sorted { lhs, rhs in
+        return filtered.sorted { lhs, rhs in
             switch takeNoteVM.sortBy {
             case .created:
                 if takeNoteVM.sortOrder == .newestFirst {
@@ -122,8 +105,6 @@ struct NoteList: View {
                 }
             }
         }
-        cachedStarredNotes = cachedSortedNotes.filter { $0.starred }
-        cachedUnstarredNotes = cachedSortedNotes.filter { !$0.starred }
     }
 
     func playSystemErrorSound() {
@@ -180,10 +161,6 @@ struct NoteList: View {
         }
     }
 
-    var folderHasStarredNotes: Bool {
-        !cachedStarredNotes.isEmpty
-    }
-
     private func handleNoteSelectionChange(old: Set<Note>, new: Set<Note>) {
         // We look in the new selected notes array so we can run the callback on the selected notes
         if new.count == 1 {
@@ -208,14 +185,17 @@ struct NoteList: View {
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
+        let sorted = sortedNotes
+        let starred = sorted.filter { $0.starred }
+        let unstarred = sorted.filter { !$0.starred }
 
         VStack {
 
             List(selection: $takeNoteVM.selectedNotes) {
 
-                if folderHasStarredNotes {
+                if !starred.isEmpty {
                     Section(header: Text("Starred").font(.headline)) {
-                        ForEach(cachedStarredNotes, id: \.self) { note in
+                        ForEach(starred, id: \.self) { note in
                             NoteListEntry(
                                 note: note,
                             )
@@ -223,9 +203,9 @@ struct NoteList: View {
                     }
 
                 }
-                if showUnstarredNoteList {
+                if !unstarred.isEmpty {
                     Section(header: Text("Notes").font(.headline)) {
-                        ForEach(cachedUnstarredNotes, id: \.self) { note in
+                        ForEach(unstarred, id: \.self) { note in
                             NoteListEntry(
                                 note: note,
                             )
@@ -234,7 +214,7 @@ struct NoteList: View {
                 }
 
             }
-            .id(cachedSortedNotes.isEmpty ? "empty" : "populated")
+            .id(sorted.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
                     .frame(maxHeight: 80)
@@ -336,7 +316,6 @@ struct NoteList: View {
         .onChange(of: notes.count) { _, _ in
             search.reindexAll(notes.filter { $0.folder?.isArchive != true }.map { ($0.uuid, $0.content) })
         }
-        .onChange(of: notes) { _, _ in rebuildNoteCache() }
         .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
             // On Mac/iPad, switch to All Notes as the user types so the sidebar
             // reflects that search is global. On iPhone this is deferred to
@@ -355,7 +334,6 @@ struct NoteList: View {
                 takeNoteVM.selectedContainer = takeNoteVM.allNotesFolder
             }
             #endif
-            rebuildNoteCache()
         }
         .onChange(of: takeNoteVM.selectedContainer) { _, _ in
             if takeNoteVM.isSearchNavigating {
@@ -363,12 +341,7 @@ struct NoteList: View {
             } else {
                 takeNoteVM.noteSearchText = ""
             }
-            rebuildNoteCache()
         }
-        .onChange(of: takeNoteVM.sortBy) { _, _ in rebuildNoteCache() }
-        .onChange(of: takeNoteVM.sortOrder) { _, _ in rebuildNoteCache() }
-        .onChange(of: takeNoteVM.noteListRefreshTrigger) { _, _ in rebuildNoteCache() }
-        .onAppear { rebuildNoteCache() }
 
     }
 }

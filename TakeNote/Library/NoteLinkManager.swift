@@ -103,14 +103,15 @@ class NoteLinkManager {
     }
 
     private func getNotesForUUIDs(_ linkToUUIDs: [UUID]) -> [Note]? {
-        /// Fetch all target notes in one query
-        let uuidSet = Set(linkToUUIDs)
-        let fetchedTargets: [Note]? = try? modelContext.fetch(
-            FetchDescriptor<Note>(
-                predicate: #Predicate { uuidSet.contains($0.uuid) }
-            )
-        )
-        return fetchedTargets
+        var results: [Note] = []
+        for uuid in linkToUUIDs {
+            if let notes = try? modelContext.fetch(
+                FetchDescriptor<Note>(predicate: #Predicate { $0.uuid == uuid })
+            ), let note = notes.first {
+                results.append(note)
+            }
+        }
+        return results.isEmpty ? nil : results
     }
 
     private func makeUUIDNoteMap(_ notes: [Note]) -> [UUID: Note] {
@@ -135,7 +136,7 @@ class NoteLinkManager {
                 sourceNote: note,
                 destinationNote: targetNote
             )
-            logger.debug("Created a link from \(note.uuid) to \(targetNote.uuid)")
+            logger.info("Created a link from \(note.uuid) to \(targetNote.uuid)")
             modelContext.insert(newLink)
         }
 
