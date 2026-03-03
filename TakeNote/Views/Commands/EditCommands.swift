@@ -8,6 +8,9 @@
 import os
 import SwiftData
 import SwiftUI
+#if os(macOS)
+    import AppKit
+#endif
 
 private let editCommandsLogger = Logger(subsystem: "com.adamdrew.takenote", category: "EditCommands")
 
@@ -37,6 +40,7 @@ struct EditCommands: Commands {
     @FocusedValue(\.textIsSelected) var textIsSelected: Bool?
     @FocusedValue(\.showAssistantPopover) var showAssistantPopover:
         (() -> Void)?
+    @FocusedValue(\.pasteImage) var pasteImage: (() -> Bool)?
 
     var nothingEditableIsFocused: Bool {
         return containerDeleteRegistry == nil && noteDeleteRegistry == nil
@@ -105,6 +109,29 @@ struct EditCommands: Commands {
     }
 
     var body: some Commands {
+        #if os(macOS)
+        CommandGroup(replacing: .pasteboard) {
+            Button("Cut") {
+                NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: nil)
+            }
+            .keyboardShortcut("x", modifiers: .command)
+
+            Button("Copy") {
+                NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: nil)
+            }
+            .keyboardShortcut("c", modifiers: .command)
+
+            Button("Paste") {
+                if let pasteImage, pasteImage() {
+                    editCommandsLogger.info("Pasted image via Edit > Paste")
+                } else {
+                    NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
+                }
+            }
+            .keyboardShortcut("v", modifiers: .command)
+        }
+        #endif
+
         CommandGroup(after: .pasteboard) {
             Button("Rename", systemImage: "pencil") {
                 if let sc = selectedNoteContainer {

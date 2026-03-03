@@ -26,6 +26,7 @@ extension FocusedValues {
     @Entry var showAssistantPopover: (() -> Void)?
     @Entry var showBacklinks: (() -> Void)?
     @Entry var openNoteHasBacklinks: Bool?
+    @Entry var pasteImage: (() -> Bool)?
 }
 
 struct EditorCard: ViewModifier {
@@ -463,16 +464,6 @@ struct NoteEditor: View {
                 }
                 return inserted
             }
-            #if os(macOS)
-                .onKeyPress(.init("v"), phases: .down) { keyPress in
-                    guard keyPress.modifiers.contains(.command) else { return .ignored }
-                    guard !showPreview else { return .ignored }
-                    if pasteImageFromMacOSClipboard() {
-                        return .handled
-                    }
-                    return .ignored
-                }
-            #endif
             .onChange(of: openNote?.id) { _, _ in
                 showPreview = true
                 setShowBacklinks()
@@ -655,6 +646,12 @@ struct NoteEditor: View {
             .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
             .focusedSceneValue(\.openNoteHasBacklinks, openNoteHasBacklinks)
             .focusedSceneValue(\.showBacklinks, showBacklinks)
+            #if os(macOS)
+            .focusedSceneValue(\.pasteImage, {
+                guard !self.showPreview else { return false }
+                return self.pasteImageFromMacOSClipboard()
+            })
+            #endif
 
         } else {
             VStack {
