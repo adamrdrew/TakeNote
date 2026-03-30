@@ -157,7 +157,10 @@ struct ChatWindow: View {
         do {
             let stream = session!.streamResponse(to: prompt)
             for try await partial in stream {
-                conversation[botIndex].text = partial.content
+                let content = partial.content
+                if content != "null" {
+                    conversation[botIndex].text = content
+                }
             }
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
             conversation[botIndex].sources = pendingSources
