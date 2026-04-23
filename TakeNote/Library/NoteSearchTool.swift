@@ -5,6 +5,7 @@
 
 import Foundation
 import FoundationModels
+import Reductio
 
 struct NoteSearchTool: Tool {
     let name = "searchNotes"
@@ -20,14 +21,24 @@ struct NoteSearchTool: Tool {
     let onSearchStart: @MainActor @Sendable (String) -> Void
     let onResults: @MainActor @Sendable ([SearchHit]) -> Void
 
+    /// Use TextRank to compress a chunk down to its most important sentences.
+    private func summarizeChunk(_ text: String) -> String {
+        let plain = stripMarkdownForSearch(text)
+        let sentences = plain.summarize(count: 3)
+        if sentences.isEmpty { return String(plain.prefix(500)) }
+        return sentences.joined(separator: " ")
+    }
+
     func call(arguments: Arguments) async throws -> String {
         await onSearchStart(arguments.query)
         let hits = searchIndex.searchNatural(arguments.query)
         await onResults(hits)
         guard !hits.isEmpty else { return "No matching notes found." }
 
+        // Compress chunks via TextRank before sending to the relevance filter.
+        // This produces denser text for both the filter and the main model.
         let numbered = hits.enumerated().map { i, hit in
-            "[\(i + 1)] \(stripMarkdownForSearch(hit.chunk))"
+            "[\(i + 1)] \(summarizeChunk(hit.chunk))"
         }.joined(separator: "\n\n")
 
         // Use a separate session to filter results for relevance before
@@ -58,10 +69,10 @@ struct NoteSearchTool: Tool {
 
         guard !valid.isEmpty else { return "No matching notes found." }
 
+        // Return the compressed excerpts for relevant hits
         var excerpts: [String] = []
         for i in valid {
-            let text = stripMarkdownForSearch(hits[i - 1].chunk)
-            excerpts.append("---\n\(text)")
+            excerpts.append("---\n\(summarizeChunk(hits[i - 1].chunk))")
         }
         let filtered = excerpts.joined(separator: "\n\n")
 

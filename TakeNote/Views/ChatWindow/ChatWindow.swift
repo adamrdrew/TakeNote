@@ -104,39 +104,7 @@ struct ChatWindow: View {
 
         // Lazily create session on first question (or after reset)
         if session == nil {
-            let modelInstructions = instructions ?? MAGIC_CHAT_PROMPT
-            if searchEnabled {
-                let searchTool = NoteSearchTool(
-                    searchIndex: search.index,
-                    onSearchStart: { [self] query in
-                        let idx = conversation.count - 1
-                        if idx >= 0 { conversation[idx].toolCallStatus = "Searching notes..." }
-                    },
-                    onResults: { [self] hits in
-                        let idx = conversation.count - 1
-                        if idx >= 0 {
-                            if hits.isEmpty {
-                                conversation[idx].toolCallStatus = "No results found"
-                            } else {
-                                conversation[idx].toolCallStatus = "Found \(hits.count) result\(hits.count == 1 ? "" : "s")"
-                            }
-                        }
-                        pendingSources.append(contentsOf: hits)
-                    }
-                )
-                let createTool = CreateNoteTool(
-                    onStatusChange: { [self] status in
-                        let idx = conversation.count - 1
-                        if idx >= 0 { conversation[idx].toolCallStatus = status }
-                    },
-                    onCreate: { [self] title, content in
-                        createNoteInInbox(title: title, content: content)
-                    }
-                )
-                session = LanguageModelSession(tools: [searchTool, createTool], instructions: modelInstructions)
-            } else {
-                session = LanguageModelSession(instructions: modelInstructions)
-            }
+            session = buildSession()
         }
 
         // Build user prompt — include context for Magic Assistant if present
@@ -166,9 +134,8 @@ struct ChatWindow: View {
             conversation[botIndex].sources = pendingSources
             conversation[botIndex].isComplete = true
         } catch let error as LanguageModelSession.GenerationError where isContextOverflow(error) {
-            session = nil
-            conversation[botIndex].text = "The conversation grew too long. Starting a fresh session — please ask your question again."
-            conversation[botIndex].isComplete = true
+            // Compact the conversation and retry instead of losing context
+            await compactAndRetry(userPrompt: userPrompt, botIndex: botIndex)
         } catch {
             #if DEBUG
             let logger = search.logger
@@ -180,6 +147,101 @@ struct ChatWindow: View {
 
         responseIsGenerating = false
         textFieldFocused = true
+    }
+
+    private func buildSession(conversationSummary: String? = nil) -> LanguageModelSession {
+        let now = Date.now.formatted(date: .complete, time: .shortened)
+        let baseInstructions = instructions ?? MAGIC_CHAT_PROMPT
+        var modelInstructions = "\(baseInstructions)\n\nCurrent date and time: \(now)"
+        if let conversationSummary {
+            modelInstructions += "\n\nSummary of earlier conversation:\n\(conversationSummary)"
+        }
+
+        let newSession: LanguageModelSession
+        if searchEnabled {
+            let searchTool = NoteSearchTool(
+                searchIndex: search.index,
+                onSearchStart: { [self] query in
+                    let idx = conversation.count - 1
+                    if idx >= 0 { conversation[idx].toolCallStatus = "Searching notes..." }
+                },
+                onResults: { [self] hits in
+                    let idx = conversation.count - 1
+                    if idx >= 0 {
+                        if hits.isEmpty {
+                            conversation[idx].toolCallStatus = "No results found"
+                        } else {
+                            conversation[idx].toolCallStatus = "Found \(hits.count) result\(hits.count == 1 ? "" : "s")"
+                        }
+                    }
+                    pendingSources.append(contentsOf: hits)
+                }
+            )
+            let createTool = CreateNoteTool(
+                onStatusChange: { [self] status in
+                    let idx = conversation.count - 1
+                    if idx >= 0 { conversation[idx].toolCallStatus = status }
+                },
+                onCreate: { [self] title, content in
+                    createNoteInInbox(title: title, content: content)
+                }
+            )
+            newSession = LanguageModelSession(tools: [searchTool, createTool], instructions: modelInstructions)
+        } else {
+            newSession = LanguageModelSession(instructions: modelInstructions)
+        }
+        newSession.prewarm()
+        return newSession
+    }
+
+    /// Summarize the conversation so far, rebuild the session with the summary
+    /// baked into instructions, and retry the user's last message.
+    private func compactAndRetry(userPrompt: String, botIndex: Int) async {
+        // Build a text summary of the conversation (exclude the current empty bot entry)
+        let historyText = conversation.prefix(botIndex).map { entry in
+            let role = entry.sender == .human ? "User" : "Assistant"
+            return "\(role): \(entry.text)"
+        }.joined(separator: "\n")
+
+        let summaryPrompt = "Summarize this conversation concisely. Capture key topics, facts discussed, and any decisions made. Under 150 words.\n\n\(String(historyText.prefix(2000)))"
+        let summarySession = LanguageModelSession(instructions: "You are a summarizer. Return only the summary, nothing else.")
+
+        let summary: String
+        do {
+            let response = try await summarySession.respond(to: summaryPrompt)
+            summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch {
+            // If summarization itself fails, fall back to a hard reset
+            conversation[botIndex].text = "The conversation grew too long. Starting a fresh session — please ask your question again."
+            conversation[botIndex].isComplete = true
+            session = nil
+            return
+        }
+
+        // Rebuild session with summary context and retry
+        session = buildSession(conversationSummary: summary)
+
+        var prompt = userPrompt
+        if let context {
+            prompt = "CONTEXT:\n\(context)\n\nQUESTION: \(prompt)"
+        }
+
+        do {
+            let stream = session!.streamResponse(to: prompt)
+            for try await partial in stream {
+                let content = partial.content
+                if content != "null" {
+                    conversation[botIndex].text = content
+                }
+            }
+            conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
+            conversation[botIndex].sources = pendingSources
+            conversation[botIndex].isComplete = true
+        } catch {
+            conversation[botIndex].text = "Something went wrong after compacting the conversation. Sorry."
+            conversation[botIndex].isComplete = true
+            session = nil
+        }
     }
 
     private func isContextOverflow(_ error: LanguageModelSession.GenerationError) -> Bool {

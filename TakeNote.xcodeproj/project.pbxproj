@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		665396ED2F99B26100106894 /* Reductio in Frameworks */ = {isa = PBXBuildFile; productRef = 665396EC2F99B26100106894 /* Reductio */; };
 		66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */; };
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
@@ -111,6 +112,7 @@
 				66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */,
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
+				665396ED2F99B26100106894 /* Reductio in Frameworks */,
 				66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */,
 				66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */,
 			);
@@ -184,6 +186,7 @@
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
 				66B616EC2E4CC2B6009A1857 /* SQLite */,
 				66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */,
+				665396EC2F99B26100106894 /* Reductio */,
 			);
 			productName = TakeNote;
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
@@ -243,6 +246,7 @@
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
 				66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */,
 				66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */,
+				665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66B6907B2E3FCDF20013519B /* Products */;
@@ -669,6 +673,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/fdzsergio/Reductio";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.7.0;
+			};
+		};
 		66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/alessiorubicini/SFSymbolsPicker";
@@ -704,6 +716,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		665396EC2F99B26100106894 /* Reductio */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */;
+			productName = Reductio;
+		};
 		66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */;

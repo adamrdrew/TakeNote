@@ -1,5 +1,5 @@
 {
-  "originHash" : "18124bb83154d77ce543e5965097b49e8eb9fdb1d63b486a44695a8095e7b203",
+  "originHash" : "b24a2d28ee5faa8d837e90ecbbd169190d59d26450b836ad9df7a3b488c014cd",
   "pins" : [
     {
       "identity" : "codeeditorview",
@@ -26,6 +26,15 @@
       "state" : {
         "revision" : "5ff7f3363f7a08f77e0d761e38e6add31c2136e1",
         "version" : "1.8.1"
+      }
+    },
+    {
+      "identity" : "reductio",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/fdzsergio/Reductio",
+      "state" : {
+        "revision" : "3f3df74bd5615cf3694ec16723780e4a47673c5b",
+        "version" : "1.7.0"
       }
     },
     {
