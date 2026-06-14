@@ -22,6 +22,5 @@ struct NoteListEntry: TimelineEntry {
     let isPlaceholder: Bool
     let name: String
     let symbol: String
-    let color: UInt32
     let totalNoteCount: Int
 }

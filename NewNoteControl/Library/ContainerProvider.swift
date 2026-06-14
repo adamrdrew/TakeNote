@@ -7,12 +7,6 @@
 
 import WidgetKit
 
-/*
- I wrote the initial TimelineProvider, but had ChatGPT refactor it so we could have different
- providers for different NoteContainers. Everything was the same for every NoteContainer except
- how we select it from the list of NoteContainers. So, this allows us to re-use this code but
- change the selection logic per-container
-*/
 protocol ContainerSpec {
     // Pick which container to show from your snapshot
     static func select(from snapshot: Snapshot) -> NoteContainerSnapshot?
@@ -20,13 +14,11 @@ protocol ContainerSpec {
     // Optional: fallbacks for placeholder/meta if snapshot is missing fields
     static var placeholderName: String { get }
     static var placeholderSymbol: String { get }
-    static var placeholderColor: UInt32 { get }
 }
 
 extension ContainerSpec {
     static var placeholderName: String { "TakeNote" }
     static var placeholderSymbol: String { "text.pad" }
-    static var placeholderColor: UInt32 { 0x000000 }
 }
 
 struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
@@ -48,7 +40,6 @@ struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
             isPlaceholder: true,
             name: Spec.placeholderName,
             symbol: Spec.placeholderSymbol,
-            color: Spec.placeholderColor,
             totalNoteCount: 0
         )
     }
@@ -84,7 +75,6 @@ struct ContainerProvider<Spec: ContainerSpec>: TimelineProvider {
             isPlaceholder: false,
             name: container.name,
             symbol: container.symbol,
-            color: container.color,
             totalNoteCount: container.totalNoteCount
         )
 

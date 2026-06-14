@@ -22,16 +22,13 @@ struct NoteContainerSnapshot: Codable, Identifiable, Hashable {
     var name: String
     var notes: [NoteSnapshot]
     var symbol: String
-    var color: UInt32
     var isInbox: Bool = false
     var isStarred: Bool = false
-    var isTag: Bool = false
     var totalNoteCount: Int = 0
 }
 
 struct Snapshot: Codable, Identifiable, Hashable {
     var id: UUID
-    var generatedAt: Date
     var containers: [NoteContainerSnapshot]
 }
 
@@ -45,7 +42,7 @@ class SnapshotController {
             .appendingPathComponent(filename)
     }
 
-    public static func readSnapshot() -> Snapshot? {
+    static func readSnapshot() -> Snapshot? {
         guard let data = try? Data(contentsOf: snapshotFileURL) else {
             return nil
         }
@@ -66,7 +63,7 @@ class SnapshotController {
         }
     }
 
-    public static func takeSnapshot(modelContext: ModelContext) {
+    static func takeSnapshot(modelContext: ModelContext) {
         #if DEBUG
         print("Taking snapshot...")
         #endif
@@ -101,10 +98,8 @@ class SnapshotController {
                 name: container.name,
                 notes: noteSnapshots,
                 symbol: container.symbol,
-                color: container.colorRGBA,
                 isInbox: container.isInbox,
                 isStarred: container.isStarred,
-                isTag: container.isTag,
                 totalNoteCount: container.notes.count
             )
 
@@ -114,7 +109,6 @@ class SnapshotController {
         // Build and write the full snapshot
         let snapshot = Snapshot(
             id: UUID(),
-            generatedAt: Date(),
             containers: containerSnapshots
         )
         Self.writeSnapshotFile(snapshot)

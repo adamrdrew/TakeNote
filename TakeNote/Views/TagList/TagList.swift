@@ -15,7 +15,7 @@ internal struct TagList: View {
         }
     ) var tags: [NoteContainer]
 
-    public var body: some View {
+    var body: some View {
         ForEach(tags, id: \.self) { tag in
             TagListEntry(tag: tag)
         }
