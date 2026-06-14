@@ -11,7 +11,6 @@
 		66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */; };
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
-		66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */ = {isa = PBXBuildFile; productRef = 66B616EC2E4CC2B6009A1857 /* SQLite */; };
 		66DEFBFB2E7EB4ED00BBA401 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */; };
 		66DEFBFD2E7EB4ED00BBA401 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */; };
 		66DEFC0A2E7EB4EE00BBA401 /* NewNoteControlExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -109,7 +108,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				66B616ED2E4CC2B6009A1857 /* SQLite in Frameworks */,
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
 				665396ED2F99B26100106894 /* Reductio in Frameworks */,
@@ -184,7 +182,6 @@
 				66EEDE102E3FFBDD00A899AE /* MarkdownUI */,
 				66AC246E2E4609FB009B0C3F /* CodeEditorView */,
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
-				66B616EC2E4CC2B6009A1857 /* SQLite */,
 				66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */,
 				665396EC2F99B26100106894 /* Reductio */,
 			);
@@ -244,7 +241,6 @@
 			packageReferences = (
 				66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
-				66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */,
 				66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */,
 				665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */,
 			);
@@ -462,12 +458,12 @@
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -526,12 +522,12 @@
 				INFOPLIST_KEY_UIStatusBarStyle = "";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
 				MARKETING_VERSION = 2.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -697,14 +693,6 @@
 				minimumVersion = 0.15.4;
 			};
 		};
-		66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/stephencelis/SQLite.swift";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 0.15.4;
-			};
-		};
 		66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
@@ -735,11 +723,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */;
 			productName = LanguageSupport;
-		};
-		66B616EC2E4CC2B6009A1857 /* SQLite */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 66B616EB2E4CC2B6009A1857 /* XCRemoteSwiftPackageReference "SQLite" */;
-			productName = SQLite;
 		};
 		66EEDE102E3FFBDD00A899AE /* MarkdownUI */ = {
 			isa = XCSwiftPackageProductDependency;

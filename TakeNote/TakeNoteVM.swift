@@ -506,8 +506,10 @@ class TakeNoteVM {
         }
 
         if let note = notes.first {
-            self.selectedNotes = [note]
             self.selectedContainer = note.folder
+            self.selectedNotes = [note]
+            self.openNote = note
+            self.showMultiNoteView = false
             return
         }
 

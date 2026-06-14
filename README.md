@@ -62,7 +62,7 @@ Notes can be sorted by created date or last updated date, in ascending or descen
 
 ## Search
 
-TakeNote includes full-text search powered by SQLite FTS5. On devices that support Apple Intelligence, semantic search is also available, letting you search your notes using natural language.
+TakeNote uses Spotlight as its native search index. Notes are searchable in the app, from system Spotlight, and by Siri/App Intents.
 
 Type in the search bar to search across all notes. On Mac and iPad, the app automatically switches to the All Notes view as you type so results span your entire library. Archived and trashed notes are excluded from search results.
 

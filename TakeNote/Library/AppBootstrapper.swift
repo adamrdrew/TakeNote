@@ -151,7 +151,7 @@ struct AppBootstrapper {
                     let ctx = container.mainContext
                     let notes = try? ctx.fetch(FetchDescriptor<Note>())
                     if let n = notes {
-                        searchIndexService.reindexAll(n.filter { $0.folder?.isArchive != true }.map { note in (note.uuid, note.content) })
+                        searchIndexService.reindexAll(n.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
                     }
                 }
             }
@@ -179,7 +179,7 @@ struct AppBootstrapper {
                 let ctx = container.mainContext
                 let notes = try? ctx.fetch(FetchDescriptor<Note>())
                 if let n = notes {
-                    searchIndexService.reindexAll(n.filter { $0.folder?.isArchive != true }.map { note in (note.uuid, note.content) })
+                    searchIndexService.reindexAll(n.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
                 }
             }
         }

@@ -8,6 +8,7 @@
 import SwiftData
 import SwiftUI
 import os
+import CoreSpotlight
 
 extension FocusedValues {
     @Entry var chatEnabled: Bool?
@@ -85,6 +86,7 @@ struct MainWindow: View {
             modelContext.delete(image)
         }
         try? modelContext.save()
+        search.deleteAllFromIndex()
     }
 
     var NoteListToolbar: some ToolbarContent {
@@ -325,6 +327,15 @@ struct MainWindow: View {
             }
             takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
         })
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard
+                let noteID = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+                let url = URL(string: "takenote://note/\(noteID)")
+            else {
+                return
+            }
+            takeNoteVM.loadNoteFromURL(url, modelContext: modelContext)
+        }
     }
 
 }

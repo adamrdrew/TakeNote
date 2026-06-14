@@ -38,6 +38,7 @@ struct NewNoteWithContentIntent: AppIntent {
             note.setTitle(noteTitle)
             takeNoteVM.openNote = note
             takeNoteVM.selectedNotes = [note]
+            try? modelContainer.mainContext.save()
         } else {
             // If addNote failed to create a note, clear current selection to avoid stale state
             takeNoteVM.openNote = nil

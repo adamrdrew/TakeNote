@@ -160,7 +160,7 @@ struct ChatWindow: View {
         let newSession: LanguageModelSession
         if searchEnabled {
             let searchTool = NoteSearchTool(
-                searchIndex: search.index,
+                search: search,
                 onSearchStart: { [self] query in
                     let idx = conversation.count - 1
                     if idx >= 0 { conversation[idx].toolCallStatus = "Searching notes..." }
