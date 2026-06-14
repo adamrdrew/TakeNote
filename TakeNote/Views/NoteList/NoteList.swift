@@ -314,7 +314,7 @@ struct NoteList: View {
             }
         }
         .onChange(of: notes.count) { _, _ in
-            search.reindexAll(notes.filter { $0.folder?.isArchive != true }.map { ($0.uuid, $0.content) })
+            search.reindexAll(notes.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
         }
         .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
             // On Mac/iPad, switch to All Notes as the user types so the sidebar

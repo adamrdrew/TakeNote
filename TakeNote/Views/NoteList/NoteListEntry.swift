@@ -141,6 +141,7 @@ struct NoteListEntry: View {
         inRenameMode = false
         note.setTitle(newName)
         try? modelContext.save()
+        search.reindex(note: note)
     }
 
     func noteStarToggle() {

@@ -134,6 +134,16 @@ internal final class SearchIndex {
         } catch { logger.error("SearchIndex delete error: \(error.localizedDescription)") }
     }
 
+    /// Remove every note from the index.
+    func deleteAll() {
+        do {
+            try db.run(fts.delete())
+            logger.debug("Search index cleared")
+        } catch {
+            logger.error("SearchIndex delete all error: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: Search
 
     // Add alongside your SearchHit and other methods
