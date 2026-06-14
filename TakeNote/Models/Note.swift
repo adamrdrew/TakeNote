@@ -7,6 +7,7 @@
 
 import CryptoKit
 import FoundationModels
+import os
 import SwiftData
 import SwiftUI
 import UniformTypeIdentifiers
@@ -14,6 +15,50 @@ import WidgetKit
 
 extension UTType {
     static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
+}
+
+enum TakeNoteLanguageModels {
+    static let chat = SystemLanguageModel(useCase: .general)
+    static let contentTagging = SystemLanguageModel(useCase: .contentTagging)
+    static let contentTransformation = SystemLanguageModel(
+        useCase: .general,
+        guardrails: .permissiveContentTransformations
+    )
+    static let contentTransformationFallback = SystemLanguageModel(useCase: .general)
+
+    static func profile(
+        instructions: String,
+        model: SystemLanguageModel = chat,
+        toolCallingMode: GenerationOptions.ToolCallingMode = .disallowed,
+        samplingMode: GenerationOptions.SamplingMode = .greedy,
+        temperature: Double? = 0.0,
+        maximumResponseTokens: Int? = nil,
+        reasoningLevel: ContextOptions.ReasoningLevel? = nil
+    ) -> some LanguageModelSession.DynamicProfile {
+        LanguageModelSession.Profile {
+            Instructions {
+                instructions
+            }
+        }
+        .model(model)
+        .samplingMode(samplingMode)
+        .temperature(temperature)
+        .maximumResponseTokens(maximumResponseTokens)
+        .reasoningLevel(reasoningLevel)
+        .toolCallingMode(toolCallingMode)
+    }
+
+    static func instructions(_ text: String) -> Instructions {
+        Instructions {
+            text
+        }
+    }
+
+    static func prompt(_ text: String) -> Prompt {
+        Prompt {
+            text
+        }
+    }
 }
 
 // Hey!
@@ -60,6 +105,7 @@ class Note: Identifiable {
     @Transient
     var aiSummaryIsGenerating: Bool = false
     var isEmpty: Bool { return content.isEmpty }
+    private static let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteSummary")
     // This odd syntax makes the setter private to the instance
     // so we can act like this is a private property
     // but SwiftData can still set it
@@ -132,7 +178,6 @@ class Note: Identifiable {
     }
 
     func canGenerateAISummary() -> Bool {
-        let model = SystemLanguageModel.default
         if isEmpty {
             return false
         }
@@ -142,7 +187,9 @@ class Note: Identifiable {
         if aiSummaryIsGenerating {
             return false
         }
-        if model.availability != .available {
+        if TakeNoteLanguageModels.contentTagging.availability != .available
+            && TakeNoteLanguageModels.contentTransformationFallback.availability != .available
+        {
             return false
         }
         return true
@@ -155,17 +202,38 @@ class Note: Identifiable {
         defer {
             aiSummaryIsGenerating = false
         }
-        contentHash = generateContentHash()
+        let newContentHash = generateContentHash()
         aiSummaryIsGenerating = true
-        aiSummary = ""
         let instructions = """
-            Write a single-line summary of the passage. State the core point directly. Do not mention the passage or the act of summarizing. No prefaces, labels, citations, or quotes. Preserve key entities and facts. Output exactly one sentence with no line breaks.
+            Write one plain-language summary sentence for a note.
+            State the core point directly.
+            Preserve important names, dates, amounts, decisions, and tasks.
+            Do not mention the note, passage, or act of summarizing.
+            Do not add labels, bullets, citations, quotes, markdown, or line breaks.
             """
-        let session = LanguageModelSession(instructions: instructions)
-        if session.isResponding { return }
-        let prompt = content
-        let response = try? await session.respond(to: prompt)
-        aiSummary = response?.content ?? ""
+        let model = TakeNoteLanguageModels.contentTagging.availability == .available
+            ? TakeNoteLanguageModels.contentTagging
+            : TakeNoteLanguageModels.contentTransformationFallback
+        let session = LanguageModelSession(
+            model: model,
+            instructions: TakeNoteLanguageModels.instructions(instructions)
+        )
+        let prompt = TakeNoteLanguageModels.prompt(content)
+        do {
+            let response = try await session.respond(
+                to: prompt,
+                options: GenerationOptions(samplingMode: .greedy, temperature: 0.0, maximumResponseTokens: 48)
+            )
+            let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !summary.isEmpty else {
+                Self.logger.warning("AI summary generation returned an empty response.")
+                return
+            }
+            aiSummary = summary
+            contentHash = newContentHash
+        } catch {
+            Self.logger.warning("AI summary generation failed: \(error.localizedDescription)")
+        }
     }
 
     func setTitle() {

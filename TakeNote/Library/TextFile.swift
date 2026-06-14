@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 
 struct TextFile: FileDocument {
     // tell the system we support only plain text
-    static var readableContentTypes = [UTType.plainText]
+    static let readableContentTypes = [UTType.plainText]
 
     // by default our document is empty
     var text = ""

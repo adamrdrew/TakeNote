@@ -22,22 +22,30 @@ struct MagicFormatterResult {
 class MagicFormatter {
 
     var session: LanguageModelSession
-    let languageModel = SystemLanguageModel.default
+    let languageModel = TakeNoteLanguageModels.contentTransformation
+    let fallbackLanguageModel = TakeNoteLanguageModels.contentTransformationFallback
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MagicFormatter")
 
     var isAvailable: Bool {
-        return languageModel.isAvailable
+        return languageModel.isAvailable || fallbackLanguageModel.isAvailable
     }
 
 
-    var defaultPrompt: String = "Document to format in markdown:\n\n"
+    var defaultPrompt: String = "Document to format as Markdown:\n\n"
 
     var formatterIsBusy: Bool = false
     var sessionCancelled: Bool = false
 
     init() {
-        self.session = LanguageModelSession(instructions: MAGIC_FORMAT_PROMPT)
+        self.session = Self.makeSession(model: TakeNoteLanguageModels.contentTransformation)
         self.session.prewarm()
+    }
+
+    private static func makeSession(model: SystemLanguageModel) -> LanguageModelSession {
+        LanguageModelSession(
+            model: model,
+            instructions: TakeNoteLanguageModels.instructions(MAGIC_FORMAT_PROMPT)
+        )
     }
 
     func hashFor(_ input: String) -> String {
@@ -66,7 +74,7 @@ class MagicFormatter {
 
     func magicFormat(_ text: String) async -> MagicFormatterResult {
         let inputHash = hashFor(text)
-        if languageModel.isAvailable == false {
+        if !isAvailable {
             logger.debug("Attempted to use MagicFormat without Apple Intelligence support.")
             return MagicFormatterResult(
                 inputHash: inputHash,
@@ -87,13 +95,13 @@ class MagicFormatter {
         }
         formatterIsBusy = true
         sessionCancelled = false
-        let prompt = defaultPrompt + text
+        let prompt = TakeNoteLanguageModels.prompt(defaultPrompt + text)
         var response: LanguageModelSession.Response<String>
 
         /// If the session is not respnding and we are all good to do some formatting we create a new session
         /// We do this because there's something cumulative about the session context windows. If we keep re-using
         /// the same session then eventually we get context window size errors even on small documents
-        session = LanguageModelSession.init(instructions: MAGIC_FORMAT_PROMPT)
+        session = Self.makeSession(model: languageModel.isAvailable ? languageModel : fallbackLanguageModel)
         do {
             response = try await session.respond(to: prompt)
             if sessionCancelled {
@@ -106,6 +114,30 @@ class MagicFormatter {
                     domain: "MagicFormatter",
                     code: 999,
                     userInfo: ["description": "A cancelled session resolved."]
+                )
+            }
+        } catch let error where shouldRetryWithFallback(error) && fallbackLanguageModel.isAvailable && !sessionCancelled {
+            logger.debug("MagicFormatter content transformation model unsupported; retrying with standard model.")
+            session = Self.makeSession(model: fallbackLanguageModel)
+            do {
+                response = try await session.respond(to: prompt)
+                if sessionCancelled {
+                    logger.debug("A cancelled fallback session resolved.")
+                    throw NSError(
+                        domain: "MagicFormatter",
+                        code: 999,
+                        userInfo: ["description": "A cancelled session resolved."]
+                    )
+                }
+            } catch {
+                logger.warning("MagicFormatter fallback error:\n \(error.localizedDescription)")
+                formatterIsBusy = false
+                return MagicFormatterResult(
+                    inputHash: inputHash,
+                    formattedText:
+                        "MagicFormatter Error:\n \(error.localizedDescription)",
+                    didSucceed: false,
+                    wasCancelled: sessionCancelled
                 )
             }
         } catch {
@@ -138,5 +170,14 @@ class MagicFormatter {
             didSucceed: true,
             wasCancelled: false
         )
+    }
+
+    private func shouldRetryWithFallback(_ error: Error) -> Bool {
+        if let languageModelError = error as? LanguageModelError,
+           case .unsupportedCapability = languageModelError {
+            return true
+        }
+        return error.localizedDescription.localizedCaseInsensitiveContains("requested capability")
+            || error.localizedDescription.localizedCaseInsensitiveContains("unsupported capability")
     }
 }

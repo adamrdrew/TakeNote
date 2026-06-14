@@ -13,8 +13,14 @@ struct NoteSearchTool: Tool {
 
     @Generable
     struct Arguments {
-        @Guide(description: "The search query")
+        @Guide(description: "A focused query for searching the user's notes. Prefer important nouns, names, dates, and phrases.")
         var query: String
+    }
+
+    @Generable
+    struct RelevanceFilterResult {
+        @Guide(description: "The 1-based numbers of search results that directly answer or support the user's question. Return an empty array when none are relevant.")
+        var relevantResultNumbers: [Int]
     }
 
     let search: SearchIndexService
@@ -32,7 +38,6 @@ struct NoteSearchTool: Tool {
     func call(arguments: Arguments) async throws -> String {
         await onSearchStart(arguments.query)
         let hits = await search.search(arguments.query)
-        await onResults(hits)
         guard !hits.isEmpty else { return "No matching notes found." }
 
         // Compress chunks via TextRank before sending to the relevance filter.
@@ -46,33 +51,35 @@ struct NoteSearchTool: Tool {
         let filterPrompt = """
             The user asked: "\(arguments.query)"
 
-            Below are search results. Return ONLY the numbers of results that are \
-            directly relevant to the user's question. Respond with just the numbers \
-            separated by commas, like: 1, 3. If none are relevant respond with: NONE
+            Below are numbered search results from the user's private notes.
+            Select only the results that directly answer the question or provide necessary supporting evidence.
+            Do not select loosely related results.
 
             \(numbered)
             """
 
-        let filterSession = LanguageModelSession(instructions: "You are a relevance filter. You return only the numbers of relevant results. Nothing else.")
-        let filterResponse = try await filterSession.respond(to: filterPrompt)
-        let responseText: String = filterResponse.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-
-        if responseText.uppercased() == "NONE" {
-            return "No matching notes found."
-        }
-
-        // Parse the returned indices and keep only matching hits
-        let separators = CharacterSet(charactersIn: ", ")
-        let parts: [String] = responseText.components(separatedBy: separators)
-        let indices: [Int] = parts.compactMap { Int($0.trimmingCharacters(in: CharacterSet.whitespaces)) }
-        let valid: [Int] = indices.filter { $0 >= 1 && $0 <= hits.count }
+        let filterSession = LanguageModelSession(
+            profile: TakeNoteLanguageModels.profile(
+                instructions: "You are a strict relevance filter for private note search results.",
+                model: TakeNoteLanguageModels.contentTagging,
+                maximumResponseTokens: 64
+            )
+        )
+        let filterResponse = try await filterSession.respond(
+            to: TakeNoteLanguageModels.prompt(filterPrompt),
+            generating: RelevanceFilterResult.self
+        )
+        let valid = filterResponse.content.relevantResultNumbers.filter { $0 >= 1 && $0 <= hits.count }
 
         guard !valid.isEmpty else { return "No matching notes found." }
 
+        let filteredHits = valid.map { hits[$0 - 1] }
+        await onResults(filteredHits)
+
         // Return the compressed excerpts for relevant hits
         var excerpts: [String] = []
-        for i in valid {
-            excerpts.append("---\n\(summarizeChunk(hits[i - 1].chunk))")
+        for hit in filteredHits {
+            excerpts.append("---\n\(summarizeChunk(hit.chunk))")
         }
         let filtered = excerpts.joined(separator: "\n\n")
 

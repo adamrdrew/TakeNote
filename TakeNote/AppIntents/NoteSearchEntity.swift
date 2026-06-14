@@ -13,7 +13,7 @@ struct NoteSearchEntity: IndexedEntity {
         TypeDisplayRepresentation(name: "Note")
     }
 
-    static var defaultQuery = NoteSearchEntityQuery()
+    static let defaultQuery = NoteSearchEntityQuery()
 
     let id: UUID
     let title: String

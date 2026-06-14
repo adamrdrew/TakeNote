@@ -12,7 +12,7 @@ import SwiftData
 private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "CommandRegistry")
 
 @Observable
-internal final class CommandRegistry {
+internal final class CommandRegistry: @unchecked Sendable {
     private var commands: [PersistentIdentifier: () -> Void] = [:]
 
     @MainActor

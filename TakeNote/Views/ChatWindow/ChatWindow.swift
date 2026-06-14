@@ -6,6 +6,7 @@
 //
 
 import FoundationModels
+import os
 import SwiftData
 import SwiftUI
 
@@ -89,7 +90,7 @@ struct ChatWindow: View {
     }
 
     private func generateResponse(userPrompt: String) async {
-        guard SystemLanguageModel.default.availability == .available else {
+        guard activeLanguageModel.availability == .available else {
             var unavailableEntry = ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device.")
             unavailableEntry.isComplete = true
             conversation.append(unavailableEntry)
@@ -123,7 +124,11 @@ struct ChatWindow: View {
         #endif
 
         do {
-            let stream = session!.streamResponse(to: prompt)
+            let stream = session!.streamResponse(
+                to: TakeNoteLanguageModels.prompt(prompt),
+                options: chatGenerationOptions,
+                contextOptions: chatContextOptions
+            )
             for try await partial in stream {
                 let content = partial.content
                 if content != "null" {
@@ -133,7 +138,7 @@ struct ChatWindow: View {
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
             conversation[botIndex].sources = pendingSources
             conversation[botIndex].isComplete = true
-        } catch let error as LanguageModelSession.GenerationError where isContextOverflow(error) {
+        } catch let error as LanguageModelError where isContextOverflow(error) {
             // Compact the conversation and retry instead of losing context
             await compactAndRetry(userPrompt: userPrompt, botIndex: botIndex)
         } catch {
@@ -147,6 +152,22 @@ struct ChatWindow: View {
 
         responseIsGenerating = false
         textFieldFocused = true
+    }
+
+    private var activeLanguageModel: SystemLanguageModel {
+        searchEnabled ? TakeNoteLanguageModels.chat : TakeNoteLanguageModels.contentTransformationFallback
+    }
+
+    private var chatGenerationOptions: GenerationOptions {
+        GenerationOptions(
+            samplingMode: .greedy,
+            temperature: searchEnabled ? 0.2 : 0.0,
+            toolCallingMode: searchEnabled ? .allowed : .disallowed
+        )
+    }
+
+    private var chatContextOptions: ContextOptions {
+        ContextOptions()
     }
 
     private func buildSession(conversationSummary: String? = nil) -> LanguageModelSession {
@@ -186,11 +207,18 @@ struct ChatWindow: View {
                     createNoteInInbox(title: title, content: content)
                 }
             )
-            newSession = LanguageModelSession(tools: [searchTool, createTool], instructions: modelInstructions)
+            newSession = LanguageModelSession(
+                model: activeLanguageModel,
+                tools: [searchTool, createTool],
+                instructions: TakeNoteLanguageModels.instructions(modelInstructions)
+            )
         } else {
-            newSession = LanguageModelSession(instructions: modelInstructions)
+            newSession = LanguageModelSession(
+                model: activeLanguageModel,
+                instructions: TakeNoteLanguageModels.instructions(modelInstructions)
+            )
         }
-        newSession.prewarm()
+        newSession.prewarm(promptPrefix: TakeNoteLanguageModels.prompt(context ?? ""))
         return newSession
     }
 
@@ -203,12 +231,24 @@ struct ChatWindow: View {
             return "\(role): \(entry.text)"
         }.joined(separator: "\n")
 
-        let summaryPrompt = "Summarize this conversation concisely. Capture key topics, facts discussed, and any decisions made. Under 150 words.\n\n\(String(historyText.prefix(2000)))"
-        let summarySession = LanguageModelSession(instructions: "You are a summarizer. Return only the summary, nothing else.")
+        let summaryPrompt = """
+            Summarize this conversation for continuity.
+            Capture key topics, facts discussed, user preferences, and any decisions made.
+            Keep it under 150 words.
+
+            \(String(historyText.prefix(2000)))
+            """
+        let summarySession = LanguageModelSession(
+            profile: TakeNoteLanguageModels.profile(
+                instructions: "Return only the compact conversation summary.",
+                model: TakeNoteLanguageModels.contentTagging,
+                maximumResponseTokens: 180
+            )
+        )
 
         let summary: String
         do {
-            let response = try await summarySession.respond(to: summaryPrompt)
+            let response = try await summarySession.respond(to: TakeNoteLanguageModels.prompt(summaryPrompt))
             summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
         } catch {
             // If summarization itself fails, fall back to a hard reset
@@ -227,7 +267,11 @@ struct ChatWindow: View {
         }
 
         do {
-            let stream = session!.streamResponse(to: prompt)
+            let stream = session!.streamResponse(
+                to: TakeNoteLanguageModels.prompt(prompt),
+                options: chatGenerationOptions,
+                contextOptions: chatContextOptions
+            )
             for try await partial in stream {
                 let content = partial.content
                 if content != "null" {
@@ -244,8 +288,8 @@ struct ChatWindow: View {
         }
     }
 
-    private func isContextOverflow(_ error: LanguageModelSession.GenerationError) -> Bool {
-        if case .exceededContextWindowSize = error { return true }
+    private func isContextOverflow(_ error: LanguageModelError) -> Bool {
+        if case .contextSizeExceeded = error { return true }
         return false
     }
 

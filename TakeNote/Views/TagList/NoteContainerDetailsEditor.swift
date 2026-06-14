@@ -6,6 +6,7 @@
 //
 
 import SFSymbolsPicker
+import SwiftData
 import SwiftUI
 
 struct NoteContainerDetailsEditor: View {

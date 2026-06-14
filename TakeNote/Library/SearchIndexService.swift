@@ -16,7 +16,11 @@ class SearchIndexService {
     var hits: [SearchHit] = []
     var isIndexing: Bool = false
     var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
-    private var reindexTask: Task<Void, Never>?
+    private var fullReindexTask: Task<Void, Never>?
+    private var noteReindexTask: Task<Void, Never>?
+    private var pendingNoteEntities: [UUID: NoteSearchEntity] = [:]
+    private let noteReindexDelay: Duration = .milliseconds(750)
+    private let fullReindexDelay: Duration = .seconds(2)
 
     init() {
         removeLegacySQLiteIndex()
@@ -24,28 +28,58 @@ class SearchIndexService {
 
     func reindex(note: Note) {
         let entity = NoteSearchEntity(note: note)
-        Task {
-            await spotlight.reindex(entity)
-        }
+        pendingNoteEntities[note.uuid] = entity
+        schedulePendingNoteReindex()
     }
 
     func reindexAll(_ notes: [Note]) {
         let spotlightEntities = notes.map(NoteSearchEntity.init(note:))
 
-        reindexTask?.cancel()
-        logger.info("Spotlight search reindex running.")
-        isIndexing = true
-        reindexTask = Task {
-            await spotlight.reindex(spotlightEntities)
-            if Task.isCancelled {
-                isIndexing = false
+        fullReindexTask?.cancel()
+        noteReindexTask?.cancel()
+        pendingNoteEntities.removeAll()
+
+        fullReindexTask = Task {
+            do {
+                try await Task.sleep(for: fullReindexDelay)
+            } catch {
                 return
             }
+            guard !Task.isCancelled else { return }
+
+            isIndexing = true
+            logger.debug("Spotlight search full reindex running for \(spotlightEntities.count) notes.")
+            await spotlight.reindex(spotlightEntities)
             isIndexing = false
+            guard !Task.isCancelled else { return }
             #if DEBUG
-            logger.info("Spotlight search reindex complete. \(spotlightEntities.count) notes indexed.")
+            logger.debug("Spotlight search full reindex complete. \(spotlightEntities.count) notes indexed.")
             #endif
         }
+    }
+
+    private func schedulePendingNoteReindex() {
+        noteReindexTask?.cancel()
+        noteReindexTask = Task {
+            do {
+                try await Task.sleep(for: noteReindexDelay)
+            } catch {
+                return
+            }
+            await flushPendingNoteReindex()
+        }
+    }
+
+    private func flushPendingNoteReindex() async {
+        guard !pendingNoteEntities.isEmpty else { return }
+
+        let entities = Array(pendingNoteEntities.values)
+        pendingNoteEntities.removeAll()
+
+        isIndexing = true
+        logger.debug("Spotlight search incremental reindex running for \(entities.count) notes.")
+        await spotlight.reindex(entities)
+        isIndexing = false
     }
 
     func deleteFromIndex(noteID: UUID) {

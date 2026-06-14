@@ -5,7 +5,7 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
-import CodeEditorView
+@preconcurrency import CodeEditorView
 import GameController
 import LanguageSupport
 import MarkdownUI
@@ -383,11 +383,7 @@ struct NoteEditor: View {
                             ),
                             position: $position,
                             messages: $messages,
-                            language: .markdown(),
-                            layout: CodeEditor.LayoutConfiguration(
-                                showMinimap: false,
-                                wrapText: true
-                            )
+                            language: .markdown()
                         )
                         #if os(macOS)
                             .onExitCommand(perform: {
@@ -406,6 +402,13 @@ struct NoteEditor: View {
                             \.codeEditorTheme,
                             colorScheme == .dark
                                 ? Theme.defaultDark : Theme.defaultLight
+                        )
+                        .environment(
+                            \.codeEditorLayoutConfiguration,
+                            CodeEditor.LayoutConfiguration(
+                                showMinimap: false,
+                                wrapText: true
+                            )
                         )
                     }
                 }
