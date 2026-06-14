@@ -8,13 +8,13 @@ import FoundationModels
 
 struct CreateNoteTool: Tool {
     let name = "createNote"
-    let description = "Create a new note in the user's Inbox."
+    let description = "Create a new Markdown note in the user's Inbox when the user explicitly asks to create or save one."
 
     @Generable
     struct Arguments {
-        @Guide(description: "The title of the note")
+        @Guide(description: "A concise note title without Markdown formatting.")
         var title: String
-        @Guide(description: "The markdown content of the note")
+        @Guide(description: "The note body in clean Markdown. Include only content the user requested or supplied.")
         var content: String
     }
 

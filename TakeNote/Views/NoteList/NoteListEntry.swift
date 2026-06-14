@@ -481,12 +481,9 @@ struct NoteListEntry: View {
             }
             if takeNoteVM.aiIsAvailable {
                 Button(action: {
-                    // This content hash dance is a little hacky, but we need to do it because
-                    // we guard creating summaries on a content hash not matching
                     note.contentHash = ""
                     Task {
                         await note.generateSummary()
-                        note.contentHash = note.generateContentHash()
                     }
 
                 }) {
