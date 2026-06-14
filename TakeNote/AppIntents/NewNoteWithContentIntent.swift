@@ -21,12 +21,12 @@ struct NewNoteWithContentIntent: AppIntent {
     @Parameter(title: "Note Title", description: "The title you want for the new note")
     var noteTitle: String
     
-    static var title: LocalizedStringResource = "Create a new note with content"
+    static let title: LocalizedStringResource = "Create a new note with content"
 
 
-    static var description = IntentDescription("Opens TakeNote and creates a new note in the Inbox with the specified content.")
+    static let description = IntentDescription("Opens TakeNote and creates a new note in the Inbox with the specified content.")
     
-    static var openAppWhenRun: Bool = true
+    static let openAppWhenRun: Bool = true
     
     @MainActor
     func perform() async throws -> some IntentResult {

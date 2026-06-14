@@ -91,6 +91,49 @@ private func systemFolderSortOrder(_ folder: NoteContainer) -> Int {
     return 5
 }
 
+private struct SidebarCreateActions: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(SearchIndexService.self) private var search
+
+    var body: some View {
+        HStack {
+            Spacer(minLength: 0)
+            ControlGroup {
+                Button(action: addNote) {
+                    Label("Add Note", systemImage: "note.text.badge.plus")
+                }
+                .disabled(!takeNoteVM.canAddNote)
+                .help("Add Note")
+
+                Button(action: {
+                    takeNoteVM.addFolder(modelContext)
+                }) {
+                    Label("Add Folder", systemImage: "folder.badge.plus")
+                }
+                .help("Add Folder")
+
+                Button(action: {
+                    takeNoteVM.addTag(modelContext: modelContext)
+                }) {
+                    Label("Add Tag", systemImage: "tag")
+                }
+                .help("Add Tag")
+            }
+            .labelStyle(.iconOnly)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    private func addNote() {
+        guard let newNote = takeNoteVM.addNote(modelContext) else { return }
+        search.reindex(note: newNote)
+    }
+}
+
 struct Sidebar: View {
     @Environment(SearchIndexService.self) var search
     @Environment(TakeNoteVM.self) var takeNoteVM
@@ -198,6 +241,12 @@ struct Sidebar: View {
                 showImportError.toggle()
             }
         }
+        #if os(macOS)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            Divider()
+            SidebarCreateActions()
+        }
+        #endif
         .listStyle(.sidebar)
     }
 }

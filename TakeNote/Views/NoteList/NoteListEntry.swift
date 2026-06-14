@@ -71,12 +71,11 @@ struct NoteListEntry: View {
 
     var note: Note
     @State private var inRenameMode: Bool = false
-    @State private var inMoveToTrashMode: Bool = false
+    @State private var notePendingTrash: Note?
     @State private var inMoveToContainerMode: Bool = false
     @State private var newName: String = ""
     @State private var showExportDialog: Bool = false
     @State private var exportError: String? = nil
-    @State private var showExportError: Bool = false
     @FocusState private var nameInputFocused: Bool
 
     private let verticalPadding: CGFloat = 8
@@ -417,7 +416,7 @@ struct NoteListEntry: View {
                 Button(
                     role: .destructive,
                     action: {
-                        inMoveToTrashMode = true
+                        notePendingTrash = note
                     }
                 ) {
                     Label("Move to Trash", systemImage: "trash")
@@ -522,7 +521,6 @@ struct NoteListEntry: View {
                 break
             case .failure(let error):
                 exportError = error.localizedDescription
-                showExportError = true
             }
         }
         .onAppear {
@@ -559,23 +557,21 @@ struct NoteListEntry: View {
             )
         }
         .alert(
-            "Something went wrong exporting your file: \(String(describing: exportError ?? "Unknown Error"))",
-            isPresented: $showExportError
-        ) {
-            Button("OK", role: .cancel) {
-                showExportError = false
-            }
+            "Export Failed",
+            item: $exportError
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .alert(
-            "Are you sure you want to move \(note.title) to the trash?",
-            isPresented: $inMoveToTrashMode
-        ) {
-            Button("Move to Trash", role: .destructive) {
-                moveToTrash()
-            }
-            Button("Cancel", role: .cancel) {
-                inMoveToTrashMode = false
-            }
+            "Move Note to Trash?",
+            item: $notePendingTrash
+        ) { _ in
+            Button("Move to Trash", role: .destructive) { moveToTrash() }
+            Button("Cancel", role: .cancel) {}
+        } message: { note in
+            Text("Are you sure you want to move \(note.title) to the trash?")
         }
     }
 }

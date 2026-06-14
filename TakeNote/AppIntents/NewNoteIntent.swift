@@ -16,12 +16,12 @@ struct NewNoteIntent: AppIntent {
     @Dependency(key: "TakeNoteVM") // key required for Swift 6 runtime.
     private var takeNoteVM: TakeNoteVM
     
-    static var title: LocalizedStringResource = "Create a new note"
+    static let title: LocalizedStringResource = "Create a new note"
 
 
-    static var description = IntentDescription("Opens TakeNote and creates a new note in the Inbox.")
+    static let description = IntentDescription("Opens TakeNote and creates a new note in the Inbox.")
     
-    static var openAppWhenRun: Bool = true
+    static let openAppWhenRun: Bool = true
     
     @MainActor
     func perform() async throws -> some IntentResult {

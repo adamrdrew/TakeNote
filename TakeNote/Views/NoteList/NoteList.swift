@@ -59,8 +59,7 @@ extension EnvironmentValues {
 struct NoteList: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) var takeNoteVM
-    @State private var showFileImportError: Bool = false
-    @State private var fileImportErrorMessage: String = ""
+    @State private var fileImportErrorMessage: String?
     @Query() var notes: [Note]
 
     @State private var noteDeleteRegistry: CommandRegistry = CommandRegistry()
@@ -322,13 +321,12 @@ struct NoteList: View {
                 searchIndex: search,
                 folder: takeNoteVM.selectedContainer!
             )
-            showFileImportError = result.errorsEncountered
-            fileImportErrorMessage = result.toString()
+            fileImportErrorMessage = result.errorsEncountered ? result.toString() : nil
         }
-        .alert(fileImportErrorMessage, isPresented: $showFileImportError) {
-            Button("OK") {
-                showFileImportError = false
-            }
+        .alert("Import Failed", item: $fileImportErrorMessage) { _ in
+            Button("OK") {}
+        } message: { message in
+            Text(message)
         }
         .onChange(of: notes.count) { _, _ in
             search.reindexAll(notes.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })

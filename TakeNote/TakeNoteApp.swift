@@ -130,6 +130,9 @@ struct TakeNoteApp: App {
 
     private var MainAppWindow: some View {
         MainWindow()
+            #if os(macOS)
+            .frame(minWidth: 960, minHeight: 600)
+            #endif
             .sheet(isPresented: $showOnboarding) {
                 WelcomeView {
                     onboardingVersionSeen = onboardingVersionCurrent
@@ -160,6 +163,7 @@ struct TakeNoteApp: App {
             }
 
             .windowToolbarStyle(.automatic)
+            .windowResizability(.contentMinSize)
         #else
             WindowGroup(id: "main-window") {
                 MainAppWindow

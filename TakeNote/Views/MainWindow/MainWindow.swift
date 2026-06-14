@@ -35,6 +35,8 @@ struct MainWindow: View {
     @State private var showSidebarChatPopover: Bool = false
     @State private var showSortPopover: Bool = false
 
+    private let sidebarColumnWidth: CGFloat = 360
+
     var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
             return UIDevice.current.userInterfaceIdiom == .phone
@@ -83,6 +85,7 @@ struct MainWindow: View {
 
     var NoteListToolbar: some ToolbarContent {
         ToolbarItemGroup(placement: toolbarPlacement) {
+            #if os(iOS)
             if takeNoteVM.canAddNote {
                 Button(action: {
                     if let newNote = takeNoteVM.addNote(modelContext) {
@@ -93,6 +96,7 @@ struct MainWindow: View {
                 }
                 .help("Add Note")
             }
+            #endif
             if !(takeNoteVM.selectedContainer?.notes.isEmpty ?? false) {
                 Button(action: doShowSortPopover) {
                     Image(systemName: "arrow.up.arrow.down")
@@ -122,7 +126,9 @@ struct MainWindow: View {
                 .help("Empty Trash")
             }
         }
+        .visibilityPriority(.high)
     }
+
     var navTitle: String {
         #if os(iOS)
             if UIDevice.current.userInterfaceIdiom == .phone {
@@ -153,7 +159,6 @@ struct MainWindow: View {
                             DefaultToolbarItem(kind: .search, placement: .bottomBar)
                             ToolbarSpacer(.flexible, placement: .bottomBar)
                         }
-                        #endif
                         ToolbarItem(placement: toolbarPlacement) {
 
                             Button(action: {
@@ -166,12 +171,15 @@ struct MainWindow: View {
                             }
                             .help("Add Folder")
                         }
+                        .visibilityPriority(.high)
+                        #endif
+                        #if os(iOS)
                         ToolbarItem(placement: toolbarPlacement) {
                             AddTagButton(action: {
                                 takeNoteVM.addTag(modelContext: modelContext)
                             })
                         }
-                        #if os(iOS)
+                        .visibilityPriority(.high)
                         if chatFeatureFlagEnabled && chatEnabled {
                             ToolbarItem(placement: toolbarPlacement) {
                                 Button(action: doShowSidebarChatPopover) {
@@ -190,6 +198,11 @@ struct MainWindow: View {
                         #endif
 
                     }
+                    .navigationSplitViewColumnWidth(
+                        min: sidebarColumnWidth,
+                        ideal: sidebarColumnWidth,
+                        max: sidebarColumnWidth
+                    )
             }
         } content: {
             NoteList()
@@ -228,7 +241,6 @@ struct MainWindow: View {
         #if os(iOS)
             .background(Color(UIColor.systemBackground))
         #endif
-        .navigationSplitViewColumnWidth(min: 300, ideal: 300, max: 300)
         .navigationTitle(takeNoteVM.navigationTitle)
         .alert(
             "Do you want to delete everything?",

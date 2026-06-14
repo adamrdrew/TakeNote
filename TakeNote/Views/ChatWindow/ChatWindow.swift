@@ -6,6 +6,7 @@
 //
 
 import FoundationModels
+import os
 import SwiftData
 import SwiftUI
 
@@ -133,7 +134,7 @@ struct ChatWindow: View {
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
             conversation[botIndex].sources = pendingSources
             conversation[botIndex].isComplete = true
-        } catch let error as LanguageModelSession.GenerationError where isContextOverflow(error) {
+        } catch let error as LanguageModelError where isContextOverflow(error) {
             // Compact the conversation and retry instead of losing context
             await compactAndRetry(userPrompt: userPrompt, botIndex: botIndex)
         } catch {
@@ -244,8 +245,8 @@ struct ChatWindow: View {
         }
     }
 
-    private func isContextOverflow(_ error: LanguageModelSession.GenerationError) -> Bool {
-        if case .exceededContextWindowSize = error { return true }
+    private func isContextOverflow(_ error: LanguageModelError) -> Bool {
+        if case .contextSizeExceeded = error { return true }
         return false
     }
 

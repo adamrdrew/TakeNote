@@ -5,6 +5,7 @@
 //  Created by Adam Drew on 8/25/25.
 //
 
+import SwiftData
 import SwiftUI
 
 struct WindowCommands: Commands {
