@@ -31,10 +31,7 @@ struct MainWindow: View {
 
     @State private var notesInBufferMessagePresented: Bool = false
     @State private var showDeleteEverythingAlert: Bool = false
-
     @State private var preferredColumn = NavigationSplitViewColumn.sidebar
-
-    @State private var showChatPopover: Bool = false
     @State private var showSidebarChatPopover: Bool = false
     @State private var showSortPopover: Bool = false
 
@@ -50,11 +47,6 @@ struct MainWindow: View {
     func showDeleteEverything() {
         showDeleteEverythingAlert = true
     }
-
-    func doShowChatPopover() {
-        showChatPopover.toggle()
-    }
-
     func doShowSidebarChatPopover() {
         showSidebarChatPopover.toggle()
     }
@@ -131,7 +123,6 @@ struct MainWindow: View {
             }
         }
     }
-
     var navTitle: String {
         #if os(iOS)
             if UIDevice.current.userInterfaceIdiom == .phone {
