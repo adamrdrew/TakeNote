@@ -17,7 +17,7 @@ struct NoteSearchTool: Tool {
         var query: String
     }
 
-    let searchIndex: SearchIndex
+    let search: SearchIndexService
     let onSearchStart: @MainActor @Sendable (String) -> Void
     let onResults: @MainActor @Sendable ([SearchHit]) -> Void
 
@@ -31,7 +31,7 @@ struct NoteSearchTool: Tool {
 
     func call(arguments: Arguments) async throws -> String {
         await onSearchStart(arguments.query)
-        let hits = searchIndex.searchNatural(arguments.query)
+        let hits = await search.search(arguments.query)
         await onResults(hits)
         guard !hits.isEmpty else { return "No matching notes found." }
 

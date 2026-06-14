@@ -68,6 +68,8 @@ struct NoteList: View {
     @State private var noteStarToggleRegistry: CommandRegistry = CommandRegistry()
     @State private var noteCopyMarkdownLinkRegistry: CommandRegistry = CommandRegistry()
     @State private var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
+    @State private var searchMatchedIDs: [UUID] = []
+    @State private var searchTask: Task<Void, Never>?
 
     @Environment(SearchIndexService.self) private var search
 
@@ -77,7 +79,7 @@ struct NoteList: View {
         }
         let filtered: [Note]
         if !takeNoteVM.noteSearchText.isEmpty {
-            let matchedIDs = search.searchNoteIDs(takeNoteVM.noteSearchText)
+            let matchedIDs = searchMatchedIDs
             let matchedSet = Set(matchedIDs)
             let matchedNotes = allNotesSource.filter { matchedSet.contains($0.uuid) }
             let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
@@ -181,6 +183,21 @@ struct NoteList: View {
 
         // Cull any NoteImage records that are no longer referenced by any active note
         NoteImageManager(modelContext: modelContext).cullOrphanedImages()
+    }
+
+    private func updateSearchResults(for text: String) {
+        searchTask?.cancel()
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            searchMatchedIDs = []
+            return
+        }
+
+        searchTask = Task {
+            let matchedIDs = await search.searchNoteIDs(query)
+            guard !Task.isCancelled else { return }
+            searchMatchedIDs = matchedIDs
+        }
     }
 
     var body: some View {
@@ -317,6 +334,7 @@ struct NoteList: View {
             search.reindexAll(notes.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
         }
         .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
+            updateSearchResults(for: newValue)
             // On Mac/iPad, switch to All Notes as the user types so the sidebar
             // reflects that search is global. On iPhone this is deferred to
             // .onSubmit(of: .search) because changing the container mid-typing
@@ -341,6 +359,9 @@ struct NoteList: View {
             } else {
                 takeNoteVM.noteSearchText = ""
             }
+        }
+        .onAppear {
+            updateSearchResults(for: takeNoteVM.noteSearchText)
         }
 
     }

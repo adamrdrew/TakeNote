@@ -65,6 +65,63 @@ final class NoteSpotlightIndex: Sendable {
         }
     }
 
+    func search(_ text: String, limit: Int) async -> [SearchHit] {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard CSSearchableIndex.isIndexingAvailable(), !trimmed.isEmpty else {
+            return []
+        }
+
+        let context = CSUserQueryContext()
+        context.enableRankedResults = true
+        context.maxResultCount = limit
+        context.maxRankedResultCount = limit
+        context.fetchAttributes = [
+            SearchableItemAttribute.title.rawValue,
+            SearchableItemAttribute.textContent.rawValue,
+            SearchableItemAttribute.contentDescription.rawValue,
+            SearchableItemAttribute.identifier.rawValue,
+            SearchableItemAttribute.domainIdentifier.rawValue
+        ]
+        context.filterQueries = [
+            "\(SearchableItemAttribute.domainIdentifier.rawValue) == \"\(Self.domainIdentifier)\""
+        ]
+
+        let query = CSUserQuery(userQueryString: trimmed, userQueryContext: context)
+        var hits: [SearchHit] = []
+
+        do {
+            for try await response in query.responses {
+                guard case .item(let result) = response else { continue }
+                let item = result.item
+                guard item.domainIdentifier == Self.domainIdentifier else { continue }
+                guard let noteID = UUID(uuidString: item.uniqueIdentifier) else { continue }
+
+                let attributes = item.attributeSet
+                let chunk = attributes.textContent
+                    ?? attributes.contentDescription
+                    ?? attributes.title
+                    ?? ""
+
+                hits.append(
+                    SearchHit(
+                        id: item.uniqueIdentifier,
+                        noteID: noteID,
+                        chunk: chunk
+                    )
+                )
+
+                if hits.count >= limit {
+                    query.cancel()
+                    break
+                }
+            }
+        } catch {
+            logger.error("Spotlight search error: \(error.localizedDescription)")
+        }
+
+        return hits
+    }
+
     private func indexSearchableItems(_ items: [CSSearchableItem]) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             CSSearchableIndex.default().indexSearchableItems(items) { error in
