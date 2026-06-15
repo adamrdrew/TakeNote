@@ -164,7 +164,6 @@ struct MainWindow: View {
                         #if os(iOS)
                         DefaultToolbarItem(kind: .search, placement: .bottomBar)
                         ToolbarSpacer(.flexible, placement: .bottomBar)
-                        #endif
                         ToolbarItem(placement: toolbarPlacement) {
 
                             Button(action: {
@@ -184,6 +183,7 @@ struct MainWindow: View {
                             })
                         }
                         .visibilityPriority(.high)
+                        #endif
                         #if os(iOS)
                         if chatFeatureFlagEnabled && chatEnabled {
                             ToolbarItem(placement: toolbarPlacement) {
@@ -238,6 +238,26 @@ struct MainWindow: View {
             }
         }
         .animation(.default, value: takeNoteVM.multipleNotesSelected)
+        #if os(macOS)
+            .toolbar {
+                ToolbarItemGroup(placement: .navigation) {
+                    Button(action: {
+                        takeNoteVM.addFolder(modelContext)
+                    }) {
+                        Label(
+                            "Add Folder",
+                            systemImage: "folder.badge.plus"
+                        )
+                    }
+                    .help("Add Folder")
+
+                    AddTagButton(action: {
+                        takeNoteVM.addTag(modelContext: modelContext)
+                    })
+                }
+                .visibilityPriority(.high)
+            }
+        #endif
         .searchable(text: $takeNoteVM.noteSearchText)
         #if os(iOS)
         .onSubmit(of: .search) {
