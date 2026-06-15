@@ -8,16 +8,12 @@ import CoreSpotlight
 import os
 
 final class NoteSpotlightIndex: Sendable {
-    static let domainIdentifier = "com.adamdrew.takenote.notes"
+    nonisolated static let domainIdentifier = "com.adamdrew.takenote.notes"
 
     private let logger = Logger(
         subsystem: "com.adamdrew.takenote",
         category: "NoteSpotlightIndex"
     )
-
-    func reindex(_ note: NoteSearchEntity) async {
-        await reindex([note])
-    }
 
     func reindex(_ notes: [NoteSearchEntity]) async {
         guard CSSearchableIndex.isIndexingAvailable(), !notes.isEmpty else {
@@ -44,11 +40,17 @@ final class NoteSpotlightIndex: Sendable {
     }
 
     func delete(noteID: UUID) async {
-        guard CSSearchableIndex.isIndexingAvailable() else { return }
+        await delete(noteIDs: [noteID])
+    }
+
+    func delete(noteIDs: [UUID]) async {
+        guard CSSearchableIndex.isIndexingAvailable(), !noteIDs.isEmpty else { return }
 
         do {
-            try await deleteSearchableItems(withIdentifiers: [noteID.uuidString])
-            logger.debug("Deleted note \(noteID.uuidString) from Spotlight.")
+            try await deleteSearchableItems(
+                withIdentifiers: noteIDs.map(\.uuidString)
+            )
+            logger.debug("Deleted \(noteIDs.count) notes from Spotlight.")
         } catch {
             logger.error("Spotlight delete error: \(error.localizedDescription)")
         }
@@ -106,6 +108,7 @@ final class NoteSpotlightIndex: Sendable {
                     SearchHit(
                         id: item.uniqueIdentifier,
                         noteID: noteID,
+                        noteTitle: attributes.title,
                         chunk: chunk
                     )
                 )

@@ -43,7 +43,7 @@ struct NoteSearchTool: Tool {
         // Compress chunks via TextRank before sending to the relevance filter.
         // This produces denser text for both the filter and the main model.
         let numbered = hits.enumerated().map { i, hit in
-            "[\(i + 1)] \(summarizeChunk(hit.chunk))"
+            "[\(i + 1)] \(hit.displayTitle)\n\(summarizeChunk(hit.chunk))"
         }.joined(separator: "\n\n")
 
         // Use a separate session to filter results for relevance before
@@ -79,7 +79,7 @@ struct NoteSearchTool: Tool {
         // Return the compressed excerpts for relevant hits
         var excerpts: [String] = []
         for hit in filteredHits {
-            excerpts.append("---\n\(summarizeChunk(hit.chunk))")
+            excerpts.append("---\nTitle: \(hit.displayTitle)\n\(summarizeChunk(hit.chunk))")
         }
         let filtered = excerpts.joined(separator: "\n\n")
 

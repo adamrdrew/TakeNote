@@ -19,14 +19,282 @@ import os
     import AppKit
 #endif
 
-extension FocusedValues {
-    @Entry var togglePreview: (() -> Void)?
-    @Entry var doMagicFormat: (() -> Void)?
-    @Entry var textIsSelected: Bool?
-    @Entry var showAssistantPopover: (() -> Void)?
-    @Entry var showBacklinks: (() -> Void)?
-    @Entry var openNoteHasBacklinks: Bool?
-    @Entry var pasteImage: (() -> Bool)?
+@MainActor
+@Observable
+final class NoteEditorActions {
+    var position = CodeEditor.Position()
+    var messages: Set<TextLocated<Message>> = []
+    var showPreview = true
+    var showBackLinks = false
+    var magicFormatterErrorMessage: String?
+    var isAssistantPopoverPresented = false
+    var openNoteHasBacklinks = false
+    var magicFormatter = MagicFormatter()
+
+    @ObservationIgnored private var modelContext: ModelContext?
+    @ObservationIgnored private var openNote: Note?
+    @ObservationIgnored private var magicFormatTask: Task<Void, Never>?
+    @ObservationIgnored private var summaryTask: Task<Void, Never>?
+
+    static let logger = Logger(
+        subsystem: "com.adamdrew.takenote",
+        category: "NoteEditor"
+    )
+
+    private static let maxImageDimension: CGFloat = 2048
+
+    func update(openNote: Note?, modelContext: ModelContext) {
+        if self.openNote?.persistentModelID != openNote?.persistentModelID {
+            cancelMagicFormat()
+            cancelSummaryGeneration()
+        }
+        self.openNote = openNote
+        self.modelContext = modelContext
+        updateBacklinkAvailability()
+    }
+
+    func togglePreview() {
+        showPreview.toggle()
+        if showPreview, let openNote {
+            generateSummary(for: openNote)
+        }
+    }
+
+    func showBacklinks() {
+        showBackLinks.toggle()
+    }
+
+    func showAssistantPopover() {
+        isAssistantPopoverPresented = true
+    }
+
+    private func presentMagicFormatterError(_ message: String) {
+        magicFormatterErrorMessage = message
+    }
+
+    func cancelMagicFormat() {
+        magicFormatTask?.cancel()
+        magicFormatTask = nil
+        magicFormatter.cancel()
+    }
+
+    private func generateSummary(for note: Note) {
+        summaryTask?.cancel()
+        summaryTask = Task {
+            await note.generateSummary()
+        }
+    }
+
+    func cancelSummaryGeneration() {
+        summaryTask?.cancel()
+        summaryTask = nil
+    }
+
+    func doMagicFormat() {
+        guard !magicFormatter.formatterIsBusy else { return }
+        guard let note = openNote, !note.content.isEmpty else { return }
+        magicFormatTask?.cancel()
+        magicFormatTask = Task {
+            let result = await magicFormatter.magicFormat(note.content)
+            guard !Task.isCancelled else { return }
+            if result.wasCancelled {
+                return
+            }
+            if !result.didSucceed {
+                presentMagicFormatterError(result.formattedText)
+                return
+            }
+            let currentContentHash = magicFormatter.hashFor(note.content)
+            if currentContentHash != result.inputHash {
+                Self.logger.critical(
+                    "Mismatch between MagicFormat input and current note content."
+                )
+                presentMagicFormatterError(
+                    String(
+                        localized: "Mismatch between MagicFormat input and current note content.",
+                        comment: "Magic Format error shown when note content changes while formatting is in progress."
+                    )
+                )
+                return
+            }
+            note.setContent(result.formattedText)
+        }
+    }
+
+    var selectedText: String {
+        guard
+            let content = openNote?.content,
+            !content.isEmpty,
+            let raw = position.selections.first
+        else { return "" }
+
+        let ns = content as NSString
+        let clamped = clamp(raw, toLength: ns.length)
+        return ns.substring(with: clamped)
+    }
+
+    var textIsSelected: Bool {
+        selectedText.isEmpty == false
+    }
+
+    func assistantSelectionReplacement(_ replacement: String) {
+        guard let note = openNote else { return }
+        guard let nsRange = position.selections.first else { return }
+        guard let swiftRange = Range(nsRange, in: note.content) else { return }
+
+        var content = note.content
+        content.replaceSubrange(swiftRange, with: replacement)
+        note.setContent(content)
+
+        let newLoc = nsRange.location + (replacement as NSString).length
+        position.selections = [NSRange(location: newLoc, length: 0)]
+    }
+
+    func insertAtCaret(_ string: String) {
+        guard let note = openNote else { return }
+        let ns = note.content as NSString
+        let range =
+            position.selections.first ?? NSRange(location: ns.length, length: 0)
+        let clamped = clamp(range, toLength: ns.length)
+
+        var content = note.content
+        if let swiftRange = Range(clamped, in: content) {
+            content.replaceSubrange(swiftRange, with: string)
+            note.setContent(content)
+            let newLoc = clamped.location + (string as NSString).length
+            position.selections = [NSRange(location: newLoc, length: 0)]
+        }
+    }
+
+    func insertImage(data: Data) {
+        guard let modelContext else { return }
+        let (downsizedData, mimeType) = Self.downsize(imageData: data)
+        let newImage = NoteImage(imageData: downsizedData, mimeType: mimeType)
+        modelContext.insert(newImage)
+        do {
+            try modelContext.save()
+        } catch {
+            presentMagicFormatterError(error.localizedDescription)
+            return
+        }
+        let markdownString = "![image](takenote://image/\(newImage.imageUUID.uuidString))"
+        insertAtCaret(markdownString)
+        Self.logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
+    }
+
+    func updateBacklinkAvailability() {
+        guard let modelContext, let openNote else {
+            openNoteHasBacklinks = false
+            return
+        }
+        openNoteHasBacklinks = NoteLinkManager(
+            modelContext: modelContext
+        ).notesLinkToDestination(openNote)
+    }
+
+    private func clamp(_ range: NSRange, toLength length: Int) -> NSRange {
+        let lower = max(0, min(range.location, length))
+        let upper = max(lower, min(range.location + range.length, length))
+        return NSRange(location: lower, length: upper - lower)
+    }
+
+    #if os(macOS)
+        @discardableResult
+        func pasteImageFromMacOSClipboard() -> Bool {
+            guard !showPreview else { return false }
+            let pasteboard = NSPasteboard.general
+            let availableTypes = pasteboard.types ?? []
+            guard availableTypes.contains(.tiff) || availableTypes.contains(.png) else {
+                return false
+            }
+            let rawData =
+                pasteboard.data(forType: .tiff) ?? pasteboard.data(forType: .png)
+            guard let data = rawData else { return false }
+            guard NSImage(data: data) != nil else { return false }
+            insertImage(data: data)
+            Self.logger.info("Inserted image from macOS clipboard via Cmd+V")
+            return true
+        }
+    #endif
+
+    private static func downsize(imageData: Data) -> (Data, String) {
+        let maxDim = maxImageDimension
+        #if os(iOS) || os(visionOS)
+            guard let image = UIImage(data: imageData) else {
+                return (imageData, "image/jpeg")
+            }
+            let originalSize = image.size
+            let longestSide = max(originalSize.width, originalSize.height)
+            guard longestSide > maxDim else {
+                if let jpegData = image.jpegData(compressionQuality: 0.85) {
+                    return (jpegData, "image/jpeg")
+                }
+                return (imageData, "image/jpeg")
+            }
+            let scale = maxDim / longestSide
+            let newSize = CGSize(
+                width: (originalSize.width * scale).rounded(),
+                height: (originalSize.height * scale).rounded()
+            )
+            let renderer = UIGraphicsImageRenderer(size: newSize)
+            let resizedImage = renderer.image { _ in
+                image.draw(in: CGRect(origin: .zero, size: newSize))
+            }
+            if let jpegData = resizedImage.jpegData(compressionQuality: 0.85) {
+                return (jpegData, "image/jpeg")
+            }
+            return (imageData, "image/jpeg")
+        #elseif os(macOS)
+            guard let image = NSImage(data: imageData) else {
+                return (imageData, "image/jpeg")
+            }
+            let originalSize = image.size
+            let longestSide = max(originalSize.width, originalSize.height)
+            guard longestSide > maxDim else {
+                let rep = NSBitmapImageRep(data: imageData)
+                if let jpegData = rep?.representation(
+                    using: .jpeg, properties: [.compressionFactor: 0.85]
+                ) {
+                    return (jpegData, "image/jpeg")
+                }
+                return (imageData, "image/jpeg")
+            }
+            let scale = maxDim / longestSide
+            let newSize = CGSize(
+                width: (originalSize.width * scale).rounded(),
+                height: (originalSize.height * scale).rounded()
+            )
+            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+                return (imageData, "image/jpeg")
+            }
+            let newRep = NSBitmapImageRep(
+                bitmapDataPlanes: nil,
+                pixelsWide: Int(newSize.width),
+                pixelsHigh: Int(newSize.height),
+                bitsPerSample: 8,
+                samplesPerPixel: 4,
+                hasAlpha: true,
+                isPlanar: false,
+                colorSpaceName: .deviceRGB,
+                bytesPerRow: 0,
+                bitsPerPixel: 0
+            )
+            guard let rep = newRep else {
+                return (imageData, "image/jpeg")
+            }
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            let destRect = CGRect(origin: .zero, size: newSize)
+            NSGraphicsContext.current?.cgContext.draw(cgImage, in: destRect)
+            NSGraphicsContext.restoreGraphicsState()
+            if let jpegData = rep.representation(
+                using: .jpeg, properties: [.compressionFactor: 0.85]
+            ) {
+                return (jpegData, "image/jpeg")
+            }
+            return (imageData, "image/jpeg")
+        #endif
+    }
 }
 
 struct EditorCard: ViewModifier {
@@ -34,10 +302,10 @@ struct EditorCard: ViewModifier {
         content
             .background(.thinMaterial.opacity(0.10))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .overlay(
+            .overlay {
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
                     .stroke(.white.opacity(0.06), lineWidth: 1)
-            )
+            }
     }
 }
 
@@ -73,7 +341,7 @@ struct MarkdownShortcutBar: View {
             }
             .padding()
             .glassEffect(in: .rect(cornerRadius: 16.0))
-            
+
             Spacer()
         }
         .padding(.horizontal, 10)
@@ -83,18 +351,9 @@ struct MarkdownShortcutBar: View {
 }
 
 struct NoteEditor: View {
-    @Environment(\.modelContext) var modelContext: ModelContext
+    @Environment(\.modelContext) private var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
-    @State private var position: CodeEditor.Position = CodeEditor.Position()
-    @State private var messages: Set<TextLocated<Message>> = Set()
-    @State private var showPreview: Bool = true
-    @State private var magicFormatterErrorMessage: String = ""
-    @State private var showBackLinks: Bool = false
-    @State private var magicFormatterErrorIsPresented: Bool = false
-    @State private var isAssistantPopoverPresented: Bool = false
-    @State private var openNoteHasBacklinks: Bool = false
-
-    @State private var magicFormatter = MagicFormatter()
+    @State private var editorActions = NoteEditorActions()
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     #if os(iOS)
@@ -111,8 +370,8 @@ struct NoteEditor: View {
         let toolbarPosition = ToolbarItemPlacement.automatic
     #endif
 
-    var hardwareKeyboardConnected: Bool {
-        return GCKeyboard.coalesced != nil
+    private var hardwareKeyboardConnected: Bool {
+        GCKeyboard.coalesced != nil
     }
 
     static let logger = Logger(
@@ -120,100 +379,17 @@ struct NoteEditor: View {
         category: "NoteEditor"
     )
 
-    func togglePreview() {
-        showPreview.toggle()
-        isInputActive = !showPreview
-        if showPreview && openNote != nil {
-            Task { await openNote?.generateSummary() }
-        }
-    }
-
-    func showBacklinks() {
-        showBackLinks.toggle()
-    }
-
-    func showAssistantPopover() {
-        isAssistantPopoverPresented = true
-    }
-
-    private func clamp(_ r: NSRange, toLength n: Int) -> NSRange {
-        let lower = max(0, min(r.location, n))
-        let upper = max(lower, min(r.location + r.length, n))
-        return NSRange(location: lower, length: upper - lower)
-    }
-
-    func doMagicFormat() {
-        if magicFormatter.formatterIsBusy { return }
-        if openNote == nil { return }
-        if openNote!.content.isEmpty { return }
-        Task {
-            let result = await magicFormatter.magicFormat(
-                openNote!.content
-            )
-            if result.wasCancelled {
-                return
-            }
-            if !result.didSucceed {
-                magicFormatterErrorIsPresented = true
-                magicFormatterErrorMessage = result.formattedText
-                return
-            }
-            let currentContentHash = magicFormatter.hashFor(openNote!.content)
-            if currentContentHash != result.inputHash {
-                Self.logger.critical(
-                    "Mismatch between MagicFormat input and current note content."
-                )
-                magicFormatterErrorIsPresented = true
-                magicFormatterErrorMessage =
-                    "Mismatch between MagicFormat input and current note content."
-                return
-            }
-            openNote!.setContent(result.formattedText)
-            return
-        }
-
-    }
-
-    private func insertAtCaret(_ s: String) {
-        guard let note = openNote else { return }
-        let ns = note.content as NSString
-        let range =
-            position.selections.first ?? NSRange(location: ns.length, length: 0)
-        let clamped = clamp(range, toLength: ns.length)
-
-        var new = note.content
-        if let r = Range(clamped, in: new) {
-            new.replaceSubrange(r, with: s)
-            note.setContent(new)
-            // place caret after the inserted text
-            let newLoc = clamped.location + (s as NSString).length
-            position.selections = [NSRange(location: newLoc, length: 0)]
-        }
-    }
-
-    private static let maxImageDimension: CGFloat = 2048
-
-    private func insertImage(data: Data) {
-        let (downsizedData, mimeType) = Self.downsize(imageData: data)
-        let newImage = NoteImage(imageData: downsizedData, mimeType: mimeType)
-        modelContext.insert(newImage)
-        try? modelContext.save()
-        let markdownString = "![image](takenote://image/\(newImage.imageUUID.uuidString))"
-        insertAtCaret(markdownString)
-        Self.logger.info("Inserted image with UUID \(newImage.imageUUID.uuidString), mimeType: \(mimeType)")
-    }
-
     #if os(iOS)
         private func pasteFromClipboard() {
-            guard !showPreview else { return }
+            guard !editorActions.showPreview else { return }
             let pasteboard = UIPasteboard.general
             if pasteboard.hasImages, let image = pasteboard.image,
                 let data = image.jpegData(compressionQuality: 1.0)
             {
-                insertImage(data: data)
+                editorActions.insertImage(data: data)
                 Self.logger.info("Inserted image from clipboard via paste button")
             } else if pasteboard.hasStrings, let text = pasteboard.string {
-                insertAtCaret(text)
+                editorActions.insertAtCaret(text)
                 Self.logger.info("Inserted text from clipboard via paste button")
             } else {
                 showNothingToPasteAlert = true
@@ -221,181 +397,32 @@ struct NoteEditor: View {
         }
     #endif
 
-    #if os(macOS)
-        @discardableResult
-        private func pasteImageFromMacOSClipboard() -> Bool {
-            let pasteboard = NSPasteboard.general
-            let availableTypes = pasteboard.types ?? []
-            guard availableTypes.contains(.tiff) || availableTypes.contains(.png) else {
-                return false
-            }
-            let rawData =
-                pasteboard.data(forType: .tiff) ?? pasteboard.data(forType: .png)
-            guard let data = rawData else { return false }
-            guard NSImage(data: data) != nil else { return false }
-            insertImage(data: data)
-            Self.logger.info("Inserted image from macOS clipboard via Cmd+V")
-            return true
-        }
-    #endif
-
-    /// Downsizes image data so the longest dimension is at most 2048px.
-    /// Returns the downsized data and its MIME type.
-    private static func downsize(imageData: Data) -> (Data, String) {
-        let maxDim = maxImageDimension
-        #if os(iOS) || os(visionOS)
-            guard let image = UIImage(data: imageData) else {
-                return (imageData, "image/jpeg")
-            }
-            let originalSize = image.size
-            let longestSide = max(originalSize.width, originalSize.height)
-            guard longestSide > maxDim else {
-                // No downscaling needed; still re-encode as JPEG
-                if let jpegData = image.jpegData(compressionQuality: 0.85) {
-                    return (jpegData, "image/jpeg")
-                }
-                return (imageData, "image/jpeg")
-            }
-            let scale = maxDim / longestSide
-            let newSize = CGSize(
-                width: (originalSize.width * scale).rounded(),
-                height: (originalSize.height * scale).rounded()
-            )
-            let renderer = UIGraphicsImageRenderer(size: newSize)
-            let resizedImage = renderer.image { _ in
-                image.draw(in: CGRect(origin: .zero, size: newSize))
-            }
-            if let jpegData = resizedImage.jpegData(compressionQuality: 0.85) {
-                return (jpegData, "image/jpeg")
-            }
-            return (imageData, "image/jpeg")
-        #elseif os(macOS)
-            guard let image = NSImage(data: imageData) else {
-                return (imageData, "image/jpeg")
-            }
-            let originalSize = image.size
-            let longestSide = max(originalSize.width, originalSize.height)
-            guard longestSide > maxDim else {
-                // No downscaling needed; still re-encode as JPEG
-                let rep = NSBitmapImageRep(data: imageData)
-                if let jpegData = rep?.representation(
-                    using: .jpeg, properties: [.compressionFactor: 0.85]
-                ) {
-                    return (jpegData, "image/jpeg")
-                }
-                return (imageData, "image/jpeg")
-            }
-            let scale = maxDim / longestSide
-            let newSize = CGSize(
-                width: (originalSize.width * scale).rounded(),
-                height: (originalSize.height * scale).rounded()
-            )
-            guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
-                return (imageData, "image/jpeg")
-            }
-            let newRep = NSBitmapImageRep(
-                bitmapDataPlanes: nil,
-                pixelsWide: Int(newSize.width),
-                pixelsHigh: Int(newSize.height),
-                bitsPerSample: 8,
-                samplesPerPixel: 4,
-                hasAlpha: true,
-                isPlanar: false,
-                colorSpaceName: .deviceRGB,
-                bytesPerRow: 0,
-                bitsPerPixel: 0
-            )
-            guard let rep = newRep else {
-                return (imageData, "image/jpeg")
-            }
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-            let srcRect = CGRect(origin: .zero, size: originalSize)
-            let destRect = CGRect(origin: .zero, size: newSize)
-            NSGraphicsContext.current?.cgContext.draw(cgImage, in: destRect)
-            _ = srcRect  // suppress unused warning
-            NSGraphicsContext.restoreGraphicsState()
-            if let jpegData = rep.representation(
-                using: .jpeg, properties: [.compressionFactor: 0.85]
-            ) {
-                return (jpegData, "image/jpeg")
-            }
-            return (imageData, "image/jpeg")
-        #endif
-    }
-
-    var selectedText: String {
-        guard
-            let content = openNote?.content,
-            !content.isEmpty,
-            let raw = position.selections.first
-        else { return "" }
-
-        let ns = content as NSString
-        let clamped = clamp(raw, toLength: ns.length)
-        return ns.substring(with: clamped)
-    }
-
-    var textIsSelected: Bool {
-        return selectedText.isEmpty == false
-    }
-
-    @MainActor
-    func assistantSelectionReplacement(_ replacement: String) {
-        guard let note = openNote else { return }
-        guard let nsRange = position.selections.first else { return }
-        guard let swiftRange = Range(nsRange, in: note.content) else { return }
-
-        var s = note.content
-        s.replaceSubrange(swiftRange, with: replacement)
-        note.setContent(s)
-
-        // place caret after the inserted text
-        let newLoc = nsRange.location + (replacement as NSString).length
-        position.selections = [NSRange(location: newLoc, length: 0)]
-    }
-
-    fileprivate func setShowBacklinks() {
-        if let on = openNote {
-            openNoteHasBacklinks = NoteLinkManager(
-                modelContext: modelContext
-            ).notesLinkToDestination(on)
-        }
-    }
-
     var body: some View {
         if let note = openNote {
-            @Bindable var formatter = magicFormatter
+            @Bindable var note = note
+            @Bindable var editorActions = editorActions
+            @Bindable var formatter = editorActions.magicFormatter
             ZStack {
-                if !showPreview {
+                if !editorActions.showPreview {
                     GeometryReader { geometry in
 
                         CodeEditor(
-                            text: Binding(
-                                get: { note.content },
-                                set: {
-                                    // Direct assignment intentional: setContent() triggers WidgetCenter.reloadAllTimelines()
-                                    // on every call, which would be excessive per-keystroke. Widget reload and summary
-                                    // generation happen on note deselection in NoteList.onChange instead.
-                                    openNote?.content = $0
-                                    openNote?.updatedDate = Date()
-                                }
-                            ),
-                            position: $position,
-                            messages: $messages,
+                            text: $note.editorContent,
+                            position: $editorActions.position,
+                            messages: $editorActions.messages,
                             language: .markdown()
                         )
                         #if os(macOS)
                             .onExitCommand(perform: {
                                 withAnimation {
-                                    showPreview.toggle()
+                                    editorActions.showPreview.toggle()
                                 }
                             })
                         #endif
                         #if os(iOS)
                             .modifier(EditorCard())
                         #endif
-                        .disabled(magicFormatter.formatterIsBusy)
+                        .disabled(editorActions.magicFormatter.formatterIsBusy)
                         .frame(height: geometry.size.height)
                         .focused($isInputActive)
                         .environment(
@@ -412,7 +439,7 @@ struct NoteEditor: View {
                         )
                     }
                 }
-                if showPreview {
+                if editorActions.showPreview {
                     GeometryReader { geometry in
 
                         ScrollView {
@@ -440,21 +467,22 @@ struct NoteEditor: View {
                         }
                         #if os(macOS)
                             .onExitCommand(perform: {
-                                showPreview.toggle()
+                                editorActions.showPreview.toggle()
                             })
                         #endif
                         .onTapGesture {
                             withAnimation {
-                                togglePreview()
+                                editorActions.togglePreview()
                             }
                         }
                     }
                 }
 
             }
-            .dropDestination(for: Data.self) { items, _ in
-                guard !showPreview else { return false }
-                var inserted = false
+            .dropDestination(
+                for: Data.self,
+                isEnabled: !editorActions.showPreview
+            ) { items, _ in
                 for item in items {
                     // Validate that the dropped data is image data before inserting
                     #if os(iOS) || os(visionOS)
@@ -462,32 +490,32 @@ struct NoteEditor: View {
                     #elseif os(macOS)
                         guard NSImage(data: item) != nil else { continue }
                     #endif
-                    insertImage(data: item)
-                    inserted = true
+                    editorActions.insertImage(data: item)
                 }
-                return inserted
             }
-            .onChange(of: openNote?.id) { _, _ in
-                showPreview = true
-                setShowBacklinks()
+            .task(id: openNote?.persistentModelID) {
+                editorActions.showPreview = true
+                editorActions.update(openNote: openNote, modelContext: modelContext)
             }
-            .onChange(of: selectedPhotoItem) { _, newItem in
-                guard let item = newItem else { return }
-                Task {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        await MainActor.run {
-                            insertImage(data: data)
-                        }
+            .onChange(of: editorActions.showPreview) { _, newValue in
+                isInputActive = !newValue
+            }
+            .task(id: selectedPhotoItem) {
+                guard let item = selectedPhotoItem else { return }
+                do {
+                    if let data = try await item.loadTransferable(type: Data.self) {
+                        guard !Task.isCancelled else { return }
+                        editorActions.insertImage(data: data)
                     }
-                    await MainActor.run {
-                        selectedPhotoItem = nil
-                    }
+                } catch is CancellationError {
+                    return
+                } catch {
+                    Self.logger.error("Failed to load selected photo data: \(error.localizedDescription)")
                 }
+                guard !Task.isCancelled else { return }
+                selectedPhotoItem = nil
             }
 
-            .onAppear {
-                setShowBacklinks()
-            }
             #if os(iOS)
                 .alert("Nothing to paste", isPresented: $showNothingToPasteAlert) {
                     Button("OK", role: .cancel) {}
@@ -498,27 +526,30 @@ struct NoteEditor: View {
                     AIMessage(message: "Magic Format", font: .largeTitle)
                         .padding()
                     Button("Cancel", role: .cancel) {
-                        magicFormatter.cancel()
+                        editorActions.cancelMagicFormat()
                     }
                     .padding()
                 }
             }
+            .onDisappear {
+                editorActions.cancelMagicFormat()
+                editorActions.cancelSummaryGeneration()
+            }
 
             .alert(
-                magicFormatterErrorMessage,
-                isPresented: $magicFormatterErrorIsPresented
+                "Magic Format Failed",
+                item: $editorActions.magicFormatterErrorMessage
             ) {
-
-                Button("OK") {
-                    magicFormatterErrorIsPresented = false
-                }
+                _ in Button("OK", role: .cancel) {}
+            } message: { message in
+                Text(message)
             }
             #if os(iOS)
                 .safeAreaInset(edge: .bottom) {
-                    if isInputActive && !showPreview
+                    if isInputActive && !editorActions.showPreview
                         && !hardwareKeyboardConnected
                     {
-                        MarkdownShortcutBar(insert: insertAtCaret)
+                        MarkdownShortcutBar(insert: editorActions.insertAtCaret)
                         .transition(
                             .move(edge: .bottom).combined(
                                 with: .opacity
@@ -528,7 +559,7 @@ struct NoteEditor: View {
                 }
                 .safeAreaPadding(
                     .bottom,
-                    (isInputActive && !showPreview) ? 8 : 0
+                    (isInputActive && !editorActions.showPreview) ? 8 : 0
                 )
             #endif
             .toolbar {
@@ -536,18 +567,19 @@ struct NoteEditor: View {
                 ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
                         withAnimation {
-                            togglePreview()
+                            editorActions.togglePreview()
                         }
                     }) {
                         Image(
-                            systemName: showPreview
+                            systemName: editorActions.showPreview
                                 ? "eye.slash"
                                 : "eye"
                         )
                     }
-                    .help(showPreview ? "Hide Preview" : "Show Preview")
+                    .help(editorActions.showPreview ? "Hide Preview" : "Show Preview")
 
                 }
+                .visibilityPriority(.high)
 
                 ToolbarItem(placement: toolbarPosition) {
                     PhotosPicker(
@@ -556,9 +588,10 @@ struct NoteEditor: View {
                     ) {
                         Image(systemName: "photo.badge.plus")
                     }
-                    .disabled(showPreview)
+                    .disabled(editorActions.showPreview)
                     .help("Insert Photo")
                 }
+                .visibilityPriority(.low)
 
                 #if os(iOS)
                     ToolbarItem(placement: toolbarPosition) {
@@ -567,15 +600,16 @@ struct NoteEditor: View {
                         }) {
                             Image(systemName: "doc.on.clipboard")
                         }
-                        .disabled(showPreview)
+                        .disabled(editorActions.showPreview)
                         .help("Paste")
                     }
+                    .visibilityPriority(.low)
                 #endif
 
-                if openNoteHasBacklinks {
+                if editorActions.openNoteHasBacklinks {
                     ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
-                            showBackLinks.toggle()
+                            editorActions.showBackLinks.toggle()
                         }) {
                             Image(
                                 systemName: "link"
@@ -583,35 +617,37 @@ struct NoteEditor: View {
                         }
                         .help("Backlinks")
                         .popover(
-                            isPresented: $showBackLinks,
+                            isPresented: $editorActions.showBackLinks,
                             attachmentAnchor: .point(.center),
                             arrowEdge: .bottom
                         ) {
                             BackLinks()
                         }
                     }
+                    .visibilityPriority(.low)
                 }
 
-                if magicFormatter.isAvailable {
+                if editorActions.magicFormatter.isAvailable {
                     ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
-                            doMagicFormat()
+                            editorActions.doMagicFormat()
                         }) {
                             Image(
                                 systemName: "wand.and.sparkles"
                             )
                         }
-                        .disabled(magicFormatter.formatterIsBusy)
+                        .disabled(editorActions.magicFormatter.formatterIsBusy)
                         .help("Magic Format")
                     }
+                    .visibilityPriority(.high)
 
                 }
 
-                if textIsSelected {
+                if editorActions.textIsSelected {
 
                     ToolbarItem(placement: toolbarPosition) {
                         Button(action: {
-                            isAssistantPopoverPresented.toggle()
+                            editorActions.isAssistantPopoverPresented.toggle()
                         }) {
                             Image(
                                 systemName: "apple.intelligence"
@@ -619,16 +655,16 @@ struct NoteEditor: View {
                         }
                         .help("Magic Assistant")
                         .adaptivePopover(
-                            isPresented: $isAssistantPopoverPresented,
+                            isPresented: $editorActions.isAssistantPopoverPresented,
                             attachmentAnchor: .point(.center),
                             arrowEdge: .bottom
                         ) {
                             ChatWindow(
-                                context: selectedText,
+                                context: editorActions.selectedText,
                                 instructions: MAGIC_ASSISTANT_PROMPT,
                                 searchEnabled: false,
                                 onBotMessageClick:
-                                    assistantSelectionReplacement,
+                                    editorActions.assistantSelectionReplacement,
                                 toolbarVisible: false,
                                 useHistory: false,
                                 windowTitleText: "Magic Assistant",
@@ -640,21 +676,11 @@ struct NoteEditor: View {
                         }
 
                     }
+                    .visibilityPriority(.high)
                 }
 
             }
-            .focusedSceneValue(\.togglePreview, togglePreview)
-            .focusedSceneValue(\.doMagicFormat, doMagicFormat)
-            .focusedSceneValue(\.textIsSelected, textIsSelected)
-            .focusedSceneValue(\.showAssistantPopover, showAssistantPopover)
-            .focusedSceneValue(\.openNoteHasBacklinks, openNoteHasBacklinks)
-            .focusedSceneValue(\.showBacklinks, showBacklinks)
-            #if os(macOS)
-            .focusedSceneValue(\.pasteImage, {
-                guard !self.showPreview else { return false }
-                return self.pasteImageFromMacOSClipboard()
-            })
-            #endif
+            .focusedSceneValue(\.noteEditorActions, editorActions)
 
         } else {
             VStack {

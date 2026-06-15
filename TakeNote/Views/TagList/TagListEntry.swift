@@ -8,46 +8,59 @@
 import SwiftData
 import SwiftUI
 
-internal struct TagListEntry: View {
-    var tag: NoteContainer
+struct TagListEntry: View {
+    let tag: NoteContainer
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var takeNoteVM
     @State private var inDeleteMode: Bool = false
 
-    @Environment(\.containerRenameRegistry) var containerRenameRegistry
-    @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
-    @Environment(\.tagSetColorRegistry) var tagSetColorRegistry
+    @Environment(\.containerRenameRegistry) private var containerRenameRegistry
+    @Environment(\.containerDeleteRegistry) private var containerDeleteRegistry
+    @Environment(\.tagSetColorRegistry) private var tagSetColorRegistry
 
     @State private var inRenameMode: Bool = false
     @State private var newTagName: String = ""
     @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
-    func startDelete() {
+    private func startDelete() {
         inDeleteMode = true
     }
 
-    func deleteTag() {
+    private func deleteTag() {
+        let tagID = tag.persistentModelID
         modelContext.delete(tag)
-        containerDeleteRegistry.unregisterCommand(id: tag.id)
-        containerRenameRegistry.unregisterCommand(id: tag.id)
-        try? modelContext.save()
-        takeNoteVM.onTagDelete(tag)
+        containerDeleteRegistry?.unregisterCommand(id: tagID)
+        containerRenameRegistry?.unregisterCommand(id: tagID)
+        if saveChanges() {
+            takeNoteVM.onTagDelete(tag)
+        }
     }
 
-    func startRename() {
+    private func startRename() {
         inRenameMode = true
         nameInputFocused = true
         newTagName = tag.name
     }
 
-    func finishRename() {
+    private func finishRename() {
         inRenameMode = false
         tag.name = newTagName
-        try? modelContext.save()
+        saveChanges()
     }
 
-    func dropNoteToTag(_ wrappedIDs: [NoteIDWrapper]) {
+    @discardableResult
+    private func saveChanges() -> Bool {
+        do {
+            try modelContext.save()
+            return true
+        } catch {
+            takeNoteVM.presentError(error.localizedDescription)
+            return false
+        }
+    }
+
+    private func dropNoteToTag(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
             // Find the note we're going to move by ID
@@ -60,6 +73,7 @@ internal struct TagListEntry: View {
         do {
             try modelContext.save()
         } catch {
+            takeNoteVM.presentError(error.localizedDescription)
             return
         }
     }
@@ -78,15 +92,17 @@ internal struct TagListEntry: View {
                         }
                     }
             } else {
-                Image(systemName: "tag.fill")
-                    .foregroundStyle(tag.getColor())
+                SidebarContainerIcon(
+                    systemName: "tag.fill",
+                    color: tag.getColor()
+                )
                 Text(tag.name)
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .foregroundStyle(.primary)
                 Spacer()
                 HStack {
-                    Text("\(tag.notes.count)")
+                    Text(tag.notes.count, format: .number)
                         .foregroundStyle(.secondary)
                     Image(systemName: "note.text")
                         .foregroundStyle(.secondary)
@@ -94,30 +110,30 @@ internal struct TagListEntry: View {
             }
         }
         .onAppear {
-            containerDeleteRegistry.registerCommand(
-                id: tag.id,
+            containerDeleteRegistry?.registerCommand(
+                id: tag.persistentModelID,
                 command: startDelete
             )
-            containerRenameRegistry.registerCommand(
-                id: tag.id,
+            containerRenameRegistry?.registerCommand(
+                id: tag.persistentModelID,
                 command: startRename
             )
-            tagSetColorRegistry.registerCommand(
-                id: tag.id,
+            tagSetColorRegistry?.registerCommand(
+                id: tag.persistentModelID,
                 command: {
                     showEditDetailsPopover = true
                 }
             )
         }
         .onDisappear {
-            containerDeleteRegistry.unregisterCommand(
-                id: tag.id
+            containerDeleteRegistry?.unregisterCommand(
+                id: tag.persistentModelID
             )
-            containerRenameRegistry.unregisterCommand(
-                id: tag.id
+            containerRenameRegistry?.unregisterCommand(
+                id: tag.persistentModelID
             )
-            tagSetColorRegistry.unregisterCommand(
-                id: tag.id
+            tagSetColorRegistry?.unregisterCommand(
+                id: tag.persistentModelID
             )
         }
         #if os(iOS)
@@ -144,7 +160,6 @@ internal struct TagListEntry: View {
                 noteContainer: tag
             )
         }
-        .contentShape(Rectangle())
         .padding(.vertical, 2)
         .dropDestination(for: NoteIDWrapper.self, isEnabled: true) {
             wrappedIDs,
@@ -152,7 +167,7 @@ internal struct TagListEntry: View {
             dropNoteToTag(wrappedIDs)
         }
         .alert(
-            "Are you sure you want to delete \(tag.name)?",
+            "Delete Tag?",
             isPresented: $inDeleteMode
         ) {
             Button("Delete", role: .destructive) {
@@ -161,6 +176,11 @@ internal struct TagListEntry: View {
             Button("Cancel", role: .cancel) {
                 inDeleteMode = false
             }
+        } message: {
+            Text(
+                "Delete \(tag.name)?",
+                comment: "Tag deletion confirmation message; the variable is the tag name."
+            )
         }
         .contextMenu {
             Button(action: startRename) {

@@ -4,9 +4,9 @@
 //
 //  Created by Adam Drew on 9/6/25.
 //
-import SwiftUI
+import Foundation
 
 var chatFeatureFlagEnabled: Bool {
-    return Bundle.main.object(forInfoDictionaryKey: "MagicChatEnabled") as? Bool
+    Bundle.main.object(forInfoDictionaryKey: "MagicChatEnabled") as? Bool
         ?? false
 }

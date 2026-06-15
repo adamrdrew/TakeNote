@@ -13,17 +13,20 @@ struct ContextBubble: View {
     var body: some View {
         HStack {
             Spacer(minLength: 40)
-            bubble
+            ContextBubbleContent(text: text)
                 .frame(maxWidth: 520, alignment: .center)
             Spacer(minLength: 40)
         }
     }
+}
 
-    private var bubble: some View {
+private struct ContextBubbleContent: View {
+    let text: String
+
+    var body: some View {
         Label(text, systemImage: "apple.intelligence")
             .fontDesign(.monospaced)
             .padding()
-            //.border(Color.primary.opacity(0.25), width: 2)
             .textSelection(.enabled)
             .font(.body)
             .overlay(

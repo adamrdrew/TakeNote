@@ -11,10 +11,11 @@ import SwiftUI
 
 struct NoteContainerDetailsEditor: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(TakeNoteVM.self) private var takeNoteVM
 
     @State private var newTagColor: Color = .takeNotePink
     @Binding var showColorPopover: Bool
-    @State var noteContainer: NoteContainer
+    let noteContainer: NoteContainer
     @State private var newSymbol: String = "folder"
     @State private var newName: String = ""
     @State private var isPresented = false
@@ -98,8 +99,12 @@ struct NoteContainerDetailsEditor: View {
                     noteContainer.setColor(newTagColor)
                     noteContainer.name = newName
                     noteContainer.symbol = newSymbol
-                    try? modelContext.save()
-                    showColorPopover = false
+                    do {
+                        try modelContext.save()
+                        showColorPopover = false
+                    } catch {
+                        takeNoteVM.presentError(error.localizedDescription)
+                    }
                 }
                 .keyboardShortcut(.defaultAction)
                 .labelStyle(.titleAndIcon)
@@ -119,10 +124,10 @@ struct NoteContainerDetailsEditor: View {
             .ultraThinMaterial,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)
         )
-        .overlay(
+        .overlay {
             RoundedRectangle(cornerRadius: 20, style: .continuous)
                 .strokeBorder(.separator.opacity(0.35))
-        )
+        }
         #if os(macOS)
             .controlSize(.large)
         #endif
@@ -131,47 +136,5 @@ struct NoteContainerDetailsEditor: View {
             newTagColor = noteContainer.getColor()
             newName = noteContainer.name
         }
-    }
-}
-
-// MARK: - Decorative container (mirrors the one used in NoteSortPopover)
-private struct LabeledContainer<Content: View>: View {
-    let title: String
-    let subtitle: String
-    @ViewBuilder let content: Content
-
-    init(
-        title: String,
-        subtitle: String = "",
-        @ViewBuilder content: () -> Content
-    ) {
-        self.title = title
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(LocalizedStringKey(title))
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                if !subtitle.isEmpty {
-                    Text(LocalizedStringKey(subtitle))
-                        .font(.caption)
-                        .foregroundStyle(.tertiary)
-                }
-            }
-            content
-        }
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(.thinMaterial)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(.separator.opacity(0.25))
-        )
     }
 }

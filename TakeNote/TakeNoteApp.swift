@@ -15,6 +15,32 @@ private let onboardingVersionKey = "onboarding.version.seen"
     private let ckBootstrapVersionKey = "takenote.ck.bootstrap.version"
 #endif
 
+private enum AppStartupError: LocalizedError {
+    case applicationSupportDirectory(String)
+    case debugStoreDirectory(String)
+    case modelContainer(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .applicationSupportDirectory(let message):
+            String(
+                localized: "TakeNote could not resolve the Application Support directory: \(message)",
+                comment: "Startup error; the variable is the underlying system error message."
+            )
+        case .debugStoreDirectory(let message):
+            String(
+                localized: "TakeNote could not create its debug store directory: \(message)",
+                comment: "Startup error in debug builds; the variable is the underlying system error message."
+            )
+        case .modelContainer(let message):
+            String(
+                localized: "TakeNote could not initialize its database: \(message)",
+                comment: "Startup error; the variable is the underlying database initialization error message."
+            )
+        }
+    }
+}
+
 @main
 struct TakeNoteApp: App {
     @Environment(\.scenePhase) private var scenePhase
@@ -24,7 +50,8 @@ struct TakeNoteApp: App {
     private var reconcilerHarness: AppBootstrapper.ReconcilerHarness?
     var takeNoteVM = TakeNoteVM()
 
-    let container: ModelContainer
+    let container: ModelContainer?
+    private let startupError: AppStartupError?
     private let search = SearchIndexService()
     private let logger = Logger(
         subsystem: "com.adamdrew.takenote",
@@ -32,147 +59,151 @@ struct TakeNoteApp: App {
     )
 
     private func startActiveRefreshLoop(ctx: ModelContext) {
-        // cancel previous loop if any
-        refreshTask?.cancel()
+        stopActiveRefreshLoop()
         refreshTask = Task { @MainActor in
-            // iOS will suspend timers when the app is backgrounded; this only runs while active
             while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 10 * 60 * 1_000_000_000) // 10 min
+                do {
+                    try await Task.sleep(for: .seconds(10 * 60))
+                } catch {
+                    return
+                }
                 SnapshotController.takeSnapshot(modelContext: ctx)
             }
         }
     }
+
+    private func stopActiveRefreshLoop() {
+        refreshTask?.cancel()
+        refreshTask = nil
+    }
     
-    static func debugStoreURL() -> URL {
-        let base = try! FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        )
+    static func debugStoreURL() throws -> URL {
+        let base: URL
+        do {
+            base = try FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            )
+        } catch {
+            throw AppStartupError.applicationSupportDirectory(error.localizedDescription)
+        }
         let dir = base.appendingPathComponent("TakeNoteDev", isDirectory: true)
-        try? FileManager.default.createDirectory(
-            at: dir,
-            withIntermediateDirectories: true
-        )
+        do {
+            try FileManager.default.createDirectory(
+                at: dir,
+                withIntermediateDirectories: true
+            )
+        } catch {
+            throw AppStartupError.debugStoreDirectory(error.localizedDescription)
+        }
         return dir.appendingPathComponent("TakeNote.sqlite")
     }
 
     init() {
-
-        // 1) Config (dev/prod)
-        let config = AppBootstrapper.makeModelConfiguration(
-            debugStoreURL: Self.debugStoreURL()
-        )
-
-        // 2) DEBUG-only: initialize CloudKit Dev schema if needed
-        #if DEBUG
-            let tempBootstrapURL = FileManager.default.temporaryDirectory
-                .appendingPathComponent(
-                    "CKBootstrap-\(UUID().uuidString).sqlite"
-                )
-            AppBootstrapper.bootstrapDevSchemaIfNeeded(
-                modelTypes: [Note.self, NoteContainer.self, NoteLink.self, NoteImage.self],
-                storeURL: tempBootstrapURL,
-                containerID: "iCloud.com.adamdrew.takenote",
-                userDefaultsKey: ckBootstrapVersionKey,
-                currentVersion: ckBootstrapVersionCurrent,
-                logger: logger
-            )
-        #endif
-
-        // 3) Real SwiftData container
         do {
-            container = try ModelContainer(
+            let config = try AppBootstrapper.makeModelConfiguration(
+                debugStoreURL: try Self.debugStoreURL()
+            )
+
+            #if DEBUG
+                let tempBootstrapURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(
+                        "CKBootstrap-\(UUID().uuidString).sqlite"
+                    )
+                AppBootstrapper.bootstrapDevSchemaIfNeeded(
+                    modelTypes: [Note.self, NoteContainer.self, NoteLink.self, NoteImage.self],
+                    storeURL: tempBootstrapURL,
+                    containerID: "iCloud.com.adamdrew.takenote",
+                    userDefaultsKey: ckBootstrapVersionKey,
+                    currentVersion: ckBootstrapVersionCurrent,
+                    logger: logger
+                )
+            #endif
+
+            let modelContainer = try ModelContainer(
                 for: Note.self,
                 NoteContainer.self,
                 NoteLink.self,
                 NoteImage.self,
                 configurations: config
             )
+
+            container = modelContainer
+            startupError = nil
+
+            let viewModel = takeNoteVM
+
+            let asyncModelContainerDep: @Sendable () async -> ModelContainer = {
+                @MainActor in
+                return modelContainer
+            }
+            AppDependencyManager.shared.add(
+                key: "ModelContainer",
+                dependency: asyncModelContainerDep
+            )
+            let asyncViewModelDep: @Sendable () async -> TakeNoteVM = {
+                @MainActor in
+                return viewModel
+            }
+            AppDependencyManager.shared.add(
+                key: "TakeNoteVM",
+                dependency: asyncViewModelDep
+            )
+
+            reconcilerHarness = AppBootstrapper.installReconciler(
+                container: modelContainer,
+                vm: takeNoteVM,
+                runOnStartup: true,
+                listenForLocalSaves: true,
+                searchIndexService: search
+            )
         } catch {
-            fatalError("Failed to initialize ModelContainer: \(error)")
+            container = nil
+            if let startupError = error as? AppStartupError {
+                self.startupError = startupError
+            } else {
+                startupError = .modelContainer(error.localizedDescription)
+            }
+            logger.critical("TakeNote startup failed: \(error.localizedDescription)")
         }
-
-        // Capture values in locals to avoid capturing `self` in escaping closures
-        let modelContainer = container
-        let viewModel = takeNoteVM
-
-        // Got this from here: https://www.malcolmhall.com/2024/07/22/how-to-use-swiftdata-with-appintents/
-        let asyncModelContainerDep: @Sendable () async -> ModelContainer = {
-            @MainActor in
-            return modelContainer
-        }
-        AppDependencyManager.shared.add(
-            key: "ModelContainer",
-            dependency: asyncModelContainerDep
-        )
-        let asyncViewModelDep: @Sendable () async -> TakeNoteVM = {
-            @MainActor in
-            return viewModel
-        }
-        AppDependencyManager.shared.add(
-            key: "TakeNoteVM",
-            dependency: asyncViewModelDep
-        )
-
-        // 4) Reconciler + observers (remote changes only by default)
-
-        reconcilerHarness = AppBootstrapper.installReconciler(
-            container: container,
-            vm: takeNoteVM,
-            runOnStartup: true,
-            listenForLocalSaves: true,
-            searchIndexService: search
-        )
-
     }
 
-    private var MainAppWindow: some View {
-        MainWindow()
-            #if os(macOS)
-            .frame(minWidth: 960, minHeight: 600)
-            #endif
-            .sheet(isPresented: $showOnboarding) {
-                WelcomeView {
-                    onboardingVersionSeen = onboardingVersionCurrent
-                    #if DEBUG
-                        onboardingVersionSeen = 0
-                    #endif
-                    showOnboarding = false
-                }
-            }
-            .task {
-                showOnboarding =
-                    onboardingVersionSeen < onboardingVersionCurrent
-            }
-
-            .focusedSceneValue(takeNoteVM)
-            .focusedSceneValue(search)
-            .environment(takeNoteVM)
-            .environment(search)
-    }
-
-    /// We need this helper and MainAppWindow because we want Window on macOS and WindowGroup everywhere else,
-    /// because other platforms don't support Window. If we use WindowGroup on macOS we get all kinds of undesired effects.
-    /// So we kind of have to jump through hoops to get the per-platform setup we want without duplication
-    private var MainSceneCore: some Scene {
+    /// Uses a single app scene definition while preserving macOS's single-window behavior.
+    private var mainSceneCore: some Scene {
         #if os(macOS)
             Window("TakeNote", id: "main-window") {
-                MainAppWindow
+                MainAppWindowContent(
+                    container: container,
+                    startupError: startupError,
+                    showOnboarding: $showOnboarding,
+                    onboardingVersionSeen: $onboardingVersionSeen,
+                    takeNoteVM: takeNoteVM,
+                    search: search,
+                    onboardingVersionCurrent: onboardingVersionCurrent
+                )
             }
 
             .windowToolbarStyle(.automatic)
             .windowResizability(.contentMinSize)
         #else
             WindowGroup(id: "main-window") {
-                MainAppWindow
+                MainAppWindowContent(
+                    container: container,
+                    startupError: startupError,
+                    showOnboarding: $showOnboarding,
+                    onboardingVersionSeen: $onboardingVersionSeen,
+                    takeNoteVM: takeNoteVM,
+                    search: search,
+                    onboardingVersionCurrent: onboardingVersionCurrent
+                )
             }
         #endif
     }
 
     var body: some Scene {
-        MainSceneCore
+        mainSceneCore
             .commands {
                 CommandGroup(replacing: .newItem) { EmptyView() }
                 FileCommands()
@@ -180,27 +211,21 @@ struct TakeNoteApp: App {
                 WindowCommands()
                 ViewCommands()
             }
-            .modelContainer(container)
             .onChange(of: scenePhase) { _, newPhase in
-                Task { @MainActor in
-                    let ctx = ModelContext(container)
-                    switch newPhase {
-                    case .active:
-                        // write at launch/foreground
-                        SnapshotController.takeSnapshot(modelContext: ctx)
-                        // kick off a lightweight refresh loop while active
-                        startActiveRefreshLoop(ctx: ctx)
-                    case .inactive, .background:
-                        // write a final snapshot on background
-                        SnapshotController.takeSnapshot(modelContext: ctx)
-                        // reindex the currently open note so mid-edit changes are captured
-                        if let openNote = takeNoteVM.openNote {
-                            search.reindex(note: openNote)
-                        }
-                    // loop auto-cancels when scene goes inactive/background
-                    @unknown default:
-                        break
+                guard let container else { return }
+                let ctx = ModelContext(container)
+                switch newPhase {
+                case .active:
+                    SnapshotController.takeSnapshot(modelContext: ctx)
+                    startActiveRefreshLoop(ctx: ctx)
+                case .inactive, .background:
+                    stopActiveRefreshLoop()
+                    SnapshotController.takeSnapshot(modelContext: ctx)
+                    if let openNote = takeNoteVM.openNote {
+                        search.reindex(note: openNote)
                     }
+                @unknown default:
+                    break
                 }
             }
             .handlesExternalEvents(
@@ -209,23 +234,86 @@ struct TakeNoteApp: App {
 
         WindowGroup(id: "note-editor-window", for: NoteIDWrapper.self) {
             noteID in
-            NoteEditorWindow(noteID: noteID)
-                .environment(search)
-                .environment(TakeNoteVM())  // intentional per your comment
-        }
-        .modelContainer(container)
-
-        WindowGroup("TakeNote - Magic Chat", id: "chat-window") {
-            if chatFeatureFlagEnabled {
-                ChatWindow()
+            if let container {
+                NoteEditorWindow(noteID: noteID)
                     .environment(search)
-                    .environment(TakeNoteVM())  // intentional
+                    .environment(TakeNoteVM())
+                    .modelContainer(container)
             } else {
-                Text(
-                    "You shouldn't be seeing this. Please report the bug to adamrdrew@live.com"
-                )
+                StartupFailureView(error: startupError)
             }
         }
-        .modelContainer(container)
+
+        WindowGroup("TakeNote - Magic Chat", id: "chat-window") {
+            if let container {
+                if chatFeatureFlagEnabled {
+                    ChatWindow()
+                        .environment(search)
+                        .environment(TakeNoteVM())
+                        .modelContainer(container)
+                } else {
+                    Text(
+                        "You shouldn't be seeing this. Please report the bug to adamrdrew@live.com"
+                    )
+                    .modelContainer(container)
+                }
+            } else {
+                StartupFailureView(error: startupError)
+            }
+        }
+    }
+}
+
+private struct StartupFailureView: View {
+    let error: AppStartupError?
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("TakeNote Could Not Start", systemImage: "exclamationmark.triangle")
+        } description: {
+            Text(error?.localizedDescription ?? String(localized: "An unknown startup error occurred."))
+        }
+        #if os(macOS)
+        .frame(minWidth: 520, minHeight: 320)
+        #endif
+    }
+}
+
+private struct MainAppWindowContent: View {
+    let container: ModelContainer?
+    let startupError: AppStartupError?
+    @Binding var showOnboarding: Bool
+    @Binding var onboardingVersionSeen: Int
+    let takeNoteVM: TakeNoteVM
+    let search: SearchIndexService
+    let onboardingVersionCurrent: Int
+
+    var body: some View {
+        if let container {
+            MainWindow()
+                #if os(macOS)
+                .frame(minWidth: 960, minHeight: 600)
+                #endif
+                .sheet(isPresented: $showOnboarding) {
+                    WelcomeView {
+                        onboardingVersionSeen = onboardingVersionCurrent
+                        #if DEBUG
+                            onboardingVersionSeen = 0
+                        #endif
+                        showOnboarding = false
+                    }
+                }
+                .task {
+                    showOnboarding =
+                        onboardingVersionSeen < onboardingVersionCurrent
+                }
+                .focusedSceneValue(takeNoteVM)
+                .focusedSceneValue(search)
+                .environment(takeNoteVM)
+                .environment(search)
+                .modelContainer(container)
+        } else {
+            StartupFailureView(error: startupError)
+        }
     }
 }

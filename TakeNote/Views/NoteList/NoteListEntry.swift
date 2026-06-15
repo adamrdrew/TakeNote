@@ -7,6 +7,7 @@
 
 import SwiftData
 import SwiftUI
+import UniformTypeIdentifiers
 
 #if os(macOS)
     import AppKit
@@ -16,11 +17,11 @@ import SwiftUI
 #endif
 
 struct MovePopoverContent: View {
-    @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @State private var selectedContainer: NoteContainer?
 
-    var note: Note
-    var onSelect: () -> Void
+    let note: Note
+    let onSelect: () -> Void
 
     var body: some View {
         List(selection: $selectedContainer) {
@@ -58,7 +59,8 @@ struct MovePopoverContent: View {
 struct NoteListEntry: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.openWindow) private var openWindow
-    @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(TakeNoteVM.self) private var takeNoteVM
 
     @Environment(\.noteDeleteRegistry) private var noteDeleteRegistry
     @Environment(\.noteCopyMarkdownLinkRegistry) private
@@ -69,13 +71,14 @@ struct NoteListEntry: View {
         var noteOpenEditorWindowRegistry
     @Environment(SearchIndexService.self) private var search
 
-    var note: Note
+    let note: Note
     @State private var inRenameMode: Bool = false
     @State private var notePendingTrash: Note?
     @State private var inMoveToContainerMode: Bool = false
     @State private var newName: String = ""
     @State private var showExportDialog: Bool = false
     @State private var exportError: String? = nil
+    @State private var summaryTask: Task<Void, Never>?
     @FocusState private var nameInputFocused: Bool
 
     private let verticalPadding: CGFloat = 8
@@ -83,7 +86,11 @@ struct NoteListEntry: View {
     private let hSpacing: CGFloat = 8
     private let vSpacing: CGFloat = 6
 
-    func copyMarkdownLink() {
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private func copyMarkdownLink() {
         #if os(macOS)
             let pasteboard = NSPasteboard.general
             pasteboard.clearContents()
@@ -95,75 +102,91 @@ struct NoteListEntry: View {
         #endif
     }
 
-    func openEditorWindow() {
+    private func openEditorWindow() {
         openWindow(
             id: "note-editor-window",
             value: NoteIDWrapper(id: note.persistentModelID)
         )
     }
 
-    func moveToTrash() {
+    private func unregisterNoteCommands(for note: Note) {
+        noteDeleteRegistry?.unregisterCommand(id: note.persistentModelID)
+        noteRenameRegistry?.unregisterCommand(id: note.persistentModelID)
+        noteStarToggleRegistry?.unregisterCommand(id: note.persistentModelID)
+        noteCopyMarkdownLinkRegistry?.unregisterCommand(id: note.persistentModelID)
+        noteOpenEditorWindowRegistry?.unregisterCommand(id: note.persistentModelID)
+    }
+
+    private func moveToTrash() {
         if takeNoteVM.selectedNotes.isEmpty == false {
             moveSelectedNotesToTrash()
             return
         }
         takeNoteVM.moveNoteToTrash(note, modelContext: modelContext)
         search.deleteFromIndex(noteID: note.uuid)
-        noteDeleteRegistry.unregisterCommand(id: note.id)
-        noteRenameRegistry.unregisterCommand(id: note.id)
+        unregisterNoteCommands(for: note)
         if takeNoteVM.openNote == note {
             takeNoteVM.openNote = nil
         }
     }
 
-    func moveSelectedNotesToTrash() {
+    private func moveSelectedNotesToTrash() {
         for sn in takeNoteVM.selectedNotes {
             takeNoteVM.moveNoteToTrash(sn, modelContext: modelContext)
             search.deleteFromIndex(noteID: sn.uuid)
-            if sn.id == note.id {
-                noteDeleteRegistry.unregisterCommand(id: note.id)
-                noteRenameRegistry.unregisterCommand(id: note.id)
-            }
-            if sn.id == takeNoteVM.openNote?.id {
+            unregisterNoteCommands(for: sn)
+            if sn.persistentModelID == takeNoteVM.openNote?.persistentModelID {
                 takeNoteVM.openNote = nil
             }
         }
     }
 
-    func startRename() {
+    private func startRename() {
         inRenameMode = true
         newName = note.title
         nameInputFocused = true
     }
 
-    func finishRename() {
+    private func finishRename() {
         inRenameMode = false
         note.setTitle(newName)
-        try? modelContext.save()
-        search.reindex(note: note)
+        do {
+            try modelContext.save()
+            search.reindex(note: note)
+        } catch {
+            takeNoteVM.presentError(error.localizedDescription)
+        }
     }
 
-    func noteStarToggle() {
+    private func noteStarToggle() {
         takeNoteVM.noteStarredToggle(note, modelContext: modelContext)
     }
 
-    func archiveNote() {
+    private func regenerateSummary() {
+        summaryTask?.cancel()
+        note.contentHash = ""
+        summaryTask = Task {
+            await note.generateSummary()
+        }
+    }
+
+    private func archiveNote() {
         takeNoteVM.moveNoteToArchive(note, modelContext: modelContext)
         search.deleteFromIndex(noteID: note.uuid)
     }
 
-    var isOpenNote: Bool {
+    private var isOpenNote: Bool {
         #if os(iOS)
-            if UIDevice.current.userInterfaceIdiom == .phone {
+            if isCompactLayout {
                 return false
             }
         #endif
         return note == takeNoteVM.openNote
     }
 
-    var iconColor: Color {
+    private var iconColor: Color {
         #if os(iOS)
-            if UIDevice.current.userInterfaceIdiom == .phone {
+            if isCompactLayout {
                 return note.folder?.getColor() ?? .takeNotePink
             }
         #endif
@@ -173,185 +196,39 @@ struct NoteListEntry: View {
         return note.folder?.getColor() ?? .takeNotePink
     }
 
-    var TitleRow: some View {
-        HStack(alignment: .lastTextBaseline, spacing: hSpacing) {
-            if inRenameMode {
-                TextField("New Note Name", text: $newName)
-                    .focused($nameInputFocused)
-                    .font(.headline.weight(.semibold))
-                    .textFieldStyle(.roundedBorder)
-                    .onSubmit { finishRename() }
-                    .onChange(of: nameInputFocused) { _, focused in
-                        if !focused { finishRename() }
-                    }
-            } else {
-                Label {
-                    Text(note.title)
-                        .font(.headline.weight(.semibold))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                } icon: {
-                    Image(systemName: "note.text")
-                        .symbolRenderingMode(.monochrome)
-                        .foregroundStyle(iconColor)
-                }
-                .labelStyle(.titleAndIcon)
-            }
-
-            Spacer(minLength: 0)
-
-            Group {
-                #if os(macOS)
-                    Button(action: { noteStarToggle() }) {
-                        Image(systemName: note.starred ? "star.fill" : "star")
-                            .imageScale(.medium)
-                            .foregroundStyle(
-                                note.starred ? .yellow : .secondary
-                            )
-                            .padding(.zero)  // kill any extra inset
-                    }
-                    .buttonStyle(.plain)  // no chrome/insets
-                    .help(note.starred ? "Unstar" : "Star")
-                #else
-                    if note.starred {
-                        Image(systemName: "star.fill")
-                            .foregroundStyle(Color(.yellow))
-                            .padding(.zero)
-                    }
-                #endif
-            }
-        }
-    }
-
-    var MetadataRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            Text(note.createdDate, style: .date)
-                .font(.subheadline)
-                .foregroundStyle(isOpenNote ? .primary : .secondary)
-
-            Spacer(minLength: 0)
-
-            Group {
-                if takeNoteVM.selectedContainer?.isTag == true
-                    || takeNoteVM.selectedContainer?.isStarred == true
-                    || takeNoteVM.selectedContainer?.isAllNotes == true
-                {
-                    HStack(spacing: 3) {
-                        Text(note.folder?.name ?? "Folder")
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .font(.subheadline)
-                            .foregroundStyle(isOpenNote ? .primary : .secondary)
-
-                        Image(systemName: note.folder?.symbol ?? "folder")
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(iconColor)
-                            .imageScale(.medium)
-                    }
-                } else if let noteLabel = note.tag {
-                    HStack(spacing: 3) {
-                        Text(noteLabel.name)
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                            .font(.subheadline)
-                            .foregroundStyle(isOpenNote ? .primary : .secondary)
-
-                        Image(systemName: "tag.fill")
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(noteLabel.getColor())
-                            .imageScale(.medium)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)  // <- pins the icon to the far right
-        }
-    }
-
-    var SummaryRow: some View {
-        HStack(alignment: .firstTextBaseline, spacing: 12) {
-            if note.aiSummaryIsGenerating {
-                AIMessage(
-                    message: "AI Summary Generating...",
-                    font: .callout
-                )
-            } else {
-                if !note.aiSummary.isEmpty {
-                    Label {
-                        Text(note.aiSummary)
-                            .font(.callout)
-                            .foregroundStyle(isOpenNote ? .primary : .secondary)
-                            .lineLimit(2)
-                            .truncationMode(.tail)
-                    } icon: {
-                        Image(systemName: "apple.intelligence")
-                            .symbolRenderingMode(.hierarchical)
-                            // This looks nutso, I know
-                            .foregroundStyle(
-                                isOpenNote
-                                    ? .linearGradient(
-                                        colors: [.primary, .primary],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                    : .linearGradient(
-                                        colors: [
-                                            .orange, .pink, .blue, .purple,
-                                        ],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    ),
-
-                            )
-                    }
-                } else {
-                    Label {
-                        Text(
-                            note.content.replacingOccurrences(
-                                of: "\n",
-                                with: " "
-                            )
-                        )
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
-                        .truncationMode(.tail)
-                    } icon: {
-                        Image(systemName: "text.magnifyingglass")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-        }
-    }
-
-    var DragRepresentation: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 1.0, style: .continuous)
-                .frame(width: 24, height: 32)
-                .foregroundStyle(.white)
-                .border(.gray, width: 1)
-            VStack {
-                Rectangle()
-                    .frame(width: 12, height: 2)
-                    .foregroundStyle(.gray)
-                Rectangle()
-                    .frame(width: 12, height: 2)
-                    .foregroundStyle(.gray)
-                Rectangle()
-                    .frame(width: 12, height: 2)
-                    .foregroundStyle(.gray)
-            }
-        }
-    }
-
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
         VStack(alignment: .leading, spacing: vSpacing) {
-            TitleRow
-                .allowsHitTesting(true)
-            MetadataRow
+            NoteListEntryTitleRow(
+                title: note.title,
+                isStarred: note.starred,
+                iconColor: iconColor,
+                hSpacing: hSpacing,
+                inRenameMode: inRenameMode,
+                newName: $newName,
+                nameInputFocused: $nameInputFocused,
+                finishRename: finishRename,
+                toggleStar: noteStarToggle
+            )
+            NoteListEntryMetadataRow(
+                createdDate: note.createdDate,
+                folderName: note.folder?.name ?? "Folder",
+                folderSymbol: note.folder?.symbol ?? "folder",
+                tagName: note.tag?.name,
+                tagColor: note.tag?.getColor(),
+                iconColor: iconColor,
+                showsFolder: takeNoteVM.selectedContainer?.isTag == true
+                    || takeNoteVM.selectedContainer?.isStarred == true
+                    || takeNoteVM.selectedContainer?.isAllNotes == true,
+                isOpenNote: isOpenNote
+            )
                 .allowsHitTesting(false)
-            SummaryRow
+            NoteListEntrySummaryRow(
+                content: note.content,
+                aiSummary: note.aiSummary,
+                aiSummaryIsGenerating: note.aiSummaryIsGenerating,
+                isOpenNote: isOpenNote
+            )
                 .allowsHitTesting(false)
         }
         // trailing = left swipe
@@ -394,12 +271,10 @@ struct NoteListEntry: View {
             }
         #endif
         .draggable(NoteIDWrapper(id: note.persistentModelID)) {
-            DragRepresentation
+            NoteListEntryDragPreview()
         }
         .padding(.vertical, verticalPadding)
         .padding(.horizontal, horizontalPadding)
-        // I had this in here but I'm not sure it is doing anything
-        //.frame(maxWidth: .infinity, alignment: .leading)
         .highPriorityGesture(
             TapGesture(count: 2)
                 .onEnded { openEditorWindow() }
@@ -481,11 +356,7 @@ struct NoteListEntry: View {
             }
             if takeNoteVM.aiIsAvailable {
                 Button(action: {
-                    note.contentHash = ""
-                    Task {
-                        await note.generateSummary()
-                    }
-
+                    regenerateSummary()
                 }) {
                     Label(
                         "Regenerate Summary",
@@ -498,7 +369,11 @@ struct NoteListEntry: View {
                     role: .destructive,
                     action: {
                         note.tag = nil
-                        try? modelContext.save()
+                        do {
+                            try modelContext.save()
+                        } catch {
+                            takeNoteVM.presentError(error.localizedDescription)
+                        }
                     }
                 ) {
                     Label(
@@ -511,6 +386,7 @@ struct NoteListEntry: View {
         .fileExporter(
             isPresented: $showExportDialog,
             document: TextFile(initialText: note.content),
+            contentType: .plainText,
             defaultFilename: "\(note.title).md"
         ) { result in
             switch result {
@@ -521,37 +397,31 @@ struct NoteListEntry: View {
             }
         }
         .onAppear {
-            noteDeleteRegistry.registerCommand(
+            noteDeleteRegistry?.registerCommand(
                 id: note.persistentModelID,
                 command: moveToTrash
             )
-            noteRenameRegistry.registerCommand(
+            noteRenameRegistry?.registerCommand(
                 id: note.persistentModelID,
                 command: startRename
             )
-            noteStarToggleRegistry.registerCommand(
+            noteStarToggleRegistry?.registerCommand(
                 id: note.persistentModelID,
                 command: noteStarToggle
             )
-            noteOpenEditorWindowRegistry.registerCommand(
+            noteOpenEditorWindowRegistry?.registerCommand(
                 id: note.persistentModelID,
                 command: openEditorWindow
             )
-            noteCopyMarkdownLinkRegistry.registerCommand(
+            noteCopyMarkdownLinkRegistry?.registerCommand(
                 id: note.persistentModelID,
                 command: copyMarkdownLink
             )
         }
         .onDisappear {
-            noteDeleteRegistry.unregisterCommand(id: note.persistentModelID)
-            noteRenameRegistry.unregisterCommand(id: note.persistentModelID)
-            noteStarToggleRegistry.unregisterCommand(id: note.persistentModelID)
-            noteCopyMarkdownLinkRegistry.unregisterCommand(
-                id: note.persistentModelID
-            )
-            noteOpenEditorWindowRegistry.unregisterCommand(
-                id: note.persistentModelID
-            )
+            unregisterNoteCommands(for: note)
+            summaryTask?.cancel()
+            summaryTask = nil
         }
         .alert(
             "Export Failed",
@@ -568,7 +438,220 @@ struct NoteListEntry: View {
             Button("Move to Trash", role: .destructive) { moveToTrash() }
             Button("Cancel", role: .cancel) {}
         } message: { note in
-            Text("Are you sure you want to move \(note.title) to the trash?")
+            Text(
+                "Are you sure you want to move \(note.title) to the trash?",
+                comment: "Confirmation message before moving a note to trash; the variable is the note title."
+            )
+        }
+    }
+}
+
+private struct NoteListEntryTitleRow: View {
+    let title: String
+    let isStarred: Bool
+    let iconColor: Color
+    let hSpacing: CGFloat
+    let inRenameMode: Bool
+    @Binding var newName: String
+    let nameInputFocused: FocusState<Bool>.Binding
+    let finishRename: () -> Void
+    let toggleStar: () -> Void
+
+    var body: some View {
+        HStack(alignment: .lastTextBaseline, spacing: hSpacing) {
+            if inRenameMode {
+                TextField("New Note Name", text: $newName)
+                    .focused(nameInputFocused)
+                    .font(.headline.weight(.semibold))
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(finishRename)
+                    .onChange(of: nameInputFocused.wrappedValue) { _, focused in
+                        if !focused { finishRename() }
+                    }
+            } else {
+                Label {
+                    Text(title)
+                        .font(.headline.weight(.semibold))
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "note.text")
+                        .symbolRenderingMode(.monochrome)
+                        .foregroundStyle(iconColor)
+                }
+                .labelStyle(.titleAndIcon)
+                .allowsHitTesting(false)
+            }
+
+            Spacer(minLength: 0)
+
+            #if os(macOS)
+                Button(action: toggleStar) {
+                    Image(systemName: isStarred ? "star.fill" : "star")
+                        .imageScale(.medium)
+                        .foregroundStyle(isStarred ? .yellow : .secondary)
+                        .padding(.zero)
+                }
+                .buttonStyle(.plain)
+                .help(isStarred ? "Unstar" : "Star")
+            #else
+                if isStarred {
+                    Image(systemName: "star.fill")
+                        .foregroundStyle(Color(.yellow))
+                        .padding(.zero)
+                }
+            #endif
+        }
+    }
+}
+
+private struct NoteListEntryMetadataRow: View {
+    let createdDate: Date
+    let folderName: String
+    let folderSymbol: String
+    let tagName: String?
+    let tagColor: Color?
+    let iconColor: Color
+    let showsFolder: Bool
+    let isOpenNote: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            Text(createdDate, style: .date)
+                .font(.subheadline)
+                .foregroundStyle(isOpenNote ? .primary : .secondary)
+
+            Spacer(minLength: 0)
+
+            NoteListEntryMetadataTrailingLabel(
+                folderName: folderName,
+                folderSymbol: folderSymbol,
+                tagName: tagName,
+                tagColor: tagColor,
+                iconColor: iconColor,
+                showsFolder: showsFolder,
+                isOpenNote: isOpenNote
+            )
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+    }
+}
+
+private struct NoteListEntryMetadataTrailingLabel: View {
+    let folderName: String
+    let folderSymbol: String
+    let tagName: String?
+    let tagColor: Color?
+    let iconColor: Color
+    let showsFolder: Bool
+    let isOpenNote: Bool
+
+    var body: some View {
+        if showsFolder {
+            HStack(spacing: 3) {
+                Text(folderName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .font(.subheadline)
+                    .foregroundStyle(isOpenNote ? .primary : .secondary)
+
+                Image(systemName: folderSymbol)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(iconColor)
+                    .imageScale(.medium)
+            }
+        } else if let tagName, let tagColor {
+            HStack(spacing: 3) {
+                Text(tagName)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .font(.subheadline)
+                    .foregroundStyle(isOpenNote ? .primary : .secondary)
+
+                Image(systemName: "tag.fill")
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(tagColor)
+                    .imageScale(.medium)
+            }
+        }
+    }
+}
+
+private struct NoteListEntrySummaryRow: View {
+    let content: String
+    let aiSummary: String
+    let aiSummaryIsGenerating: Bool
+    let isOpenNote: Bool
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 12) {
+            if aiSummaryIsGenerating {
+                AIMessage(
+                    message: "AI Summary Generating...",
+                    font: .callout
+                )
+            } else if !aiSummary.isEmpty {
+                Label {
+                    Text(aiSummary)
+                        .font(.callout)
+                        .foregroundStyle(isOpenNote ? .primary : .secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "apple.intelligence")
+                        .symbolRenderingMode(.hierarchical)
+                        .foregroundStyle(summaryIconStyle)
+                }
+            } else {
+                Label {
+                    Text(content.replacingOccurrences(of: "\n", with: " "))
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .truncationMode(.tail)
+                } icon: {
+                    Image(systemName: "text.magnifyingglass")
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
+    private var summaryIconStyle: LinearGradient {
+        if isOpenNote {
+            return LinearGradient(
+                colors: [.primary, .primary],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+        }
+
+        return LinearGradient(
+            colors: [.orange, .pink, .blue, .purple],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+}
+
+private struct NoteListEntryDragPreview: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 1.0, style: .continuous)
+                .frame(width: 24, height: 32)
+                .foregroundStyle(.white)
+                .border(.gray, width: 1)
+            VStack {
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundStyle(.gray)
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundStyle(.gray)
+                Rectangle()
+                    .frame(width: 12, height: 2)
+                    .foregroundStyle(.gray)
+            }
         }
     }
 }

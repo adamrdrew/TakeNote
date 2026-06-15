@@ -3,9 +3,9 @@
 //  TakeNote
 //
 
+import Foundation
 import os
 import SwiftData
-import SwiftUI
 
 @MainActor
 final class OrphanRecoveryService {
@@ -64,8 +64,6 @@ final class OrphanRecoveryService {
     }
 
     private static func formattedDate() -> String {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "dd/MM/yy"
-        return fmt.string(from: Date())
+        Date.now.formatted(.dateTime.day().month(.twoDigits).year(.twoDigits))
     }
 }

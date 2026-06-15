@@ -2,28 +2,58 @@ import Foundation
 import os
 
 // MARK: Result type
-struct SearchHit: Identifiable, Hashable {
+struct SearchHit: Identifiable, Hashable, Sendable {
     let id: String
     let noteID: UUID
+    let noteTitle: String?
     let chunk: String
+
+    nonisolated var displayTitle: String {
+        guard let noteTitle, !noteTitle.isEmpty else {
+            return String(
+                localized: "Note",
+                comment: "Fallback title for a note search result with no title."
+            )
+        }
+        return noteTitle
+    }
 }
 
 @MainActor
 @Observable
-class SearchIndexService {
+final class SearchIndexService {
+    @ObservationIgnored
     private let spotlight = NoteSpotlightIndex()
 
     var hits: [SearchHit] = []
     var isIndexing: Bool = false
-    var logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
+    @ObservationIgnored
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "SearchIndexService")
+    @ObservationIgnored
     private var fullReindexTask: Task<Void, Never>?
+    @ObservationIgnored
     private var noteReindexTask: Task<Void, Never>?
+    @ObservationIgnored
+    private var noteDeletionTask: Task<Void, Never>?
+    @ObservationIgnored
     private var pendingNoteEntities: [UUID: NoteSearchEntity] = [:]
+    @ObservationIgnored
+    private var pendingDeletedNoteIDs: Set<UUID> = []
+    @ObservationIgnored
     private let noteReindexDelay: Duration = .milliseconds(750)
+    @ObservationIgnored
+    private let noteDeletionDelay: Duration = .milliseconds(250)
+    @ObservationIgnored
     private let fullReindexDelay: Duration = .seconds(2)
 
     init() {
         removeLegacySQLiteIndex()
+    }
+
+    deinit {
+        fullReindexTask?.cancel()
+        noteReindexTask?.cancel()
+        noteDeletionTask?.cancel()
     }
 
     func reindex(note: Note) {
@@ -37,7 +67,9 @@ class SearchIndexService {
 
         fullReindexTask?.cancel()
         noteReindexTask?.cancel()
+        noteDeletionTask?.cancel()
         pendingNoteEntities.removeAll()
+        pendingDeletedNoteIDs.removeAll()
 
         fullReindexTask = Task {
             do {
@@ -48,9 +80,9 @@ class SearchIndexService {
             guard !Task.isCancelled else { return }
 
             isIndexing = true
+            defer { isIndexing = false }
             logger.debug("Spotlight search full reindex running for \(spotlightEntities.count) notes.")
             await spotlight.reindex(spotlightEntities)
-            isIndexing = false
             guard !Task.isCancelled else { return }
             #if DEBUG
             logger.debug("Spotlight search full reindex complete. \(spotlightEntities.count) notes indexed.")
@@ -77,23 +109,53 @@ class SearchIndexService {
         pendingNoteEntities.removeAll()
 
         isIndexing = true
+        defer { isIndexing = false }
         logger.debug("Spotlight search incremental reindex running for \(entities.count) notes.")
         await spotlight.reindex(entities)
-        isIndexing = false
     }
 
     func deleteFromIndex(noteID: UUID) {
         logger.debug("Removing note \(noteID) from Spotlight index.")
-        Task {
-            await spotlight.delete(noteID: noteID)
-        }
+        pendingNoteEntities[noteID] = nil
+        pendingDeletedNoteIDs.insert(noteID)
+        hits.removeAll { $0.noteID == noteID }
+        schedulePendingNoteDeletions()
     }
 
     func deleteAllFromIndex() {
         logger.debug("Removing all notes from Spotlight index.")
-        Task {
+        fullReindexTask?.cancel()
+        noteReindexTask?.cancel()
+        noteDeletionTask?.cancel()
+        pendingNoteEntities.removeAll()
+        pendingDeletedNoteIDs.removeAll()
+        hits.removeAll()
+
+        noteDeletionTask = Task {
             await spotlight.deleteAll()
         }
+    }
+
+    private func schedulePendingNoteDeletions() {
+        noteDeletionTask?.cancel()
+        noteDeletionTask = Task {
+            do {
+                try await Task.sleep(for: noteDeletionDelay)
+            } catch {
+                return
+            }
+            await flushPendingNoteDeletions()
+        }
+    }
+
+    private func flushPendingNoteDeletions() async {
+        guard !pendingDeletedNoteIDs.isEmpty else { return }
+
+        let noteIDs = Array(pendingDeletedNoteIDs)
+        pendingDeletedNoteIDs.removeAll()
+
+        logger.debug("Spotlight search deletion running for \(noteIDs.count) notes.")
+        await spotlight.delete(noteIDs: noteIDs)
     }
 
     func search(_ text: String, limit: Int = 20) async -> [SearchHit] {
@@ -116,14 +178,16 @@ class SearchIndexService {
 
     private func removeLegacySQLiteIndex() {
         let fileManager = FileManager.default
-        guard
-            let appSupportURL = try? fileManager.url(
+        let appSupportURL: URL
+        do {
+            appSupportURL = try fileManager.url(
                 for: .applicationSupportDirectory,
                 in: .userDomainMask,
                 appropriateFor: nil,
                 create: false
             )
-        else {
+        } catch {
+            logger.warning("Could not resolve Application Support directory: \(error.localizedDescription)")
             return
         }
 

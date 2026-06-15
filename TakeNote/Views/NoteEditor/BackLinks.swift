@@ -7,7 +7,6 @@ struct BackLinks: View {
     @Environment(TakeNoteVM.self) private var takeNoteVM
     @Environment(\.dismiss) private var dismiss
 
-    @State private var linkManager: NoteLinkManager?
     @State private var backLinkedNotes: [Note] = []
 
     private var hasBacklinks: Bool { !backLinkedNotes.isEmpty }
@@ -19,11 +18,14 @@ struct BackLinks: View {
                 Label("Backlinks", systemImage: "link")
                     .font(.headline)
                 if hasBacklinks {
-                    Text("\(backLinkedNotes.count)")
+                    Text(backLinkedNotes.count, format: .number)
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(.secondary.opacity(0.2)))
+                        .background {
+                            Capsule()
+                                .fill(.secondary.opacity(0.2))
+                        }
                 }
                 Spacer()
             }
@@ -88,7 +90,6 @@ struct BackLinks: View {
             .presentationDragIndicator(.visible)  // optional
         #endif
         .onAppear {
-            linkManager = NoteLinkManager(modelContext: modelContext)
             refresh()
         }
         .onChange(of: takeNoteVM.openNote) { _, _ in
@@ -97,15 +98,12 @@ struct BackLinks: View {
     }
 
     private func refresh() {
-        guard let open = takeNoteVM.openNote,
-            let mgr = linkManager
-        else {
+        guard let open = takeNoteVM.openNote else {
             backLinkedNotes = []
             return
         }
-        // Notes that link TO the open note
-        backLinkedNotes = mgr.getNotesThatLinkTo(open)
-        // Optional: stable sort by title for consistent UI
+        let linkManager = NoteLinkManager(modelContext: modelContext)
+        backLinkedNotes = linkManager.getNotesThatLinkTo(open)
         backLinkedNotes.sort {
             $0.title.localizedCaseInsensitiveCompare($1.title)
                 == .orderedAscending
@@ -136,13 +134,18 @@ private struct BacklinkRow: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
-            .background(
+            .background {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
                     .fill(Color.secondary.opacity(isHovering ? 0.12 : 0.0))
-            )
+            }
         }
         .buttonStyle(.plain)
         .onHover { isHovering = $0 }
-        .accessibilityLabel(Text("Open \(note.title)"))
+        .accessibilityLabel(
+            Text(
+                "Open \(note.title)",
+                comment: "Accessibility label for opening a backlink row; the variable is the note title."
+            )
+        )
     }
 }

@@ -9,56 +9,40 @@ import SwiftData
 import SwiftUI
 
 struct WindowCommands: Commands {
-
-    @FocusedValue(\.chatEnabled) var chatEnabled: Bool?
-    @FocusedValue(\.openChatWindow) var openChatWindow: (() -> Void)?
+    @Environment(\.openWindow) private var openWindow
+    @FocusedValue(\.chatEnabled) private var chatEnabled: Bool?
     @FocusedValue(\.noteOpenEditorWindowRegistry)
-    var noteOpenEditorWindowRegistry: CommandRegistry?
-    @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
+    private var noteOpenEditorWindowRegistry: CommandRegistry?
+    @FocusedValue(\.selectedNotes) private var selectedNotes: Set<Note>?
 
-    var openEditorWindowDisabled: Bool {
-        guard let sn = selectedNotes, sn.count == 1 else {
-            return true
-        }
-        guard noteOpenEditorWindowRegistry != nil else {
-            return true
-        }
-        return false
+    private var openEditorWindowDisabled: Bool {
+        selectedNotes?.count != 1 || noteOpenEditorWindowRegistry == nil
     }
 
-    var chatDisabled: Bool {
-        if let ce = chatEnabled {
-            return !ce
-        }
-        return true
+    private var chatDisabled: Bool {
+        chatEnabled != true
     }
 
     var body: some Commands {
         CommandGroup(after: .windowArrangement) {
             if chatFeatureFlagEnabled {
                 Button("Open Chat", systemImage: "message") {
-                    if let ocw = openChatWindow {
-                        ocw()
-                    }
+                    openWindow(id: TakeNoteVM.chatWindowID)
                 }
                 .keyboardShortcut("c", modifiers: [.command, .shift])
                 .disabled(chatDisabled)
             }
 
             Button("Open Editor Window", systemImage: "macwindow.badge.plus") {
-                guard let sn = selectedNotes, sn.count == 1 else {
+                guard let selectedNote = selectedNotes?.first else {
                     return
                 }
-                guard let selectedNote = sn.first else {
-                    return
-                }
-                if let oew = noteOpenEditorWindowRegistry {
-                    oew.runCommand(id: selectedNote.persistentModelID)
-                }
+                noteOpenEditorWindowRegistry?.runCommand(
+                    id: selectedNote.persistentModelID
+                )
             }
             .keyboardShortcut("e", modifiers: [.command, .shift])
             .disabled(openEditorWindowDisabled)
-
         }
     }
 }

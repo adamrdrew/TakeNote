@@ -10,21 +10,35 @@ import SwiftUI
 /// A ViewModifier that presents content as a `.sheet()` on iPad (centered modal)
 /// and as a `.popover()` on iPhone and macOS.
 struct AdaptivePopover<PopoverContent: View>: ViewModifier {
-    @Binding var isPresented: Bool
-    var attachmentAnchor: PopoverAttachmentAnchor
-    var arrowEdge: Edge
-    @ViewBuilder let popoverContent: () -> PopoverContent
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
-    private var isIPad: Bool {
+    @Binding private var isPresented: Bool
+    private let attachmentAnchor: PopoverAttachmentAnchor
+    private let arrowEdge: Edge
+    @ViewBuilder private let popoverContent: () -> PopoverContent
+
+    init(
+        isPresented: Binding<Bool>,
+        attachmentAnchor: PopoverAttachmentAnchor,
+        arrowEdge: Edge,
+        @ViewBuilder popoverContent: @escaping () -> PopoverContent
+    ) {
+        self._isPresented = isPresented
+        self.attachmentAnchor = attachmentAnchor
+        self.arrowEdge = arrowEdge
+        self.popoverContent = popoverContent
+    }
+
+    private var prefersSheetPresentation: Bool {
         #if os(iOS)
-            return UIDevice.current.userInterfaceIdiom == .pad
+            return horizontalSizeClass == .regular
         #else
             return false
         #endif
     }
 
     func body(content: Content) -> some View {
-        if isIPad {
+        if prefersSheetPresentation {
             content.sheet(isPresented: $isPresented) {
                 popoverContent()
             }

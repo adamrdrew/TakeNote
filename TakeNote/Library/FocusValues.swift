@@ -5,17 +5,36 @@
 //  Created by Adam Drew on 8/24/25.
 //
 
-// Add this to a shared utilities file:
 import SwiftData
 import SwiftUI
 
-struct ModelContextFocusedValueKey: FocusedValueKey {
-    typealias Value = ModelContext
+extension FocusedValues {
+    @Entry var modelContext: ModelContext?
+    @Entry var chatEnabled: Bool?
+    @Entry var mainWindowActions: MainWindowActions?
+    @Entry var noteEditorActions: NoteEditorActions?
+
+    @Entry var containerDeleteRegistry: CommandRegistry?
+    @Entry var containerRenameRegistry: CommandRegistry?
+    @Entry var selectedNoteContainer: NoteContainer?
+    @Entry var tagSetColorRegistry: CommandRegistry?
+
+    @Entry var noteDeleteRegistry: CommandRegistry?
+    @Entry var noteRenameRegistry: CommandRegistry?
+    @Entry var noteStarToggleRegistry: CommandRegistry?
+    @Entry var noteCopyMarkdownLinkRegistry: CommandRegistry?
+    @Entry var noteOpenEditorWindowRegistry: CommandRegistry?
+    @Entry var selectedNotes: Set<Note>?
 }
 
-extension FocusedValues {
-    var modelContext: ModelContext? {
-        get { self[ModelContextFocusedValueKey.self] }
-        set { self[ModelContextFocusedValueKey.self] = newValue }
-    }
+extension EnvironmentValues {
+    @Entry var containerDeleteRegistry: CommandRegistry?
+    @Entry var containerRenameRegistry: CommandRegistry?
+    @Entry var tagSetColorRegistry: CommandRegistry?
+
+    @Entry var noteDeleteRegistry: CommandRegistry?
+    @Entry var noteCopyMarkdownLinkRegistry: CommandRegistry?
+    @Entry var noteRenameRegistry: CommandRegistry?
+    @Entry var noteStarToggleRegistry: CommandRegistry?
+    @Entry var noteOpenEditorWindowRegistry: CommandRegistry?
 }

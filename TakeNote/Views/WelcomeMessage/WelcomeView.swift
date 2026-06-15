@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct WelcomeView: View {
-    var onDone: () -> Void
+    let onDone: () -> Void
 
     var body: some View {
         VStack(spacing: 24) {

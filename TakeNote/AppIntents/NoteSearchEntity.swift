@@ -24,9 +24,12 @@ struct NoteSearchEntity: IndexedEntity {
     let isStarred: Bool
 
     var displayRepresentation: DisplayRepresentation {
-        let subtitle = folderName.map { LocalizedStringResource(stringLiteral: $0) }
+        let titleResource: LocalizedStringResource = "\(title)"
+        let subtitle = folderName.map { folderName -> LocalizedStringResource in
+            "\(folderName)"
+        }
         return DisplayRepresentation(
-            title: LocalizedStringResource(stringLiteral: title),
+            title: titleResource,
             subtitle: subtitle,
             image: DisplayRepresentation.Image(named: "AppIcon")
         )

@@ -12,41 +12,43 @@ struct NoteContainerWidgetView: View {
     let entry: NoteListEntry
     let showNewButton: Bool
     @Environment(\.widgetFamily) private var family
-    @Environment(\.colorScheme) var colorScheme
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var rowStyle: NoteContainerWidgetRows.Style {
+        switch family {
+        case .systemMedium:
+            return .medium
+        case .systemLarge:
+            return .large
+        default:
+            return .small
+        }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
-            // --- Top content: header + list ---
             VStack(alignment: .leading, spacing: 6) {
-                // Title row + actions
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Image(systemName: entry.symbol)
                     Text(entry.name)
                         .font(.subheadline).bold()
                         .foregroundStyle(.primary)
                     Spacer()
-                    Text("\(entry.totalNoteCount)")
+                    Text(entry.totalNoteCount, format: .number)
                         .font(.subheadline).bold()
                         .foregroundStyle(.primary)
                 }
 
-                // Content varies by family
-                Group {
-                    switch family {
-                    case .systemMedium:
-                        mediumList
-                    case .systemLarge:
-                        largeList
-                    default: // .systemSmall
-                        smallList
-                    }
-                }
+                NoteContainerWidgetRows(
+                    rows: entry.rows,
+                    isPlaceholder: entry.isPlaceholder,
+                    style: rowStyle
+                )
             }
             .frame(maxWidth: .infinity, alignment: .topLeading)
 
-            Spacer(minLength: 0) // pushes button to bottom
+            Spacer(minLength: 0)
 
-            // --- Bottom content: new note button ---
             HStack {
                 Spacer()
                 if showNewButton {
@@ -84,77 +86,97 @@ struct NoteContainerWidgetView: View {
             }
         }
     }
+}
 
-    // MARK: - Small (4 titles)
-    private var smallList: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            ForEach(entry.rows.prefix(4)) { row in
-                if let url = URL(string: row.url) {
-                    Link(destination: url) {
-                        Text(row.title.isEmpty ? "Untitled" : row.title)
-                            .font(.footnote)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
+private struct NoteContainerWidgetRows: View {
+    private struct LinkedRow: Identifiable {
+        let row: NoteRow
+        let destination: URL
+
+        var id: UUID { row.id }
+    }
+
+    enum Style {
+        case small
+        case medium
+        case large
+
+        var limit: Int {
+            switch self {
+            case .small: 4
+            case .medium: 3
+            case .large: 5
             }
-            if !entry.isPlaceholder && entry.rows.isEmpty {
-                Text("No notes")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
+        }
+
+        var spacing: CGFloat {
+            switch self {
+            case .small: 4
+            case .medium: 6
+            case .large: 8
             }
+        }
+
+        var titleFont: Font {
+            switch self {
+            case .small, .medium: .footnote
+            case .large: .callout
+            }
+        }
+
+        var excerptFont: Font {
+            switch self {
+            case .small: .caption2
+            case .medium: .caption2
+            case .large: .footnote
+            }
+        }
+
+        var showsExcerpt: Bool {
+            self != .small
         }
     }
 
-    // MARK: - Medium (3 items: smaller title + excerpt)
-    private var mediumList: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(entry.rows.prefix(3)) { row in
-                if let url = URL(string: row.url) {
-                    Link(destination: url) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title.isEmpty ? "Untitled" : row.title)
-                                .font(.footnote).bold()
-                                .lineLimit(1)
-                            Text(row.excerpt)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
+    let rows: [NoteRow]
+    let isPlaceholder: Bool
+    let style: Style
+
+    private var linkedRows: [LinkedRow] {
+        rows
+            .prefix(style.limit)
+            .compactMap { row in
+                guard let destination = URL(string: row.url) else { return nil }
+                return LinkedRow(row: row, destination: destination)
             }
-            if !entry.isPlaceholder && entry.rows.isEmpty {
-                Text("No notes")
-                    .font(.footnote)
-                    .foregroundStyle(.secondary)
-            }
-        }
     }
 
-    // MARK: - Large (5 items: larger title + excerpt)
-    private var largeList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ForEach(entry.rows.prefix(5)) { row in
-                if let url = URL(string: row.url) {
-                    Link(destination: url) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(row.title.isEmpty ? "Untitled" : row.title)
-                                .font(.callout).bold()
+    var body: some View {
+        VStack(alignment: .leading, spacing: style.spacing) {
+            ForEach(linkedRows) { linkedRow in
+                Link(destination: linkedRow.destination) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        if linkedRow.row.title.isEmpty {
+                            Text("Untitled")
+                                .font(style.titleFont)
+                                .bold(style.showsExcerpt)
                                 .lineLimit(1)
-                            Text(row.excerpt)
-                                    .font(.footnote)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            
+                        } else {
+                            Text(linkedRow.row.title)
+                                .font(style.titleFont)
+                                .bold(style.showsExcerpt)
+                                .lineLimit(1)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        if style.showsExcerpt {
+                            Text(linkedRow.row.excerpt)
+                                .font(style.excerptFont)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
                     }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            if !entry.isPlaceholder && entry.rows.isEmpty {
+            if !isPlaceholder && rows.isEmpty {
                 Text("No notes")
                     .font(.footnote)
                     .foregroundStyle(.secondary)

@@ -6,7 +6,6 @@
 //
 
 import AppIntents
-import SwiftUI
 import SwiftData
 
 struct NewNoteWithContentIntent: AppIntent {
@@ -30,20 +29,28 @@ struct NewNoteWithContentIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult {
-        takeNoteVM.selectedContainer = takeNoteVM.inboxFolder
-        let note = takeNoteVM.addNote(modelContainer.mainContext)
+        guard let inboxFolder = takeNoteVM.inboxFolder else {
+            throw NoteIntentError.noteCreationFailed
+        }
 
-        if let note {
-            note.setContent(content)
-            note.setTitle(noteTitle)
-            takeNoteVM.openNote = note
-            takeNoteVM.selectedNotes = [note]
-            try? modelContainer.mainContext.save()
-        } else {
-            // If addNote failed to create a note, clear current selection to avoid stale state
+        let modelContext = modelContainer.mainContext
+        let note = Note(folder: inboxFolder)
+        note.setContent(content)
+        note.setTitle(noteTitle)
+        modelContext.insert(note)
+
+        do {
+            try modelContext.save()
+        } catch {
+            modelContext.delete(note)
             takeNoteVM.openNote = nil
             takeNoteVM.selectedNotes = []
+            throw NoteIntentError.noteSaveFailed
         }
+
+        takeNoteVM.selectedContainer = inboxFolder
+        takeNoteVM.openNote = note
+        takeNoteVM.selectedNotes = [note]
 
         return .result()
     }

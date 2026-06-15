@@ -9,32 +9,23 @@ import SwiftData
 import SwiftUI
 
 struct NoteListHeader: View {
-    @Environment(TakeNoteVM.self) var takeNoteVM
-    @Query() var allNotes: [Note]
+    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Query() private var allNotes: [Note]
 
     @State private var inEditMode: Bool = false
     @State private var newName: String = ""
     @FocusState private var nameInputFocused: Bool
-    @State private var cachedNoteCount: Int = 0
 
-    private func rebuildNoteCount() {
-        guard let container = takeNoteVM.selectedContainer else {
-            cachedNoteCount = 0
-            return
-        }
+    private func noteCount(for container: NoteContainer) -> Int {
         if container.isAllNotes {
-            cachedNoteCount = allNotes.filter {
+            return allNotes.filter {
                 $0.folder?.isTrash != true && $0.folder?.isBuffer != true
             }.count
-        } else {
-            cachedNoteCount = container.notes.count
         }
+        return container.notes.count
     }
 
-    var folderSymbol: String {
-        guard let container = takeNoteVM.selectedContainer else {
-            return "folder"
-        }
+    private func folderSymbol(for container: NoteContainer) -> String {
         if container.isTrash {
             return "trash"
         }
@@ -44,89 +35,49 @@ struct NoteListHeader: View {
         return container.symbol
     }
 
-    var noteCountLabel: String {
-        let noNotes = "No notes"
-        guard takeNoteVM.selectedContainer != nil else {
-            return noNotes
-        }
-        if cachedNoteCount == 0 {
-            return noNotes
-        }
-        if cachedNoteCount == 1 {
-            return "\(cachedNoteCount) note"
-        }
-        return "\(cachedNoteCount) notes"
-    }
-
-    var ContainerNameEditor: some View {
-        TextField("Rename...", text: $newName)
-            .focused($nameInputFocused)
-            .onChange(of: nameInputFocused) { _, newValue in
-                if !newValue {
-                    inEditMode = false
-                    nameInputFocused = false
-                }
-            }
-            #if os(macOS)
-                .onExitCommand {
-                    inEditMode = false
-                    nameInputFocused = false
-                }
-            #endif
-            .onSubmit {
-                guard let container = takeNoteVM.selectedContainer
-                else {
-                    return
-                }
-                container.name = newName
-                inEditMode.toggle()
-            }
-    }
-
-    var NoteCountLabel: some View {
-        Text(noteCountLabel)
-            .font(.headline)
-            .foregroundStyle(.secondary)
-    }
-
-    var ContainerNameLabel: some View {
-        Label {
-            Text(
-                takeNoteVM.selectedContainer?.name
-                    ?? "No folder selected",
+    var body: some View {
+        if let selectedContainer = takeNoteVM.selectedContainer {
+            NoteListHeaderContent(
+                container: selectedContainer,
+                canRename: takeNoteVM.canRenameSelectedContainer,
+                noteCount: noteCount(for: selectedContainer),
+                folderSymbol: folderSymbol(for: selectedContainer),
+                inEditMode: $inEditMode,
+                newName: $newName,
+                nameInputFocused: $nameInputFocused
             )
-        } icon: {
-            Image(systemName: folderSymbol)
-                .foregroundStyle(takeNoteVM.selectedContainer?.getColor() ?? .takeNotePink)
-        }
-        .font(.title)
-        .fontWeight(.bold)
-    }
-
-    func toggleEditMode() {
-        if !takeNoteVM.canRenameSelectedContainer {
-            return
-        }
-        inEditMode.toggle()
-        nameInputFocused = inEditMode
-        newName = takeNoteVM.selectedContainer?.name ?? ""
-    }
-
-    var RenameButton: some View {
-        Button("Rename") {
-            toggleEditMode()
+                .glassEffect(in: .rect)
         }
     }
+}
 
-    var Header: some View {
+private struct NoteListHeaderContent: View {
+    let container: NoteContainer
+    let canRename: Bool
+    let noteCount: Int
+    let folderSymbol: String
+    @Binding var inEditMode: Bool
+    @Binding var newName: String
+    let nameInputFocused: FocusState<Bool>.Binding
+
+    var body: some View {
         HStack {
             VStack(alignment: .leading) {
                 if inEditMode {
-                    ContainerNameEditor
+                    NoteListHeaderNameEditor(
+                        container: container,
+                        inEditMode: $inEditMode,
+                        newName: $newName,
+                        nameInputFocused: nameInputFocused
+                    )
                 } else {
-                    ContainerNameLabel
+                    NoteListHeaderNameLabel(
+                        name: container.name,
+                        symbol: folderSymbol,
+                        color: container.getColor()
+                    )
                 }
-                NoteCountLabel
+                NoteListHeaderCountLabel(noteCount: noteCount)
             }
             Spacer()
         }
@@ -135,19 +86,92 @@ struct NoteListHeader: View {
             toggleEditMode()
         }
         .contextMenu {
-            if !inEditMode && takeNoteVM.canRenameSelectedContainer {
-                RenameButton
+            if !inEditMode && canRename {
+                NoteListHeaderRenameButton(action: toggleEditMode)
             }
         }
     }
 
+    private func toggleEditMode() {
+        guard canRename else { return }
+        inEditMode.toggle()
+        nameInputFocused.wrappedValue = inEditMode
+        newName = container.name
+    }
+}
+
+private struct NoteListHeaderNameEditor: View {
+    let container: NoteContainer
+    @Binding var inEditMode: Bool
+    @Binding var newName: String
+    let nameInputFocused: FocusState<Bool>.Binding
+
     var body: some View {
-        if takeNoteVM.selectedContainer != nil {
-            Header
-                .glassEffect(in: .rect)
-                .onChange(of: allNotes) { _, _ in rebuildNoteCount() }
-                .onChange(of: takeNoteVM.selectedContainer) { _, _ in rebuildNoteCount() }
-                .onAppear { rebuildNoteCount() }
+        TextField("Rename...", text: $newName)
+            .focused(nameInputFocused)
+            .onChange(of: nameInputFocused.wrappedValue) { _, newValue in
+                if !newValue {
+                    inEditMode = false
+                    nameInputFocused.wrappedValue = false
+                }
+            }
+            #if os(macOS)
+                .onExitCommand {
+                    inEditMode = false
+                    nameInputFocused.wrappedValue = false
+                }
+            #endif
+            .onSubmit {
+                container.name = newName
+                inEditMode.toggle()
+            }
+    }
+}
+
+private struct NoteListHeaderNameLabel: View {
+    let name: String
+    let symbol: String
+    let color: Color
+
+    var body: some View {
+        Label {
+            Text(name)
+        } icon: {
+            Image(systemName: symbol)
+                .foregroundStyle(color)
         }
+        .font(.title)
+        .fontWeight(.bold)
+    }
+}
+
+private struct NoteListHeaderCountLabel: View {
+    let noteCount: Int
+
+    var body: some View {
+        countText
+            .font(.headline)
+            .foregroundStyle(.secondary)
+    }
+
+    private var countText: Text {
+        if noteCount == 0 {
+            Text("No notes")
+        } else if noteCount == 1 {
+            Text("1 note")
+        } else {
+            Text(
+                "\(noteCount, format: .number) notes",
+                comment: "Header count for a note list; the variable is the number of notes."
+            )
+        }
+    }
+}
+
+private struct NoteListHeaderRenameButton: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button("Rename", action: action)
     }
 }

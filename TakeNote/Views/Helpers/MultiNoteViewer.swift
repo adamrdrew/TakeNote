@@ -4,9 +4,6 @@
 //
 //  Created by Adam Drew on 8/15/25.
 //
-// This View was almost entirely written by ChatGPT
-// I wrote the initial implementation that was very simple
-// But ChatGPT re-wrote it to be more robust
 
 import MarkdownUI
 import SwiftData
@@ -24,13 +21,10 @@ struct MultiNoteViewer: View {
     private let paperAspect: CGFloat = 8.5 / 11.0
 
     var body: some View {
-        @Bindable var takeNoteVM = takeNoteVM
         GeometryReader { geo in
             // Cards
             ZStack {
-                ForEach(Array(notesArray.enumerated()), id: \.element.id) {
-                    idx,
-                    note in
+                ForEach(notesArray.enumerated(), id: \.element.persistentModelID) { index, note in
                     PaperCard(note: note)
                         .frame(
                             width: paperWidth(in: geo.size),
@@ -39,9 +33,9 @@ struct MultiNoteViewer: View {
                         .rotationEffect(.degrees(jitterAngle(note)))
                         .offset(
                             x: jitterX(note),
-                            y: jitterY(note) + CGFloat(idx) * 4
+                            y: jitterY(note) + CGFloat(index) * 4
                         )  // tiny cascade
-                        .zIndex(Double(idx))
+                        .zIndex(Double(index))
 
                 }
             }
@@ -67,7 +61,7 @@ struct MultiNoteViewer: View {
         paperWidth(in: size) / paperAspect
     }
 
-    // MARK: - “Messy pile” jitter (deterministic per note)
+    // MARK: - Deterministic card jitter
 
     private func jitterAngle(_ note: Note) -> Double {
         // ~[-7°, +7°]
@@ -88,7 +82,7 @@ struct MultiNoteViewer: View {
     }
 
     private func stableRand(_ note: Note, salt: String) -> CGFloat {
-        let s = "\(note.id)#\(salt)"
+        let s = "\(note.uuid)#\(salt)"
         var h: UInt64 = 1_469_598_103_934_665_603  // FNV-1a 64 offset
         for b in s.utf8 {
             h ^= UInt64(b)

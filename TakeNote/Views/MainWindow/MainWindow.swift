@@ -10,93 +10,41 @@ import SwiftUI
 import os
 import CoreSpotlight
 
-extension FocusedValues {
-    @Entry var chatEnabled: Bool?
-    @Entry var openChatWindow: (() -> Void)?
-    @Entry var showDeleteEverything: (() -> Void)?
-}
-
-struct MainWindow: View {
-    @Environment(\.openWindow) var openWindow
-    @Environment(\.modelContext) var modelContext
-    @Environment(TakeNoteVM.self) var takeNoteVM
-    @Environment(SearchIndexService.self) private var search
-
-    @Query() var notes: [Note]
-    @Query() var containers: [NoteContainer]
-    @Query() var noteLinks: [NoteLink]
-    @Query() var noteImages: [NoteImage]
-
-    static let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MainWindow")
-
-    @State private var notesInBufferMessagePresented: Bool = false
-    @State private var showDeleteEverythingAlert: Bool = false
-    @State private var preferredColumn = NavigationSplitViewColumn.sidebar
-    @State private var showSidebarChatPopover: Bool = false
-    @State private var showSortPopover: Bool = false
-
-    private let sidebarColumnWidth: CGFloat = 360
-
-    var toolbarPlacement: ToolbarItemPlacement {
-        #if os(iOS)
-            return UIDevice.current.userInterfaceIdiom == .phone
-                ? .bottomBar : .automatic
-        #else
-            return .automatic
-        #endif
-    }
+@MainActor
+@Observable
+final class MainWindowActions {
+    var deleteEverythingAlertIsPresented = false
 
     func showDeleteEverything() {
-        showDeleteEverythingAlert = true
+        deleteEverythingAlertIsPresented = true
     }
-    func doShowSidebarChatPopover() {
-        showSidebarChatPopover.toggle()
-    }
+}
 
-    func doShowSortPopover() {
-        showSortPopover.toggle()
-    }
+private struct NoteListToolbarContent: ToolbarContent {
+    @Environment(\.openWindow) private var openWindow
+    let toolbarPlacement: ToolbarItemPlacement
+    let takeNoteVM: TakeNoteVM
+    let modelContext: ModelContext
+    let search: SearchIndexService
+    let chatEnabled: Bool
+    @Binding var showSortPopover: Bool
 
-    @MainActor
-    func openChatWindow() {
-        openWindow(id: TakeNoteVM.chatWindowID)
-    }
-
-    var chatEnabled: Bool {
-        return takeNoteVM.aiIsAvailable && notes.count > 0
-    }
-
-    func deleteEverything() {
-        for note in notes {
-            modelContext.delete(note)
-        }
-        for container in containers {
-            modelContext.delete(container)
-        }
-        for noteLink in noteLinks {
-            modelContext.delete(noteLink)
-        }
-        for image in noteImages {
-            modelContext.delete(image)
-        }
-        try? modelContext.save()
-        search.deleteAllFromIndex()
-    }
-
-    var NoteListToolbar: some ToolbarContent {
+    var body: some ToolbarContent {
         ToolbarItemGroup(placement: toolbarPlacement) {
             if takeNoteVM.canAddNote {
-                Button(action: {
+                Button {
                     if let newNote = takeNoteVM.addNote(modelContext) {
                         search.reindex(note: newNote)
                     }
-                }) {
+                } label: {
                     Image(systemName: "note.text.badge.plus")
                 }
                 .help("Add Note")
             }
-            if !(takeNoteVM.selectedContainer?.notes.isEmpty ?? false) {
-                Button(action: doShowSortPopover) {
+            if takeNoteVM.selectedContainer?.notes.isEmpty == false {
+                Button {
+                    showSortPopover.toggle()
+                } label: {
                     Image(systemName: "arrow.up.arrow.down")
                 }
                 .help("Sort Notes")
@@ -110,12 +58,13 @@ struct MainWindow: View {
             }
             if chatFeatureFlagEnabled && chatEnabled {
                 #if os(macOS)
-                    Button(action: openChatWindow) {
+                    Button {
+                        openWindow(id: TakeNoteVM.chatWindowID)
+                    } label: {
                         Label("Chat", systemImage: "message")
                     }
                     .help("Magic Chat")
                 #endif
-
             }
             if takeNoteVM.canEmptyTrash {
                 Button(action: takeNoteVM.showEmptyTrashAlert) {
@@ -126,21 +75,81 @@ struct MainWindow: View {
         }
         .visibilityPriority(.high)
     }
+}
 
-    var navTitle: String {
+struct MainWindow: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(SearchIndexService.self) private var search
+
+    @Query() private var notes: [Note]
+    @Query() private var containers: [NoteContainer]
+    @Query() private var noteLinks: [NoteLink]
+    @Query() private var noteImages: [NoteImage]
+
+    static let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MainWindow")
+
+    @State private var notesInBufferMessagePresented: Bool = false
+    @State private var mainWindowActions = MainWindowActions()
+    @State private var preferredColumn = NavigationSplitViewColumn.sidebar
+    @State private var showSidebarChatPopover: Bool = false
+    @State private var showSortPopover: Bool = false
+
+    private let sidebarColumnWidth: CGFloat = 360
+
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private var toolbarPlacement: ToolbarItemPlacement {
         #if os(iOS)
-            if UIDevice.current.userInterfaceIdiom == .phone {
-                return "TakeNote"
-            } else {
-                return ""
-            }
+            return isCompactLayout ? .bottomBar : .automatic
         #else
-            return ""
+            return .automatic
+        #endif
+    }
+
+    private func doShowSidebarChatPopover() {
+        showSidebarChatPopover.toggle()
+    }
+
+    private var chatEnabled: Bool {
+        takeNoteVM.aiIsAvailable && notes.count > 0
+    }
+
+    private func deleteEverything() {
+        for note in notes {
+            modelContext.delete(note)
+        }
+        for container in containers {
+            modelContext.delete(container)
+        }
+        for noteLink in noteLinks {
+            modelContext.delete(noteLink)
+        }
+        for image in noteImages {
+            modelContext.delete(image)
+        }
+        do {
+            try modelContext.save()
+            search.deleteAllFromIndex()
+        } catch {
+            takeNoteVM.presentError(error.localizedDescription)
+        }
+    }
+
+    private var navTitle: LocalizedStringResource {
+        #if os(iOS)
+            isCompactLayout ? "TakeNote" : ""
+        #else
+            ""
         #endif
     }
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
+        @Bindable var mainWindowActions = mainWindowActions
 
         NavigationSplitView(preferredCompactColumn: $preferredColumn) {
             VStack {
@@ -153,10 +162,8 @@ struct MainWindow: View {
                     #endif
                     .toolbar {
                         #if os(iOS)
-                        if #available(iOS 26.0, *) {
-                            DefaultToolbarItem(kind: .search, placement: .bottomBar)
-                            ToolbarSpacer(.flexible, placement: .bottomBar)
-                        }
+                        DefaultToolbarItem(kind: .search, placement: .bottomBar)
+                        ToolbarSpacer(.flexible, placement: .bottomBar)
                         #endif
                         ToolbarItem(placement: toolbarPlacement) {
 
@@ -192,6 +199,7 @@ struct MainWindow: View {
                                     .frame(minWidth: 400, minHeight: 500)
                                 }
                             }
+                            .visibilityPriority(.high)
                         }
                         #endif
 
@@ -208,11 +216,18 @@ struct MainWindow: View {
                     #if os(iOS)
                         ToolbarSpacer(.fixed, placement: .bottomBar)
                     #endif
-                    NoteListToolbar
+                    NoteListToolbarContent(
+                        toolbarPlacement: toolbarPlacement,
+                        takeNoteVM: takeNoteVM,
+                        modelContext: modelContext,
+                        search: search,
+                        chatEnabled: chatEnabled,
+                        showSortPopover: $showSortPopover
+                    )
                 }
 
         } detail: {
-            if takeNoteVM.showMultiNoteView {
+            if takeNoteVM.multipleNotesSelected {
                 MultiNoteViewer()
                     .transition(.opacity)
             } else {
@@ -222,27 +237,27 @@ struct MainWindow: View {
                 .transition(.opacity)
             }
         }
+        .animation(.default, value: takeNoteVM.multipleNotesSelected)
         .searchable(text: $takeNoteVM.noteSearchText)
         #if os(iOS)
         .onSubmit(of: .search) {
             takeNoteVM.searchSubmitted()
         }
         #endif
-        .onChange(of: takeNoteVM.multipleNotesSelected) { _, newValue in
-            withAnimation {
-                takeNoteVM.showMultiNoteView = newValue
-            }
-        }
         #if os(macOS)
-            .background(Color(NSColor.textBackgroundColor))
+            .background {
+                Color(nsColor: NSColor.textBackgroundColor)
+            }
         #endif
         #if os(iOS)
-            .background(Color(UIColor.systemBackground))
+            .background {
+                Color(uiColor: UIColor.systemBackground)
+            }
         #endif
         .navigationTitle(takeNoteVM.navigationTitle)
         .alert(
             "Do you want to delete everything?",
-            isPresented: $showDeleteEverythingAlert
+            isPresented: $mainWindowActions.deleteEverythingAlertIsPresented
         ) {
             Button(
                 "Delete",
@@ -255,21 +270,23 @@ struct MainWindow: View {
                     takeNoteVM.bufferFolder = nil
                     takeNoteVM.starredFolder = nil
 
-                    takeNoteVM.folderInit(modelContext)
+                    takeNoteVM.folderInit(
+                        modelContext,
+                        selectInboxOnLaunch: !isCompactLayout
+                    )
                 }
             )
         }
         .alert(
-            "Link Error: \(takeNoteVM.linkToNoteErrorMessage)",
-            isPresented: $takeNoteVM.linkToNoteErrorIsPresented
+            "Link Error",
+            item: $takeNoteVM.linkToNoteErrorMessage
         ) {
-            Button(
-                "OK",
-                action: { takeNoteVM.linkToNoteErrorIsPresented = false }
-            )
+            _ in Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .alert(
-            "Are you sure you want to empty the trash? This action cannot be undone.",
+            "Empty Trash?",
             isPresented: $takeNoteVM.emptyTrashAlertIsPresented
         ) {
             Button(
@@ -283,23 +300,39 @@ struct MainWindow: View {
                     }
                 }
             )
+        } message: {
+            Text("This action cannot be undone.")
         }
         .focusedSceneValue(\.modelContext, modelContext)
         .focusedSceneValue(\.chatEnabled, chatEnabled)
-        .focusedSceneValue(\.openChatWindow, openChatWindow)
-        .focusedSceneValue(\.showDeleteEverything, showDeleteEverything)
+        .focusedSceneValue(\.mainWindowActions, mainWindowActions)
         .alert(
-            "Something went wrong: \(takeNoteVM.errorAlertMessage)",
-            isPresented: $takeNoteVM.errorAlertIsVisible
+            "Something went wrong",
+            item: $takeNoteVM.errorAlertMessage
         ) {
-            Button("OK", action: { takeNoteVM.errorAlertIsVisible = false })
+            _ in Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .alert(
-            "\(takeNoteVM.bufferNotesCount) notes found in the cut and paste buffer. They'll be returned to your Inbox.",
+            "Notes Found in Cut and Paste Buffer",
             isPresented: $notesInBufferMessagePresented
         ) {
-            Button("OK", action: { notesInBufferMessagePresented = false })
-
+            Button("OK", role: .cancel) {
+                notesInBufferMessagePresented = false
+            }
+        } message: {
+            if takeNoteVM.bufferNotesCount == 1 {
+                Text(
+                    "1 note will be returned to your Inbox.",
+                    comment: "Message shown when one note is recovered from the cut and paste buffer."
+                )
+            } else {
+                Text(
+                    "\(takeNoteVM.bufferNotesCount, format: .number) notes will be returned to your Inbox.",
+                    comment: "Message shown when multiple notes are recovered from the cut and paste buffer; the variable is the number of notes."
+                )
+            }
         }
         .alert(
             "Orphaned Notes Recovered",
@@ -307,14 +340,20 @@ struct MainWindow: View {
         ) {
             Button("OK", action: { takeNoteVM.orphanRecoveryAlertVisible = false })
         } message: {
-            Text("Orphaned notes were found. These can be caused by sync problems or device crashes. Orphaned notes have been moved to a new \(takeNoteVM.orphanRecoveryFolderName) folder. No data was lost.")
+            Text(
+                "Orphaned notes were found. These can be caused by sync problems or device crashes. Orphaned notes have been moved to a new \(takeNoteVM.orphanRecoveryFolderName) folder. No data was lost.",
+                comment: "Recovery alert message; the variable is the name of the folder that received recovered notes."
+            )
         }
         .onAppear(perform: {
             takeNoteVM.trashFolder = containers.first(where: { $0.isTrash })
             takeNoteVM.inboxFolder = containers.first(where: { $0.isInbox })
             takeNoteVM.bufferFolder = containers.first(where: { $0.isBuffer })
 
-            takeNoteVM.folderInit(modelContext)
+            takeNoteVM.folderInit(
+                modelContext,
+                selectInboxOnLaunch: !isCompactLayout
+            )
             if !takeNoteVM.bufferIsEmpty {
                 notesInBufferMessagePresented = true
                 takeNoteVM.moveNotesFromBufferToInbox(modelContext)

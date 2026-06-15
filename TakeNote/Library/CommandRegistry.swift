@@ -5,17 +5,18 @@
 //  Created by Adam Drew on 8/25/25.
 //
 
+import Observation
 import os
-import SwiftUI
 import SwiftData
 
 private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "CommandRegistry")
 
+@MainActor
 @Observable
-internal final class CommandRegistry: @unchecked Sendable {
+final class CommandRegistry {
+    @ObservationIgnored
     private var commands: [PersistentIdentifier: () -> Void] = [:]
 
-    @MainActor
     func registerCommand(
         id: PersistentIdentifier,
         command: @escaping () -> Void
@@ -23,14 +24,12 @@ internal final class CommandRegistry: @unchecked Sendable {
         commands[id] = command
     }
 
-    @MainActor
     func unregisterCommand(
         id: PersistentIdentifier
     ) {
         commands.removeValue(forKey: id)
     }
 
-    @MainActor
     func runCommand(id: PersistentIdentifier) {
         logger.debug("Running command with ID: \(String(describing: id))")
         commands[id]?()

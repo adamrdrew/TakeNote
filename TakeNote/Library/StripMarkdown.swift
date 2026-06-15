@@ -7,7 +7,7 @@ import Foundation
 
 /// Strips common Markdown syntax from text, producing a plain-text version
 /// suitable for feeding into search or language-model prompts.
-func stripMarkdownForSearch(_ text: String) -> String {
+nonisolated func stripMarkdownForSearch(_ text: String) -> String {
     var s = text
     // Remove images and links but keep link text
     s = s.replacingOccurrences(of: #"!\[.*?\]\(.*?\)"#, with: "", options: .regularExpression)

@@ -6,8 +6,27 @@
 //
 
 import AppIntents
-import SwiftUI
 import SwiftData
+
+enum NoteIntentError: LocalizedError, Sendable {
+    case noteCreationFailed
+    case noteSaveFailed
+
+    var errorDescription: String? {
+        switch self {
+        case .noteCreationFailed:
+            return String(
+                localized: "TakeNote could not create a new note.",
+                comment: "Error shown when the Create Note app intent could not create a note."
+            )
+        case .noteSaveFailed:
+            return String(
+                localized: "TakeNote could not save the new note.",
+                comment: "Error shown when the Create Note app intent created a note but could not save its content."
+            )
+        }
+    }
+}
 
 struct NewNoteIntent: AppIntent {
     
@@ -35,6 +54,7 @@ struct NewNoteIntent: AppIntent {
             // If addNote failed to create a note, clear current selection to avoid stale state
             takeNoteVM.openNote = nil
             takeNoteVM.selectedNotes = []
+            throw NoteIntentError.noteCreationFailed
         }
 
         return .result()
