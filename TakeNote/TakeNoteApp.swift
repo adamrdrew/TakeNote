@@ -151,6 +151,16 @@ struct TakeNoteApp: App {
                 key: "TakeNoteVM",
                 dependency: asyncViewModelDep
             )
+            let searchService = search
+            let asyncSearchDep: @Sendable () async -> SearchIndexService = {
+                @MainActor in
+                return searchService
+            }
+            AppDependencyManager.shared.add(
+                key: "SearchIndexService",
+                dependency: asyncSearchDep
+            )
+            TakeNoteShortcuts.updateAppShortcutParameters()
 
             reconcilerHarness = AppBootstrapper.installReconciler(
                 container: modelContainer,

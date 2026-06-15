@@ -14,11 +14,15 @@ struct NewNoteWithContentIntent: AppIntent {
     private var modelContainer: ModelContainer
     @Dependency(key: "TakeNoteVM") // key required for Swift 6 runtime.
     private var takeNoteVM: TakeNoteVM
+    @Dependency(key: "SearchIndexService")
+    private var search: SearchIndexService
     
     @Parameter(title: "Note Content", description: "The content you want in the new note")
     var content: String
     @Parameter(title: "Note Title", description: "The title you want for the new note")
     var noteTitle: String
+    @Parameter(title: "Folder", description: "The folder for the new note")
+    var folder: NoteFolderEntity?
     
     static let title: LocalizedStringResource = "Create a new note with content"
 
@@ -28,13 +32,16 @@ struct NewNoteWithContentIntent: AppIntent {
     static let openAppWhenRun: Bool = true
     
     @MainActor
-    func perform() async throws -> some IntentResult {
-        guard let inboxFolder = takeNoteVM.inboxFolder else {
-            throw NoteIntentError.noteCreationFailed
+    func perform() async throws -> some IntentResult & ReturnsValue<NoteSearchEntity> {
+        let modelContext = modelContainer.mainContext
+        let destinationFolder: NoteContainer
+        if let folder {
+            destinationFolder = try TakeNoteIntentStore.folder(for: folder, in: modelContext)
+        } else {
+            destinationFolder = try TakeNoteIntentStore.inbox(in: modelContext)
         }
 
-        let modelContext = modelContainer.mainContext
-        let note = Note(folder: inboxFolder)
+        let note = Note(folder: destinationFolder)
         note.setContent(content)
         note.setTitle(noteTitle)
         modelContext.insert(note)
@@ -48,11 +55,12 @@ struct NewNoteWithContentIntent: AppIntent {
             throw NoteIntentError.noteSaveFailed
         }
 
-        takeNoteVM.selectedContainer = inboxFolder
+        takeNoteVM.selectedContainer = destinationFolder
         takeNoteVM.openNote = note
         takeNoteVM.selectedNotes = [note]
+        search.reindex(note: note)
 
-        return .result()
+        return .result(value: NoteSearchEntity(note: note))
     }
     
 }

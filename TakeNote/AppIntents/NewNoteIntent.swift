@@ -51,7 +51,6 @@ struct NewNoteIntent: AppIntent {
             takeNoteVM.openNote = note
             takeNoteVM.selectedNotes = [note]
         } else {
-            // If addNote failed to create a note, clear current selection to avoid stale state
             takeNoteVM.openNote = nil
             takeNoteVM.selectedNotes = []
             throw NoteIntentError.noteCreationFailed
