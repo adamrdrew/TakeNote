@@ -57,7 +57,7 @@ private struct NoteListToolbarContent: ToolbarContent {
                 }
             }
             if chatFeatureFlagEnabled && chatEnabled {
-                #if os(macOS)
+                #if os(macOS) || os(visionOS)
                     Button {
                         openWindow(id: TakeNoteVM.chatWindowID)
                     } label: {
@@ -73,7 +73,7 @@ private struct NoteListToolbarContent: ToolbarContent {
                 .help("Empty Trash")
             }
         }
-        .visibilityPriority(.high)
+        .visibilityPriority(.takeNotePrimary)
     }
 }
 
@@ -176,13 +176,13 @@ struct MainWindow: View {
                             }
                             .help("Add Folder")
                         }
-                        .visibilityPriority(.high)
+                        .visibilityPriority(.takeNotePrimary)
                         ToolbarItem(placement: toolbarPlacement) {
                             AddTagButton(action: {
                                 takeNoteVM.addTag(modelContext: modelContext)
                             })
                         }
-                        .visibilityPriority(.high)
+                        .visibilityPriority(.takeNotePrimary)
                         #endif
                         #if os(iOS)
                         if chatFeatureFlagEnabled && chatEnabled {
@@ -199,7 +199,7 @@ struct MainWindow: View {
                                     .frame(minWidth: 400, minHeight: 500)
                                 }
                             }
-                            .visibilityPriority(.high)
+                            .visibilityPriority(.takeNotePrimary)
                         }
                         #endif
 
@@ -238,7 +238,7 @@ struct MainWindow: View {
             }
         }
         .animation(.default, value: takeNoteVM.multipleNotesSelected)
-        #if os(macOS)
+        #if os(macOS) || os(visionOS)
             .toolbar {
                 ToolbarItemGroup(placement: .navigation) {
                     Button(action: {
@@ -255,7 +255,7 @@ struct MainWindow: View {
                         takeNoteVM.addTag(modelContext: modelContext)
                     })
                 }
-                .visibilityPriority(.high)
+                .visibilityPriority(.takeNotePrimary)
             }
         #endif
         .searchable(text: $takeNoteVM.noteSearchText)

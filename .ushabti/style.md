@@ -30,7 +30,7 @@ TakeNote/                  # Main app target
 │   └── WelcomeMessage/    # Onboarding screen
 ├── Library/               # Services, utilities, and non-view logic
 │   ├── CommandRegistry.swift
-│   ├── SearchIndex.swift
+│   ├── NoteSpotlightIndex.swift
 │   ├── SearchIndexService.swift
 │   ├── MagicFormatter.swift
 │   ├── AppBootstrapper.swift
@@ -45,7 +45,7 @@ TakeNote/                  # Main app target
 └── Assets.xcassets/
 
 NewNoteControl/            # Widget extension target
-TakeNoteShare/             # Share extension target (currently empty)
+TakeNoteTests/             # Migration regression tests
 ```
 
 **Rules:**
@@ -61,12 +61,13 @@ TakeNoteShare/             # Share extension target (currently empty)
 ## Language and Tooling Conventions
 
 - **Language:** Swift 6, strict concurrency.
-- **Minimum targets:** macOS 26, iOS 26 (see L01). No `#available` checks for earlier versions.
+- **Minimum targets:** macOS 27, iOS 27 (see L01). No `#available` checks for earlier versions.
 - **Build system:** Xcode with a standard `.xcodeproj`. No SPM-managed app manifest.
 - **Dependencies (SPM):**
   - `CodeEditorView` — code editor with syntax highlighting
   - `MarkdownUI` — rendered Markdown display
-  - `SQLite.swift` — FTS5 search index
+  - `SFSymbolsPicker` — folder symbols on Mac and iOS; visionOS uses a native picker
+- **Search:** Core Spotlight and Apple’s SpotlightSearchTool.
 - **Logging:** Use `os.Logger` with subsystem `com.adamdrew.takenote` and a per-file category string. Do not use `print()` in production code paths; `print()` is acceptable only for debug traces that will be removed.
 - **Conditional compilation:** Use `#if os(macOS)`, `#if os(iOS)`, `#if os(visionOS)`, and `#if DEBUG` blocks. No platform-specific logic outside these guards.
 
@@ -180,13 +181,13 @@ let response = try await session.respond(to: prompt)
 self.session = LanguageModelSession(...)  // stored property — do not do this
 ```
 
-`MagicFormatter` is the one apparent exception: it stores a session property but reassigns it to a fresh `LanguageModelSession` at the start of every `magicFormat()` call. The stored property is never reused across calls; it is overwritten. This satisfies L06.
+`MagicFormatter` and `ChatWindow` retain only their active session: it stores a session property but reassigns it to a fresh `LanguageModelSession` at the start of every request. The stored property is never reused across calls; it is overwritten. This satisfies L06.
 
 #### Feature flag checks for Magic Chat surfaces
 
 The Magic Chat UI surfaces — the Chat window/popover and the Chat toolbar button — must check `chatFeatureFlagEnabled` before rendering or executing. Read the flag from the global computed variable in `ChatFeatureFlagEnabled.swift`.
 
-FTS indexing (`SearchIndexService.reindex` and `reindexAll`) is unconditional and must NOT be gated on `chatFeatureFlagEnabled`. Note list search depends on FTS regardless of whether Magic Chat is enabled; the two concerns are independent (see L07).
+Spotlight indexing (`SearchIndexService.reindex` and `reindexAll`) is unconditional and must NOT be gated on `chatFeatureFlagEnabled`. Note list search depends on Spotlight regardless of whether Magic Chat is enabled; the two concerns are independent (see L07).
 
 #### AppIntents access state through AppDependencyManager
 
@@ -218,7 +219,7 @@ Operations on `TakeNoteVM` that can fail assign `errorAlertMessage` and set `err
 - **New `@Model` types** without updating L02 and L03. SwiftData models are a schema contract.
 - **Direct `modelContext.delete(note)` outside `emptyTrash()`** (see L10). Notes are moved to Trash; permanent deletion only happens via `emptyTrash()`.
 - **Storing a `LanguageModelSession` as a surviving property** to be reused across calls (see L06).
-- **Any `#available` check for a version below macOS 26 / iOS 26** (see L01).
+- **Any `#available` check for a version below macOS 27 / iOS 27** (see L01).
 - **New app-wide `@Observable` or `ObservableObject` state managers** that duplicate `TakeNoteVM`'s role (see L09).
 - **Widget code touching `ModelContainer` directly** (see L08).
 - **Wiring `VectorSearchIndex` into `SearchIndexService`** without a deliberate decision recorded in laws (see L13).
@@ -277,11 +278,7 @@ Operations on `TakeNoteVM` that can fail assign `errorAlertMessage` and set `err
 
 ## Testing Strategy
 
-The codebase does not currently have a structured test target with unit tests visible in the survey. Until a testing approach is established, the following minimal expectations apply:
-
-- `VectorSearchIndex` and debug-only code may be exercised in isolation in tests.
-- `SearchIndex` (FTS5) must remain the production implementation wired into `SearchIndexService`; do not swap to `VectorSearchIndex` in tests that also exercise the service layer.
-- Any new service or utility with testable pure logic should have unit tests in a test target.
+The shared `TakeNote` scheme includes `TakeNoteTests`, written with Swift Testing. Use in-memory SwiftData stores with CloudKit disabled and a `NoteSearchIndex` double. The Debug test host bypasses normal app startup, so tests must not access the user's library, Spotlight index, or widget snapshots. Cover observable behavior and asynchronous ordering, especially edits/deletions during index rebuilds.
 
 ---
 
@@ -319,11 +316,11 @@ LLM model methods (`Note.generateSummary()`) swallow errors with `try?`. This is
 
 ## Performance and Resource Use
 
-- **Search index rate limiting:** `SearchIndexService.reindexAll()` is rate-limited to once per 10 minutes via `canReindexAllNotes()`. Do not call `reindexAll()` without going through this gate.
-- **FTS indexing is always-on:** `reindex(note:)` and `reindexAll()` run unconditionally. Do not add a `chatFeatureFlagEnabled` guard to any indexing path (see L07).
+- **Search writes:** Coalesce pending requests in the single indexing worker. Never cancel and replace a Spotlight write that is already in flight.
+- **Spotlight indexing is always-on:** `reindex(note:)` and `reindexAll()` run unconditionally. Do not add a `chatFeatureFlagEnabled` guard to any indexing path (see L07).
 - **Snapshot writes:** `SnapshotController.takeSnapshot()` runs on scene phase changes and every 10 minutes while active. New triggers should be justified; this is already frequent.
 - **Widget reload:** `WidgetCenter.shared.reloadAllTimelines()` is called on every note mutation (in `Note` initializer and mutating methods). This is the existing pattern; do not add additional `reloadAllTimelines()` calls without good reason.
-- **In-memory search index in DEBUG:** `SearchIndex` uses an in-memory connection in DEBUG builds. This is intentional and must be preserved so development builds do not leave stale on-disk search data.
+- **Isolated tests:** Inject a `NoteSearchIndex` double. Normal DEBUG app builds use the system Spotlight index.
 - **Session prewarm:** `MagicFormatter.init()` calls `session.prewarm()`. New LLM service objects should consider prewarming if they are instantiated before their first use.
 
 ---
@@ -346,7 +343,7 @@ Reviewers verify each of these items for any pull request that touches the liste
 
 **Magic Chat feature flag**
 - [ ] Any new chat UI surface (Chat window/popover, Chat toolbar button) checks `chatFeatureFlagEnabled` (L07).
-- [ ] No new `chatFeatureFlagEnabled` guard is added to any FTS indexing path; indexing must remain unconditional (L07).
+- [ ] No new `chatFeatureFlagEnabled` guard is added to any Spotlight indexing path; indexing must remain unconditional (L07).
 
 **CommandRegistry**
 - [ ] Any new list item that registers commands also unregisters them in `.onDisappear` (L15).
@@ -360,10 +357,10 @@ Reviewers verify each of these items for any pull request that touches the liste
 - [ ] Widget code does not import or instantiate `ModelContainer`, `ModelContext`, or any `@Model` type (L08).
 
 **Search**
-- [ ] `SearchIndexService.index` remains of type `SearchIndex` (FTS5), not `VectorSearchIndex` (L13).
+- [ ] Production search uses Core Spotlight; index writes are serialized and hidden notes stay excluded (L13).
 
 **Platform and deployment target**
-- [ ] No `#available` check for a version below macOS 26 / iOS 26 (L01).
+- [ ] No `#available` check for a version below macOS 27 / iOS 27 (L01).
 
 **General craft**
 - [ ] New service objects use `os.Logger`, not `print()`.

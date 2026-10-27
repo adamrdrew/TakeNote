@@ -12,6 +12,7 @@ enum TakeNoteIntentError: LocalizedError, Sendable {
     case folderNotFound
     case tagNotFound
     case saveFailed
+    case protectedFolder
 
     var errorDescription: String? {
         switch self {
@@ -35,6 +36,8 @@ enum TakeNoteIntentError: LocalizedError, Sendable {
                 localized: "TakeNote could not save your changes.",
                 comment: "App Intent error shown when SwiftData could not save changes."
             )
+        case .protectedFolder:
+            String(localized: "TakeNote's system folders cannot be renamed or deleted.")
         }
     }
 }
@@ -65,17 +68,17 @@ struct NoteFolderEntity: AppEntity {
         self.isSystemFolder = isSystemFolder
     }
 
-    init(container: NoteContainer) {
+    init(container: NoteContainer) throws {
         self.init(
-            id: Self.identifier(for: container),
+            id: try Self.identifier(for: container),
             name: container.name,
             symbol: container.symbol,
             isSystemFolder: container.isSystemFolder
         )
     }
 
-    static func identifier(for container: NoteContainer) -> String {
-        "folder:\(container.name)"
+    static func identifier(for container: NoteContainer) throws -> String {
+        try TakeNoteIntentStore.identifier(for: container, prefix: "folder")
     }
 }
 
@@ -116,7 +119,7 @@ struct NoteFolderEntityQuery: EntityStringQuery, EnumerableEntityQuery {
                 sortBy: [SortDescriptor(\.name, order: .forward)]
             )
         )
-        return folders
+        return try folders
             .filter {
                 !$0.isTag && !$0.isTrash && !$0.isBuffer
                     && !$0.isAllNotes && !$0.isStarred
@@ -149,16 +152,16 @@ struct NoteTagEntity: AppEntity {
         self.symbol = symbol
     }
 
-    init(container: NoteContainer) {
+    init(container: NoteContainer) throws {
         self.init(
-            id: Self.identifier(for: container),
+            id: try Self.identifier(for: container),
             name: container.name,
             symbol: container.symbol
         )
     }
 
-    static func identifier(for container: NoteContainer) -> String {
-        "tag:\(container.name)"
+    static func identifier(for container: NoteContainer) throws -> String {
+        try TakeNoteIntentStore.identifier(for: container, prefix: "tag")
     }
 }
 
@@ -200,12 +203,40 @@ struct NoteTagEntityQuery: EntityStringQuery, EnumerableEntityQuery {
                 sortBy: [SortDescriptor(\.name, order: .forward)]
             )
         )
-        return tags.map(NoteTagEntity.init(container:))
+        return try tags.map(NoteTagEntity.init(container:))
     }
 }
 
 @MainActor
 enum TakeNoteIntentStore {
+    // SwiftData's saved identity survives renaming and distinguishes duplicate
+    // names without introducing a new CloudKit schema field.
+    nonisolated static func identifier(for container: NoteContainer, prefix: String) throws -> String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
+        return "\(prefix):\(try encoder.encode(container.persistentModelID).base64EncodedString())"
+    }
+
+    private static func container(
+        identifier: String,
+        prefix: String,
+        in context: ModelContext
+    ) throws -> NoteContainer? {
+        guard identifier.hasPrefix("\(prefix):"),
+              let data = Data(base64Encoded: String(identifier.dropFirst(prefix.count + 1))),
+              let modelID = try? JSONDecoder().decode(PersistentIdentifier.self, from: data) else { return nil }
+        let descriptor = FetchDescriptor<NoteContainer>(
+            predicate: #Predicate { $0.persistentModelID == modelID }
+        )
+        return try context.fetch(descriptor).first
+    }
+
+    static func requireEditableFolder(_ folder: NoteContainer) throws {
+        guard folder.canBeDeleted, !folder.isSystemFolder, !folder.isBuffer else {
+            throw TakeNoteIntentError.protectedFolder
+        }
+    }
+
     static func note(
         for entity: NoteSearchEntity,
         in context: ModelContext
@@ -224,13 +255,9 @@ enum TakeNoteIntentStore {
         for entity: NoteFolderEntity,
         in context: ModelContext
     ) throws -> NoteContainer {
-        let name = entity.name
-        let descriptor = FetchDescriptor<NoteContainer>(
-            predicate: #Predicate {
-                !$0.isTag && $0.name == name
-            }
-        )
-        guard let folder = try context.fetch(descriptor).first else {
+        guard let folder = try container(identifier: entity.id, prefix: "folder", in: context),
+              !folder.isTag, !folder.isTrash, !folder.isBuffer,
+              !folder.isAllNotes, !folder.isStarred else {
             throw TakeNoteIntentError.folderNotFound
         }
         return folder
@@ -240,37 +267,29 @@ enum TakeNoteIntentStore {
         for entity: NoteTagEntity,
         in context: ModelContext
     ) throws -> NoteContainer {
-        let name = entity.name
-        let descriptor = FetchDescriptor<NoteContainer>(
-            predicate: #Predicate {
-                $0.isTag && $0.name == name
-            }
-        )
-        guard let tag = try context.fetch(descriptor).first else {
+        guard let tag = try container(identifier: entity.id, prefix: "tag", in: context), tag.isTag else {
             throw TakeNoteIntentError.tagNotFound
         }
         return tag
     }
 
     static func inbox(in context: ModelContext) throws -> NoteContainer {
-        if let inbox = try fetchContainer(
-            in: context,
-            predicate: #Predicate<NoteContainer> { $0.isInbox }
-        ) {
-            return inbox
+        try NewNoteIntent.inbox(in: context)
+    }
+
+    static func starred(in context: ModelContext) throws -> NoteContainer {
+        if let folder = try fetchContainer(in: context, predicate: #Predicate { $0.isStarred }) {
+            return folder
         }
-        let inbox = NoteContainer(
+        let folder = NoteContainer(
             canBeDeleted: false,
-            isTrash: false,
-            isInbox: true,
-            isStarred: false,
-            name: TakeNoteVM.inboxFolderName,
-            symbol: "tray",
-            isTag: false
+            isStarred: true,
+            name: "Starred",
+            symbol: "star.fill"
         )
-        context.insert(inbox)
+        context.insert(folder)
         try save(context)
-        return inbox
+        return folder
     }
 
     static func trash(in context: ModelContext) throws -> NoteContainer {
@@ -329,6 +348,9 @@ enum TakeNoteIntentStore {
     static func save(_ context: ModelContext) throws {
         do {
             try context.save()
+            if !AppBootstrapper.isRunningTests {
+                SnapshotController.takeSnapshot(modelContext: context)
+            }
         } catch {
             throw TakeNoteIntentError.saveFailed
         }

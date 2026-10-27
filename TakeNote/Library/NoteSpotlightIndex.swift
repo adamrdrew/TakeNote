@@ -7,7 +7,15 @@ import AppIntents
 import CoreSpotlight
 import os
 
-final class NoteSpotlightIndex: Sendable {
+@MainActor
+protocol NoteSearchIndex: Sendable {
+    func reindex(_ notes: [NoteSearchEntity]) async
+    func delete(noteIDs: [UUID]) async
+    func deleteAll() async
+    func search(_ text: String, limit: Int) async -> [SearchHit]
+}
+
+final class NoteSpotlightIndex: NoteSearchIndex {
     nonisolated static let domainIdentifier = "com.adamdrew.takenote.notes"
 
     private let logger = Logger(
@@ -20,16 +28,7 @@ final class NoteSpotlightIndex: Sendable {
             return
         }
 
-        let items = notes.map { note in
-            let item = CSSearchableItem(
-                uniqueIdentifier: note.id.uuidString,
-                domainIdentifier: Self.domainIdentifier,
-                attributeSet: note.attributeSet
-            )
-            item.expirationDate = .distantFuture
-            item.associateAppEntity(note)
-            return item
-        }
+        let items = notes.map(\.searchableItem)
 
         do {
             try await indexSearchableItems(items)

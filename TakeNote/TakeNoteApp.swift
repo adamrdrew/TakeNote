@@ -102,6 +102,11 @@ struct TakeNoteApp: App {
     }
 
     init() {
+        if AppBootstrapper.isRunningTests {
+            container = nil
+            startupError = nil
+            return
+        }
         do {
             let config = try AppBootstrapper.makeModelConfiguration(
                 debugStoreURL: try Self.debugStoreURL()
@@ -152,6 +157,7 @@ struct TakeNoteApp: App {
                 dependency: asyncViewModelDep
             )
             let searchService = search
+            searchService.configureSpotlightDelegate(modelContainer: modelContainer)
             let asyncSearchDep: @Sendable () async -> SearchIndexService = {
                 @MainActor in
                 return searchService
@@ -299,7 +305,9 @@ private struct MainAppWindowContent: View {
     let onboardingVersionCurrent: Int
 
     var body: some View {
-        if let container {
+        if AppBootstrapper.isRunningTests {
+            Color.clear
+        } else if let container {
             MainWindow()
                 #if os(macOS)
                 .frame(minWidth: 960, minHeight: 600)

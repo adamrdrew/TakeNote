@@ -10,9 +10,9 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L01 — Platform Minimum Versions
 
-- **Rule:** All targets MUST require macOS 26 or later and iOS 26 or later. No code may introduce deployment-target compatibility shims for earlier OS versions.
+- **Rule:** All targets MUST require macOS 27 or later and iOS 27 or later. No code may introduce deployment-target compatibility shims for earlier OS versions.
 - **Rationale:** TakeNote depends on APIs (FoundationModels, SwiftData CloudKit integration, SwiftUI features) that are only available at these minimum versions. Lowering the deployment target would create a false compatibility surface.
-- **Enforcement:** Reviewer checks `MACOSX_DEPLOYMENT_TARGET` and `IPHONEOS_DEPLOYMENT_TARGET` in the Xcode project settings. Any `#available` check for a version below macOS 26 / iOS 26 is a violation.
+- **Enforcement:** Reviewer checks `MACOSX_DEPLOYMENT_TARGET` and `IPHONEOS_DEPLOYMENT_TARGET` in the Xcode project settings. Any `#available` check for a version below macOS 27 / iOS 27 is a violation.
 - **Exceptions:** None.
 
 ---
@@ -22,7 +22,7 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 - **Rule:** All user data persistence MUST use the SwiftData `ModelContainer` backed by `iCloud.com.adamdrew.takenote`. The four model types `Note`, `NoteContainer`, `NoteLink`, and `NoteImage` are the only `@Model` types. No alternative persistence mechanism (raw CoreData, direct SQLite for user data, flat-file note storage) may be introduced.
 - **Rationale:** User data integrity and iCloud sync correctness depend on all writes flowing through SwiftData's change tracking and CloudKit sync pipeline.
 - **Enforcement:** Reviewer verifies no new `@Model` classes are introduced without updating `L03`. No `NSManagedObjectContext` or direct SQLite writes to non-search databases are present.
-- **Scope:** User-facing data. The FTS5 search database (`search.sqlite`) is a derived index, not user data, and is exempt.
+- **Scope:** User-facing data. The Core Spotlight index is derived data; it is not an alternate persistence store for user notes.
 - **Exceptions:** None.
 
 ---
@@ -38,7 +38,7 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L04 — Apple FoundationModels as the Sole LLM Runtime
 
-- **Rule:** All LLM inference MUST go through `Apple.FoundationModels.SystemLanguageModel.default`. No third-party LLM APIs (OpenAI, Anthropic, Ollama, etc.), remote API calls for model inference, or alternative on-device model runtimes may be introduced.
+- **Rule:** All LLM inference MUST go through Apple FoundationModels `SystemLanguageModel` configurations. No third-party LLM APIs (OpenAI, Anthropic, Ollama, etc.), remote API calls for model inference, or alternative on-device model runtimes may be introduced.
 - **Rationale:** TakeNote is designed as a fully private, on-device AI experience. All inference stays on the user's device with Apple's privacy guarantees.
 - **Enforcement:** Reviewer verifies no network calls exist for LLM inference. No SPM dependencies or frameworks that wrap external LLM APIs are added.
 - **Exceptions:** None.
@@ -58,15 +58,15 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 - **Rule:** A new `LanguageModelSession` MUST be created for each individual LLM response. Sessions MUST NOT be reused across conversation turns or across separate invocations.
 - **Rationale:** Reusing sessions accumulates context in the session object, which causes context window overflow errors as conversation history grows. Full conversation history is assembled in the prompt text instead.
-- **Enforcement:** Reviewer checks that no `LanguageModelSession` instance is stored as a persistent property on a class or struct that survives across multiple calls.
+- **Enforcement:** Reviewer verifies that a fresh session is created at the start of every response. A property may retain the active session for in-flight work, but it must never be reused for a later turn.
 - **Exceptions:** None.
 
 ---
 
-### L07 — Magic Chat Feature Flag Gates Only Chat UI; FTS Indexing Is Always-On
+### L07 — Magic Chat Feature Flag Gates Only Chat UI; Spotlight Indexing Is Always-On
 
-- **Rule:** FTS indexing (`SearchIndexService.reindex` and `reindexAll`) MUST run unconditionally, regardless of the value of `chatFeatureFlagEnabled`. The `MagicChatEnabled` Info.plist boolean (`chatFeatureFlagEnabled`) MUST gate only the Magic Chat UI surfaces: (1) the Chat window/popover, and (2) the Chat toolbar button. When `chatFeatureFlagEnabled` is `false`, those two UI surfaces MUST NOT be reachable, but FTS indexing MUST continue to operate normally.
-- **Rationale:** Note list search depends on FTS regardless of whether Magic Chat is enabled. Gating indexing on the chat feature flag causes note list search to break silently when Magic Chat is disabled. FTS is a search index, not a chat feature; its lifecycle is independent of the chat flag. (This was the deliberate architectural change made in phase 0011.)
+- **Rule:** Spotlight indexing (`SearchIndexService.reindex` and `reindexAll`) MUST run unconditionally, regardless of the value of `chatFeatureFlagEnabled`. The `MagicChatEnabled` Info.plist boolean (`chatFeatureFlagEnabled`) MUST gate only the Magic Chat UI surfaces: (1) the Chat window/popover, and (2) the Chat toolbar button. When `chatFeatureFlagEnabled` is `false`, those two UI surfaces MUST NOT be reachable, but Spotlight indexing MUST continue to operate normally.
+- **Rationale:** Note list search depends on Spotlight regardless of whether Magic Chat is enabled. Gating indexing on the chat feature flag causes note list search to break silently when Magic Chat is disabled. Spotlight is a search index, not a chat feature; its lifecycle is independent of the chat flag. (This was the deliberate architectural change made in phase 0011.)
 - **Enforcement:** Reviewer verifies that `SearchIndexService.reindex` and `reindexAll` contain no guard or early return conditioned on `chatFeatureFlagEnabled`. Reviewer checks that the Chat window/popover and Chat toolbar button each consult `chatFeatureFlagEnabled` before rendering or executing. A change that adds a new chat UI entry point MUST also gate it on this flag.
 - **Exceptions:** Magic Assistant (inline text transformation inside NoteEditor) is distinct from Magic Chat and is not gated by this flag.
 
@@ -92,7 +92,7 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L10 — Notes Must Be Trashed Before Permanent Deletion
 
-- **Rule:** User notes MUST be moved to the Trash folder before they can be permanently deleted. Permanent deletion MUST only occur via `TakeNoteVM.emptyTrash()`, which operates exclusively on notes already in the Trash container. No code path may permanently delete a note that is not in Trash.
+- **Rule:** User notes MUST be moved to the Trash folder before they can be permanently deleted. Permanent deletion MUST only occur via `TakeNoteVM.emptyTrash()` or `EmptyTrashIntent`, both of which operate exclusively on notes already in the Trash container. No code path may permanently delete a note that is not in Trash.
 - **Rationale:** Permanent data loss is unrecoverable. The Trash step provides a safety buffer and is a core UX contract.
 - **Enforcement:** Reviewer checks that no `modelContext.delete(note)` call exists outside `emptyTrash()`. The delete rule on `Note.folder` is `.noAction`; reviewer confirms this has not been changed.
 - **Exceptions:** The DEBUG "Delete Everything" command (gated on `#if DEBUG`) is exempt.
@@ -110,19 +110,19 @@ These laws define the non-negotiable invariants for TakeNote across all Phases, 
 
 ### L12 — Note UUID Must Not Be Reassigned After Creation
 
-- **Rule:** `Note.uuid` has a private setter and MUST NOT be reassigned after the note is created. It is the stable, permanent identifier for a note across the FTS index, vector index, `NoteLink` graph, deep links (`takenote://note/<UUID>`), and widget snapshots.
-- **Rationale:** Reassigning a UUID would silently break all cross-references: FTS index entries become orphaned, deep links become invalid, `NoteLink` records reference a nonexistent UUID, and widget URLs stop working.
+- **Rule:** `Note.uuid` has a private setter and MUST NOT be reassigned after the note is created. It is the stable, permanent identifier for a note across the Spotlight index, `NoteLink` graph, deep links (`takenote://note/<UUID>`), and widget snapshots.
+- **Rationale:** Reassigning a UUID would silently break all cross-references: Spotlight entries become orphaned, deep links become invalid, `NoteLink` records reference a nonexistent UUID, and widget URLs stop working.
 - **Enforcement:** Reviewer confirms that no code accesses or mutates `Note.uuid` via reflection, `setValue(_:forKey:)`, or any other mechanism that bypasses the private setter.
 - **Exceptions:** SwiftData's internal hydration of the `uuid` field from the persistent store is the only permitted setter invocation.
 
 ---
 
-### L13 — FTS5 SearchIndex Is the Authoritative Search Backend
+### L13 — Core Spotlight Is the Authoritative Search Backend
 
-- **Rule:** `SearchIndexService` MUST use `SearchIndex` (FTS5 via SQLite) as its backing implementation. `VectorSearchIndex` MUST NOT be wired into `SearchIndexService` or any production code path without an explicit decision recorded in `.ushabti/laws.md` to replace the search backend.
-- **Rationale:** `VectorSearchIndex` is an experimental, in-memory-only, non-persisted implementation. Silently switching to it would break search persistence across launches and change relevance behavior.
-- **Enforcement:** Reviewer checks that `SearchIndexService.index` is of type `SearchIndex`, not `VectorSearchIndex`. Any PR that wires `VectorSearchIndex` into the service layer is a law violation unless this law is first updated.
-- **Exceptions:** Test code and DEBUG-only investigation code may use `VectorSearchIndex` in isolation.
+- **Rule:** Production search uses Core Spotlight through `SearchIndexService` and `NoteSpotlightIndex`. Magic Chat uses Apple's `SpotlightSearchTool` with `NoteSpotlightDelegate`. Do not restore SQLite/FTS or a vector backend without an explicit architectural decision.
+- **Rationale:** One native index serves in-app search, system Spotlight, App Entities, and on-device chat retrieval.
+- **Enforcement:** Index writes are serialized; hidden notes (Trash, Archive, Buffer) are excluded on every indexing path; result UUIDs and domains are validated.
+- **Exceptions:** Tests may inject a `NoteSearchIndex` double without writing to the system index.
 
 ---
 

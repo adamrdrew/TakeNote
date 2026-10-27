@@ -28,7 +28,7 @@ struct CreateFolderIntent: AppIntent {
         )
         context.insert(folder)
         try TakeNoteIntentStore.save(context)
-        return .result(value: NoteFolderEntity(container: folder))
+        return .result(value: try NoteFolderEntity(container: folder))
     }
 }
 
@@ -55,13 +55,15 @@ struct CreateTagIntent: AppIntent {
         )
         context.insert(tag)
         try TakeNoteIntentStore.save(context)
-        return .result(value: NoteTagEntity(container: tag))
+        return .result(value: try NoteTagEntity(container: tag))
     }
 }
 
 struct RenameFolderIntent: AppIntent {
     @Dependency(key: "ModelContainer")
     private var modelContainer: ModelContainer
+    @Dependency(key: "SearchIndexService")
+    private var search: SearchIndexService
 
     @Parameter(title: "Folder")
     var folder: NoteFolderEntity
@@ -76,15 +78,19 @@ struct RenameFolderIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<NoteFolderEntity> {
         let context = modelContainer.mainContext
         let folder = try TakeNoteIntentStore.folder(for: folder, in: context)
+        try TakeNoteIntentStore.requireEditableFolder(folder)
         folder.name = name
         try TakeNoteIntentStore.save(context)
-        return .result(value: NoteFolderEntity(container: folder))
+        for note in folder.notes { search.reindex(note: note) }
+        return .result(value: try NoteFolderEntity(container: folder))
     }
 }
 
 struct RenameTagIntent: AppIntent {
     @Dependency(key: "ModelContainer")
     private var modelContainer: ModelContainer
+    @Dependency(key: "SearchIndexService")
+    private var search: SearchIndexService
 
     @Parameter(title: "Tag")
     var tag: NoteTagEntity
@@ -101,13 +107,16 @@ struct RenameTagIntent: AppIntent {
         let tag = try TakeNoteIntentStore.tag(for: tag, in: context)
         tag.name = name
         try TakeNoteIntentStore.save(context)
-        return .result(value: NoteTagEntity(container: tag))
+        for note in tag.notes { search.reindex(note: note) }
+        return .result(value: try NoteTagEntity(container: tag))
     }
 }
 
 struct DeleteFolderIntent: AppIntent {
     @Dependency(key: "ModelContainer")
     private var modelContainer: ModelContainer
+    @Dependency(key: "TakeNoteVM")
+    private var takeNoteVM: TakeNoteVM
     @Dependency(key: "SearchIndexService")
     private var search: SearchIndexService
 
@@ -122,15 +131,23 @@ struct DeleteFolderIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let context = modelContainer.mainContext
         let folder = try TakeNoteIntentStore.folder(for: folder, in: context)
+        try TakeNoteIntentStore.requireEditableFolder(folder)
+        let wasSelected = takeNoteVM.selectedContainer == folder
+        let fallback = wasSelected ? try TakeNoteIntentStore.inbox(in: context) : nil
         let trash = try TakeNoteIntentStore.trash(in: context)
         for note in folder.notes {
-            note.folder = trash
+            note.setFolder(trash)
             note.starred = false
             note.starredFolder = nil
             search.deleteFromIndex(noteID: note.uuid)
         }
         context.delete(folder)
         try TakeNoteIntentStore.save(context)
+        if wasSelected {
+            takeNoteVM.selectedContainer = fallback
+            takeNoteVM.selectedNotes = []
+            takeNoteVM.openNote = nil
+        }
         return .result()
     }
 }
@@ -138,6 +155,8 @@ struct DeleteFolderIntent: AppIntent {
 struct DeleteTagIntent: AppIntent {
     @Dependency(key: "ModelContainer")
     private var modelContainer: ModelContainer
+    @Dependency(key: "TakeNoteVM")
+    private var takeNoteVM: TakeNoteVM
     @Dependency(key: "SearchIndexService")
     private var search: SearchIndexService
 
@@ -152,6 +171,8 @@ struct DeleteTagIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let context = modelContainer.mainContext
         let tag = try TakeNoteIntentStore.tag(for: tag, in: context)
+        let wasSelected = takeNoteVM.selectedContainer == tag
+        let fallback = wasSelected ? try TakeNoteIntentStore.inbox(in: context) : nil
         let notes = tag.notes
         for note in notes where note.tag == tag {
             note.tag = nil
@@ -159,6 +180,11 @@ struct DeleteTagIntent: AppIntent {
         }
         context.delete(tag)
         try TakeNoteIntentStore.save(context)
+        if wasSelected {
+            takeNoteVM.selectedContainer = fallback
+            takeNoteVM.selectedNotes = []
+            takeNoteVM.openNote = nil
+        }
         return .result()
     }
 }

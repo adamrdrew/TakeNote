@@ -47,13 +47,13 @@ enum ToolCallStatus: Hashable, Sendable {
 
 struct CreateNoteTool: Tool {
     let name = "createNote"
-    let description = "Create a new Markdown note in the user's Inbox when the user explicitly asks to create or save one."
+    let description = "Create a new Markdown note in the user's Inbox. Use only for explicit requests to create, save, draft, write, add, compose, or start a new note. Never use for questions, searches, summaries, or requests to find existing notes."
 
     @Generable
     struct Arguments {
-        @Guide(description: "A concise note title without Markdown formatting.")
+        @Guide(description: "A concise title for the new note. Do not infer a title for existing-note questions or searches.")
         var title: String
-        @Guide(description: "The note body in clean Markdown. Include only content the user requested or supplied.")
+        @Guide(description: "The new note body in clean Markdown. Include only content the user explicitly requested or supplied for a new note.")
         var content: String
     }
 
@@ -61,6 +61,7 @@ struct CreateNoteTool: Tool {
     let onCreate: @MainActor @Sendable (String, String) async -> UUID?
 
     func call(arguments: Arguments) async throws -> String {
+        try Task.checkCancellation()
         await onStatusChange(.creatingNote)
         guard await onCreate(arguments.title, arguments.content) != nil else {
             await onStatusChange(.failedToCreateNote)

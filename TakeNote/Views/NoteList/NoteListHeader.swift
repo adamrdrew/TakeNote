@@ -46,7 +46,9 @@ struct NoteListHeader: View {
                 newName: $newName,
                 nameInputFocused: $nameInputFocused
             )
+                #if !os(visionOS)
                 .glassEffect(in: .rect)
+                #endif
         }
     }
 }

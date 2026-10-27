@@ -85,7 +85,7 @@ Middle column. Renders notes for the selected container.
 - Search text state lives in `TakeNoteVM.noteSearchText` (not a local `@State` on `NoteList`). This is the single source of truth for search text shared across platforms.
 - Filters and sorts notes via `rebuildNoteCache()`, which is called on `.onAppear` and via `onChange` whenever any of the five cache inputs change: `notes` (the `@Query` array), `takeNoteVM.noteSearchText`, `takeNoteVM.selectedContainer`, `takeNoteVM.sortBy`, or `takeNoteVM.sortOrder`. The results are stored in four `@State private` arrays: `cachedFilteredNotes`, `cachedSortedNotes`, `cachedStarredNotes`, and `cachedUnstarredNotes`. The body uses these cached arrays directly; there are no computed `filteredNotes` or `sortedNotes` properties evaluated on every render.
 - The `.onChange(of: takeNoteVM.selectedContainer)` handler clears `noteSearchText` on a user-initiated container switch. It first checks `takeNoteVM.isSearchNavigating`: if `true` (the switch was triggered programmatically by the search submit handler), it resets the flag to `false` and skips clearing the search text; if `false` (a manual user switch), it clears `noteSearchText`. `rebuildNoteCache()` is always called after, so the note list reflects the correct state for either path.
-- `rebuildNoteCache()` logic: when `noteSearchText` is non-empty, the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search); FTS results are ordered by BM25 rank. When search text is empty, returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected). Results are then sorted by `sortBy`/`sortOrder` from `TakeNoteVM`. The sorted result is split into `cachedStarredNotes` and `cachedUnstarredNotes` to avoid per-render `filter` calls in `ForEach`.
+- `rebuildNoteCache()` logic: when `noteSearchText` is non-empty, the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search); search results come from ranked Spotlight queries. When search text is empty, returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected). Results are then sorted by `sortBy`/`sortOrder` from `TakeNoteVM`. The sorted result is split into `cachedStarredNotes` and `cachedUnstarredNotes` to avoid per-render `filter` calls in `ForEach`.
 - The `.searchable()` modifier placement differs by platform:
   - **macOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `List` inside `NoteList`.
   - **iOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern — search bar appears at the bottom of the sidebar column on iPhone).
@@ -201,8 +201,7 @@ AI chat interface. Flexible enough to serve two purposes:
 |---|---|---|
 | `context` | `nil` | Pre-injected context string (selected note text for Magic Assistant). |
 | `instructions` | `nil` | LLM system instructions. Defaults to `MAGIC_CHAT_PROMPT`. |
-| `prompt` | `nil` | Prompt prefix. Defaults to `"Provide an answer to the following question:\n\n"`. |
-| `searchEnabled` | `true` | Whether to run FTS search and include excerpts in the prompt. |
+| `searchEnabled` | `true` | Whether to offer SpotlightSearchTool for note retrieval. |
 | `onBotMessageClick` | `nil` | Callback receiving bot response text (used by Magic Assistant to replace selected text). |
 | `toolbarVisible` | `true` | Whether to show the "New Chat" toolbar button. |
 | `useHistory` | `true` | Whether to include chat history in prompts. |
@@ -210,11 +209,11 @@ AI chat interface. Flexible enough to serve two purposes:
 ### Data Types
 
 - `Sender` — enum: `.human` / `.bot`
-- `ConversationEntry` — `Identifiable, Hashable`. Fields: `id: UUID`, `sender: Sender`, `text: String`.
+- `ConversationEntry` — `Identifiable, Hashable, Sendable`. Holds the message UUID, sender, text, source hits, completion state, and tool status.
 
 ### Behavior
 
-- On submit: appends user message, runs `SearchIndex.searchNatural()` if `searchEnabled`, assembles prompt with context + excerpts + history, calls `LanguageModelSession.respond()`.
+- On submit: appends the user message, builds a fresh session with explicit visible history and selected-text context, and streams the response. SpotlightSearchTool is offered when search is enabled; the creation tool requires an explicit current-turn request.
 - A new `LanguageModelSession` is created per response (stateless).
 - Bot responses are stripped of wrapping Markdown fences via `unwrapMarkdownFence()`.
 - "New Chat" button clears `conversation`, `userQuery`, and resets state.
@@ -222,7 +221,7 @@ AI chat interface. Flexible enough to serve two purposes:
 ### Supporting Views
 
 - `ContextBubble` — styled bubble displaying the injected `context` string at the top of the conversation.
-- `MessageBubble` — individual message bubble. Bot messages are tappable if `onBotMessageClick` is provided. Accepts `noteTitles: [UUID: String]` (a pre-computed title map) instead of `notes: [Note]`, to avoid full-list re-renders on any note change. `ChatWindow` pre-computes `noteTitleMap` as a computed property mapping `allNotes` UUIDs to titles, and passes it to each `MessageBubble`.
+- `MessageBubble` — displays a message, tool status, and validated source links. Assistant replies invoke `onBotMessageClick` when selection replacement is enabled.
 
 ---
 

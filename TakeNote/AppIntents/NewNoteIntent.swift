@@ -44,7 +44,10 @@ struct NewNoteIntent: AppIntent {
     
     @MainActor
     func perform() async throws -> some IntentResult {
-        takeNoteVM.selectedContainer = takeNoteVM.inboxFolder
+        let context = modelContainer.mainContext
+        let inbox = try Self.inbox(in: context)
+        takeNoteVM.inboxFolder = inbox
+        takeNoteVM.selectedContainer = inbox
         let note = takeNoteVM.addNote(modelContainer.mainContext)
 
         if let note {
@@ -59,4 +62,23 @@ struct NewNoteIntent: AppIntent {
         return .result()
     }
     
+    @MainActor
+    static func inbox(in context: ModelContext) throws -> NoteContainer {
+        let descriptor = FetchDescriptor<NoteContainer>(predicate: #Predicate { $0.isInbox })
+        if let inbox = try context.fetch(descriptor).first {
+            return inbox
+        }
+        let inbox = NoteContainer(
+            canBeDeleted: false,
+            isTrash: false,
+            isInbox: true,
+            isStarred: false,
+            name: TakeNoteVM.inboxFolderName,
+            symbol: "tray",
+            isTag: false
+        )
+        context.insert(inbox)
+        try context.save()
+        return inbox
+    }
 }

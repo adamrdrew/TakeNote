@@ -5,7 +5,9 @@
 //  Created by Adam Drew on 9/21/25.
 //
 
+#if !os(visionOS)
 import SFSymbolsPicker
+#endif
 import SwiftData
 import SwiftUI
 
@@ -56,11 +58,15 @@ struct NoteContainerDetailsEditor: View {
                         }
                         .buttonStyle(.bordered)
                         .sheet(isPresented: $isPresented) {
+                            #if os(visionOS)
+                            FolderSymbolPicker(selection: $newSymbol)
+                            #else
                             SymbolsPicker(
                                 selection: $newSymbol,
                                 title: "Pick a symbol",
                                 autoDismiss: true
                             )
+                            #endif
                         }
                         Spacer()
                     }
@@ -111,7 +117,7 @@ struct NoteContainerDetailsEditor: View {
             }
             .padding(.top, 4)
         }
-        #if os(macOS)
+        #if os(macOS) || os(visionOS)
             .frame(width: 280, height: 420)  // align with NoteSortPopover sizing
         #else
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -138,3 +144,58 @@ struct NoteContainerDetailsEditor: View {
         }
     }
 }
+
+#if os(visionOS)
+private struct FolderSymbolPicker: View {
+    @Binding var selection: String
+    @Environment(\.dismiss) private var dismiss
+
+    private struct SymbolChoice: Identifiable {
+        let id: String
+        let title: LocalizedStringResource
+    }
+
+    private let symbols: [SymbolChoice] = [
+        .init(id: "folder", title: "Folder"), .init(id: "briefcase", title: "Work"),
+        .init(id: "house", title: "Home"), .init(id: "book", title: "Book"),
+        .init(id: "graduationcap", title: "Study"), .init(id: "lightbulb", title: "Ideas"),
+        .init(id: "star", title: "Star"), .init(id: "heart", title: "Heart"),
+        .init(id: "flag", title: "Flag"), .init(id: "bookmark", title: "Bookmark"),
+        .init(id: "calendar", title: "Calendar"), .init(id: "checklist", title: "Checklist"),
+        .init(id: "pencil", title: "Writing"), .init(id: "doc.text", title: "Document"),
+        .init(id: "tray", title: "Tray"), .init(id: "archivebox", title: "Archive"),
+        .init(id: "person", title: "Person"), .init(id: "person.2", title: "People"),
+        .init(id: "airplane", title: "Travel"), .init(id: "car", title: "Car"),
+        .init(id: "leaf", title: "Nature"), .init(id: "fork.knife", title: "Food"),
+        .init(id: "gift", title: "Gift"), .init(id: "music.note", title: "Music")
+    ]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 72))], spacing: 16) {
+                    ForEach(symbols) { symbol in
+                        Button {
+                            selection = symbol.id
+                            dismiss()
+                        } label: {
+                            Image(systemName: symbol.id)
+                                .font(.title)
+                                .frame(width: 60, height: 60)
+                        }
+                        .accessibilityLabel(Text(symbol.title))
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Pick a symbol")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel", role: .cancel) { dismiss() }
+                }
+            }
+        }
+        .frame(width: 480, height: 420)
+    }
+}
+#endif

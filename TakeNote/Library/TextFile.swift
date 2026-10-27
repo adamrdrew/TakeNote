@@ -22,7 +22,7 @@ final class TextFile: WritableDocument {
     nonisolated func writer(
         configuration: sending DocumentWriteConfiguration
     ) -> sending FileWrapperDocumentWriter<String> {
-        FileWrapperDocumentWriter(configuration) { snapshot in
+        FileWrapperDocumentWriter(configuration) { snapshot, _ in
             FileWrapper(regularFileWithContents: Data(snapshot.utf8))
         }
     }

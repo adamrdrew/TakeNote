@@ -193,8 +193,6 @@ struct ClearNoteTagIntent: AppIntent {
 struct SetNoteStarredIntent: AppIntent {
     @Dependency(key: "ModelContainer")
     private var modelContainer: ModelContainer
-    @Dependency(key: "TakeNoteVM")
-    private var takeNoteVM: TakeNoteVM
     @Dependency(key: "SearchIndexService")
     private var search: SearchIndexService
 
@@ -211,9 +209,14 @@ struct SetNoteStarredIntent: AppIntent {
     func perform() async throws -> some IntentResult & ReturnsValue<NoteSearchEntity> {
         let context = modelContainer.mainContext
         let note = try TakeNoteIntentStore.note(for: note, in: context)
-        if note.starred != starred {
-            takeNoteVM.noteStarredToggle(note, modelContext: context)
+        if starred {
+            note.starredFolder = try TakeNoteIntentStore.starred(in: context)
+        } else {
+            note.starredFolder = nil
         }
+        note.starred = starred
+        note.updatedDate = .now
+        try TakeNoteIntentStore.save(context)
         search.reindex(note: note)
         return .result(value: NoteSearchEntity(note: note))
     }
@@ -263,8 +266,15 @@ struct TrashNoteIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         let context = modelContainer.mainContext
         let note = try TakeNoteIntentStore.note(for: note, in: context)
-        takeNoteVM.moveNoteToTrash(note, modelContext: context)
+        note.setFolder(try TakeNoteIntentStore.trash(in: context))
+        note.starred = false
+        note.starredFolder = nil
+        try TakeNoteIntentStore.save(context)
         search.deleteFromIndex(noteID: note.uuid)
+        takeNoteVM.selectedNotes.remove(note)
+        if takeNoteVM.openNote?.uuid == note.uuid {
+            takeNoteVM.openNote = nil
+        }
         return .result()
     }
 }

@@ -234,41 +234,17 @@ struct ImportResult {
 
 ## AppIntents
 
-**Files:** `TakeNote/AppIntents/NewNoteIntent.swift`, `NewNoteWithContentIntent.swift`
+`TakeNote/AppIntents/` exposes note search/open/create/update/append/move/tag/star/archive/trash actions and folder/tag create/rename/delete actions, plus Empty Trash. `TakeNoteShortcuts` publishes seven app shortcuts. New/Open Note actions open the UI; other actions can execute in the background.
 
-Siri/Shortcuts integration. Both intents open the app (`openAppWhenRun = true`) and access shared state via `AppDependencyManager`.
+Shared state comes from `@Dependency` using the `ModelContainer`, `TakeNoteVM`, and `SearchIndexService` keys registered at app startup. Persistence errors propagate as intent errors. Mutations refresh widget snapshots and schedule Spotlight updates/removals.
 
-### NewNoteIntent
-
-`static var title: "Create a new note"`
-
-Creates a new note in the Inbox. Selects it in the UI.
-
-### NewNoteWithContentIntent
-
-`static var title: "Create a new note with content"`
-
-Parameters:
-- `content: String` — note body
-- `noteTitle: String` — note title
-
-Creates a note in Inbox, sets content and title via `note.setContent(content)` and `note.setTitle(noteTitle)` (the model's mutating methods, which update `updatedDate` and trigger `WidgetCenter.shared.reloadAllTimelines()`), then selects it in the UI.
-
-### Dependency Access
-
-Both intents use:
-```swift
-@Dependency(key: "ModelContainer") private var modelContainer: ModelContainer
-@Dependency(key: "TakeNoteVM") private var takeNoteVM: TakeNoteVM
-```
-
-These keys are registered in `TakeNoteApp.init()` via `AppDependencyManager.shared.add(key:dependency:)`.
+`NoteSearchEntity` uses the note UUID. Folder and tag entities encode the saved SwiftData persistent identity, so renames and duplicate names remain unambiguous within the same store; moving a shortcut to a different device/store requires reselecting that folder/tag. No schema field is added. Queries return current display names. Renaming or deleting system folders is rejected. The Inbox and Starred lookups do not depend on a window having initialized the view model. Trash actions remove star relationships; permanent deletion operates only on notes already in Trash.
 
 ---
 
 ## Widgets and Control Extension
 
-**Target:** `NewNoteControl`
+**Target:** `NewNoteControlExtension`
 **Files:** `NewNoteControl/`
 
 ### InboxWidget
@@ -287,7 +263,7 @@ Same as InboxWidget but shows Starred notes. No new note button.
 
 `kind: "com.adamdrew.takenote.newNoteControl"`
 
-A `ControlWidget` button for Control Center / Lock Screen that fires `NewNoteIntent`.
+A `ControlWidget` button for Control Center / Lock Screen that fires `NewNoteIntent` on macOS and iOS. It is excluded on visionOS, where Inbox and Starred widgets remain available.
 
 ### ContainerProvider
 
@@ -327,7 +303,7 @@ Extends `LanguageConfiguration` with a `markdown()` factory. Provides syntax hig
 
 **File:** `TakeNote/Library/TextFile.swift`
 
-A `FileDocument` implementation for note export. Stores `text: String`. Used by `.fileExporter` in `NoteListEntry` to save notes as `.md` files. `readableContentTypes = [UTType.plainText]`.
+A `WritableDocument` implementation for note export. Stores `text: String` and provides a String snapshot with a `FileWrapperDocumentWriter`. The SDK 27 writer closure receives both the snapshot and previous FileWrapper. Used by `.fileExporter` to save notes as `.md` files.
 
 ### FocusValues
 

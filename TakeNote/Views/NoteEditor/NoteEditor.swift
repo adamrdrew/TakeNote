@@ -309,6 +309,16 @@ struct EditorCard: ViewModifier {
     }
 }
 
+private struct MarkdownShortcutSurface: ViewModifier {
+    func body(content: Content) -> some View {
+        #if os(visionOS)
+        content.background(.regularMaterial, in: .rect(cornerRadius: 16))
+        #else
+        content.glassEffect(in: .rect(cornerRadius: 16))
+        #endif
+    }
+}
+
 struct MarkdownShortcutBar: View {
     let insert: (String) -> Void
     var body: some View {
@@ -316,37 +326,39 @@ struct MarkdownShortcutBar: View {
             Spacer()
             Button("#") { insert("#") }
                 .padding()
-                .glassEffect(in: .rect(cornerRadius: 16.0))
+                .modifier(MarkdownShortcutSurface())
 
             Button("*") { insert("*") }
                 .padding()
-                .glassEffect(in: .rect(cornerRadius: 16.0))
+                .modifier(MarkdownShortcutSurface())
 
             Button("1.") { insert("1. ") }
                 .padding()
-                .glassEffect(in: .rect(cornerRadius: 16.0))
+                .modifier(MarkdownShortcutSurface())
 
             Button("```") { insert("```\n\n```") }
                 .padding()
-                .glassEffect(in: .rect(cornerRadius: 16.0))
+                .modifier(MarkdownShortcutSurface())
 
             Button(action: { insert("[ ](  )") }) {
                 Text(verbatim: "[]()")
             }
             .padding()
-            .glassEffect(in: .rect(cornerRadius: 16.0))
+            .modifier(MarkdownShortcutSurface())
 
             Button(action: { insert("`") }) {
                 Text(verbatim: "`")
             }
             .padding()
-            .glassEffect(in: .rect(cornerRadius: 16.0))
+            .modifier(MarkdownShortcutSurface())
 
             Spacer()
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
+        #if !os(visionOS)
         .glassEffect()
+        #endif
     }
 }
 
@@ -579,7 +591,7 @@ struct NoteEditor: View {
                     .help(editorActions.showPreview ? "Hide Preview" : "Show Preview")
 
                 }
-                .visibilityPriority(.high)
+                .visibilityPriority(.takeNotePrimary)
 
                 ToolbarItem(placement: toolbarPosition) {
                     PhotosPicker(
@@ -591,7 +603,7 @@ struct NoteEditor: View {
                     .disabled(editorActions.showPreview)
                     .help("Insert Photo")
                 }
-                .visibilityPriority(.low)
+                .visibilityPriority(.takeNoteSecondary)
 
                 #if os(iOS)
                     ToolbarItem(placement: toolbarPosition) {
@@ -603,7 +615,7 @@ struct NoteEditor: View {
                         .disabled(editorActions.showPreview)
                         .help("Paste")
                     }
-                    .visibilityPriority(.low)
+                    .visibilityPriority(.takeNoteSecondary)
                 #endif
 
                 if editorActions.openNoteHasBacklinks {
@@ -624,7 +636,7 @@ struct NoteEditor: View {
                             BackLinks()
                         }
                     }
-                    .visibilityPriority(.low)
+                    .visibilityPriority(.takeNoteSecondary)
                 }
 
                 if editorActions.magicFormatter.isAvailable {
@@ -639,7 +651,7 @@ struct NoteEditor: View {
                         .disabled(editorActions.magicFormatter.formatterIsBusy)
                         .help("Magic Format")
                     }
-                    .visibilityPriority(.high)
+                    .visibilityPriority(.takeNotePrimary)
 
                 }
 
@@ -676,7 +688,7 @@ struct NoteEditor: View {
                         }
 
                     }
-                    .visibilityPriority(.high)
+                    .visibilityPriority(.takeNotePrimary)
                 }
 
             }

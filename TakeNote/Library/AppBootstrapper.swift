@@ -10,6 +10,16 @@ import SwiftData
 import os
 
 struct AppBootstrapper {
+    static var isRunningTests: Bool {
+        #if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        return environment["TAKENOTE_TESTING"] == "1"
+            || environment["XCTestConfigurationFilePath"] != nil
+        #else
+        return false
+        #endif
+    }
+
     private enum BootstrapError: LocalizedError {
         case modelSynthesisFailed
 
@@ -80,7 +90,7 @@ struct AppBootstrapper {
             observerTasks.append(
                 Task { @MainActor [weak self] in
                     guard let self else { return }
-                    logger.info("RAG search startup reindex triggered.")
+                    logger.info("Spotlight search startup reindex triggered.")
                     do {
                         try reindexAllSearchableNotes()
                     } catch {

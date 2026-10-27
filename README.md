@@ -2,7 +2,7 @@
 
 TakeNote is a markdown note-taking app for Mac, iPhone, iPad, and Apple Vision Pro. All your notes sync across devices via iCloud. AI features powered by Apple Intelligence run entirely on-device for privacy.
 
-**Requires macOS 26, iOS 26, or visionOS 26 or later.** AI features require a device that supports [Apple Intelligence](https://www.apple.com/apple-intelligence/) with Apple Intelligence enabled.
+**Requires macOS 27, iOS/iPadOS 27, or visionOS 27 or later.** AI features require a device that supports [Apple Intelligence](https://www.apple.com/apple-intelligence/) with Apple Intelligence enabled.
 
 ## Notes
 
@@ -12,7 +12,7 @@ A note's title is automatically set from the first line of its content. You can 
 
 ### Preview Mode
 
-Press **Cmd+P** to toggle between the editor and a rendered markdown preview. On Mac, the editor and preview display side by side. On iPhone and iPad, it switches between full-screen editor and full-screen preview.
+Press **Cmd+P** to toggle between the editor and a rendered markdown preview. Switch between the editor and a rendered preview on each platform.
 
 ### Images
 
@@ -133,7 +133,19 @@ TakeNote provides home screen and lock screen widgets:
 - **Inbox Widget** - Shows recent notes from your Inbox with a button to create a new note. Available in small, medium, and large sizes.
 - **Starred Widget** - Shows your recently starred notes. Available in small, medium, and large sizes.
 
-A Control Center widget is also available for quickly creating a new note.
+A Control Center widget is also available on Mac, iPhone, and iPad for quickly creating a new note. Vision Pro includes the Inbox and Starred widgets.
+
+## Siri and Shortcuts
+
+TakeNote exposes actions to find, open, create, update, append to, move, tag, star, archive, and trash notes; create, rename, and delete folders and tags; and empty Trash. System folders are protected from renaming and deletion. Empty Trash permanently deletes the notes already in Trash.
+
+Seven app shortcuts provide New Note, New Note With Text, Find Notes, Open Note, Append to Note, New Folder, and New Tag. Folder and tag references use saved database identities, so duplicate names and renames are supported on the device where the shortcut was configured. Reselect a folder or tag when moving the shortcut to a different device.
+
+## Building and Testing
+
+Open `TakeNote.xcodeproj` in Xcode 27.1 or later and select the shared `TakeNote` scheme. The app targets macOS, iOS/iPadOS, and visionOS 27. Configure your signing team and iCloud/App Group capabilities to run the app with sync.
+
+Run **Product → Test** with a Mac or iOS destination for the migration regression suite. The Debug test host skips normal app startup, keeping tests separate from your notes, CloudKit, Spotlight index, and widget snapshots. Tests create their own in-memory stores and search doubles.
 
 ## Keyboard Shortcuts
 
