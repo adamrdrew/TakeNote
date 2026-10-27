@@ -276,3 +276,17 @@ Key platform differences handled throughout:
 - Copy/cut/paste system is macOS-only.
 - AI Chat is a separate window on macOS; a popover on iOS.
 - Search bar placement: on macOS `.searchable()` is attached to the `List` in `NoteList`; on iOS `.searchable()` is attached to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern), placing the search bar at the bottom of the sidebar column on iPhone. Both use `TakeNoteVM.noteSearchText` as the shared binding. When search text is non-empty, results span all non-trash/non-buffer notes regardless of selected folder (global search). Pressing Enter/Return in a non-empty search field navigates to All Notes (via `MainWindow.onSubmit(of: .search)`) so the sidebar communicates the global scope. Manually switching to a different folder while search text is non-empty clears the search text (via `NoteList.onChange(of: selectedContainer)`).
+
+## iPhone Duo and window resizing
+
+The app is built with the iOS 27.1 SDK for full-screen Duo support. Layout depends on the current window's size classes and safe areas, with no device-model, global-screen, or orientation-based geometry assumptions. NavigationSplitView handles native camera/fold adaptation.
+
+`MainWindowActions` owns the preferred compact column. On a transition to compact width, selected notes stay in the detail column, a selected folder or active search stays in the content column, and an empty selection shows the sidebar. Existing folder selection and active searches are preserved when the main view reappears. The sidebar can shrink from its ideal width to 240 points.
+
+Each window owns its own `NoteEditorActions`. Reattaching the editor to the same saved note preserves preview/edit mode, caret selection, and scroll position; selecting another note resets the presentation. Editing focus is restored when the editor reattaches. Markdown commands use the system keyboard toolbar rather than a custom fixed bar.
+
+`AdaptivePopover` has a single popover host and uses native compact-sheet adaptation. It no longer changes the presenting content's structural identity when size classes change. Chat uses flexible ideal sizes. Sort/detail forms and onboarding scroll at short heights; onboarding keeps Continue available outside the scroll content. Multi-note card geometry clamps to nonnegative sizes.
+
+`TakeNoteTests/AdaptiveLayoutTests.swift` covers compact-navigation selection and editor reattachment. Validate closed/open, landscape, book/tabletop, camera-active, and Split View poses on a Duo running iOS 27.1 or later, including keyboard and modal transitions. State tests and successful compilation do not replace device layout verification.
+
+The October 27, 2026 simulator verification attempt used the installed iOS 27.1 runtime and an ad-hoc-signed build. The temporary Duo simulator remained at the Apple boot logo, and installation never completed; the temporary simulator was cleaned up. The user subsequently verified the app on a real Duo and reported that it looks good. The pose matrix above remains a regression checklist; individual poses were not separately reported.

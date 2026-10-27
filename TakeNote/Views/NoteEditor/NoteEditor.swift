@@ -47,6 +47,9 @@ final class NoteEditorActions {
         if self.openNote?.persistentModelID != openNote?.persistentModelID {
             cancelMagicFormat()
             cancelSummaryGeneration()
+            showPreview = true
+            position = CodeEditor.Position()
+            messages = []
         }
         self.openNote = openNote
         self.modelContext = modelContext
@@ -309,63 +312,40 @@ struct EditorCard: ViewModifier {
     }
 }
 
-private struct MarkdownShortcutSurface: ViewModifier {
-    func body(content: Content) -> some View {
-        #if os(visionOS)
-        content.background(.regularMaterial, in: .rect(cornerRadius: 16))
-        #else
-        content.glassEffect(in: .rect(cornerRadius: 16))
-        #endif
-    }
-}
-
-struct MarkdownShortcutBar: View {
+#if os(iOS)
+private struct MarkdownShortcutToolbar: ToolbarContent {
+    let isVisible: Bool
     let insert: (String) -> Void
-    var body: some View {
-        HStack(spacing: 12) {
-            Spacer()
-            Button("#") { insert("#") }
-                .padding()
-                .modifier(MarkdownShortcutSurface())
 
-            Button("*") { insert("*") }
-                .padding()
-                .modifier(MarkdownShortcutSurface())
-
-            Button("1.") { insert("1. ") }
-                .padding()
-                .modifier(MarkdownShortcutSurface())
-
-            Button("```") { insert("```\n\n```") }
-                .padding()
-                .modifier(MarkdownShortcutSurface())
-
-            Button(action: { insert("[ ](  )") }) {
-                Text(verbatim: "[]()")
+    var body: some ToolbarContent {
+        ToolbarItemGroup(placement: .keyboard) {
+            if isVisible {
+                Button("#") { insert("#") }
+                    .accessibilityLabel("Heading")
+                Button("*") { insert("*") }
+                    .accessibilityLabel("Bullet List")
+                Button("1.") { insert("1. ") }
+                    .accessibilityLabel("Numbered List")
+                Button("```") { insert("```\n\n```") }
+                    .accessibilityLabel("Code Block")
+                Button { insert("[ ](  )") } label: {
+                    Text(verbatim: "[]()")
+                }
+                .accessibilityLabel("Link")
+                Button { insert("`") } label: {
+                    Text(verbatim: "`")
+                }
+                .accessibilityLabel("Inline Code")
             }
-            .padding()
-            .modifier(MarkdownShortcutSurface())
-
-            Button(action: { insert("`") }) {
-                Text(verbatim: "`")
-            }
-            .padding()
-            .modifier(MarkdownShortcutSurface())
-
-            Spacer()
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        #if !os(visionOS)
-        .glassEffect()
-        #endif
     }
 }
+#endif
 
 struct NoteEditor: View {
     @Environment(\.modelContext) private var modelContext: ModelContext
     @Environment(\.colorScheme) private var colorScheme: ColorScheme
-    @State private var editorActions = NoteEditorActions()
+    let editorActions: NoteEditorActions
     @State private var selectedPhotoItem: PhotosPickerItem?
 
     #if os(iOS)
@@ -506,8 +486,8 @@ struct NoteEditor: View {
                 }
             }
             .task(id: openNote?.persistentModelID) {
-                editorActions.showPreview = true
                 editorActions.update(openNote: openNote, modelContext: modelContext)
+                isInputActive = !editorActions.showPreview
             }
             .onChange(of: editorActions.showPreview) { _, newValue in
                 isInputActive = !newValue
@@ -556,25 +536,13 @@ struct NoteEditor: View {
             } message: { message in
                 Text(message)
             }
-            #if os(iOS)
-                .safeAreaInset(edge: .bottom) {
-                    if isInputActive && !editorActions.showPreview
-                        && !hardwareKeyboardConnected
-                    {
-                        MarkdownShortcutBar(insert: editorActions.insertAtCaret)
-                        .transition(
-                            .move(edge: .bottom).combined(
-                                with: .opacity
-                            )
-                        )
-                    }
-                }
-                .safeAreaPadding(
-                    .bottom,
-                    (isInputActive && !editorActions.showPreview) ? 8 : 0
-                )
-            #endif
             .toolbar {
+                #if os(iOS)
+                MarkdownShortcutToolbar(
+                    isVisible: isInputActive && !editorActions.showPreview && !hardwareKeyboardConnected,
+                    insert: editorActions.insertAtCaret
+                )
+                #endif
 
                 ToolbarItem(placement: toolbarPosition) {
                     Button(action: {
@@ -684,7 +652,7 @@ struct NoteEditor: View {
                                 chatBoxPlaceholder: "How do you want this formatted?"
 
                             )
-                            .frame(minWidth: 400, minHeight: 500)
+                            .frame(idealWidth: 400, idealHeight: 500)
                         }
 
                     }

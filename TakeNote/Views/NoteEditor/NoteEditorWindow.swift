@@ -10,6 +10,7 @@ import SwiftUI
 
 struct NoteEditorWindow: View {
     @Binding var noteID: NoteIDWrapper?
+    @State private var editorActions = NoteEditorActions()
 
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var editorWindowVM
@@ -42,6 +43,7 @@ struct NoteEditorWindow: View {
     var body: some View {
         @Bindable var editorWindowVM = editorWindowVM
         NoteEditor(
+            editorActions: editorActions,
             openNote: $editorWindowVM.openNote
         )
             .onAppear {

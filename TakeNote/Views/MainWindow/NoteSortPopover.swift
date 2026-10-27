@@ -13,71 +13,72 @@ struct NoteSortPopover: View {
 
     var body: some View {
         @Bindable var takeNoteVM = takeNoteVM
-        VStack(spacing: 16) {
-            NoteSortPopoverHeader()
+        ScrollView {
+            VStack(spacing: 16) {
+                NoteSortPopoverHeader()
 
-            LabeledContainer(
-                title: "Sort by",
-                subtitle: "Choose which timestamp drives ordering."
-            ) {
-                Picker("Sort by", selection: $takeNoteVM.sortBy) {
-                    Label("Created", systemImage: "calendar.badge.plus").tag(
-                        SortBy.created
-                    )
-                    Label("Updated", systemImage: "arrow.clockwise").tag(
-                        SortBy.updated
-                    )
+                LabeledContainer(
+                    title: "Sort by",
+                    subtitle: "Choose which timestamp drives ordering."
+                ) {
+                    Picker("Sort by", selection: $takeNoteVM.sortBy) {
+                        Label("Created", systemImage: "calendar.badge.plus").tag(
+                            SortBy.created
+                        )
+                        Label("Updated", systemImage: "arrow.clockwise").tag(
+                            SortBy.updated
+                        )
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Sort by")
                 }
-                .pickerStyle(.segmented)
-                .accessibilityLabel("Sort by")
+
+                LabeledContainer(
+                    title: "Order",
+                    subtitle: "Pick direction of the list."
+                ) {
+                    Picker("Order", selection: $takeNoteVM.sortOrder) {
+                        Label("Newest first", systemImage: "arrow.down.to.line")
+                            .tag(SortOrder.newestFirst)
+                        Label("Oldest first", systemImage: "arrow.up.to.line").tag(
+                            SortOrder.oldestFirst
+                        )
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityLabel("Sort order")
+                }
+
+                HStack(spacing: 12) {
+                    Button(role: .none) {
+                        takeNoteVM.sortBy = .created
+                        takeNoteVM.sortOrder = .newestFirst
+                    } label: {
+                        Label("Reset", systemImage: "arrow.counterclockwise")
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Restore defaults: Created · Newest first")
+
+                    Spacer()
+
+                    Button {
+                        dismiss()
+                    } label: {
+                        Label("Done", systemImage: "checkmark")
+                            .labelStyle(.titleAndIcon)
+                    }
+                    .keyboardShortcut(.defaultAction)
+                }
+                .padding(.top, 4)
             }
-
-            LabeledContainer(
-                title: "Order",
-                subtitle: "Pick direction of the list."
-            ) {
-                Picker("Order", selection: $takeNoteVM.sortOrder) {
-                    Label("Newest first", systemImage: "arrow.down.to.line")
-                        .tag(SortOrder.newestFirst)
-                    Label("Oldest first", systemImage: "arrow.up.to.line").tag(
-                        SortOrder.oldestFirst
-                    )
-                }
-                .pickerStyle(.segmented)
-                .accessibilityLabel("Sort order")
-            }
-
-            HStack(spacing: 12) {
-                Button(role: .none) {
-                    takeNoteVM.sortBy = .created
-                    takeNoteVM.sortOrder = .newestFirst
-                } label: {
-                    Label("Reset", systemImage: "arrow.counterclockwise")
-                }
-                .buttonStyle(.borderless)
-                .help("Restore defaults: Created · Newest first")
-
-                Spacer()
-
-                Button {
-                    dismiss()
-                } label: {
-                    Label("Done", systemImage: "checkmark")
-                        .labelStyle(.titleAndIcon)
-                }
-                .keyboardShortcut(.defaultAction)
-            }
-            .padding(.top, 4)
+            .padding(16)
         }
         #if os(macOS)
             .frame(width: 280, height: 320)
         #else
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.horizontal)
+            .frame(idealWidth: 320, idealHeight: 360)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         #endif
-        .padding(16)
         .background(
             .ultraThinMaterial,
             in: RoundedRectangle(cornerRadius: 20, style: .continuous)

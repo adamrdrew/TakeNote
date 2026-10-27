@@ -14,6 +14,17 @@ import CoreSpotlight
 @Observable
 final class MainWindowActions {
     var deleteEverythingAlertIsPresented = false
+    var preferredCompactColumn = NavigationSplitViewColumn.sidebar
+
+    func adaptToCompactLayout(selection: TakeNoteVM) {
+        if !selection.selectedNotes.isEmpty {
+            preferredCompactColumn = .detail
+        } else if selection.selectedContainer != nil || !selection.noteSearchText.isEmpty {
+            preferredCompactColumn = .content
+        } else {
+            preferredCompactColumn = .sidebar
+        }
+    }
 
     func showDeleteEverything() {
         deleteEverythingAlertIsPresented = true
@@ -92,11 +103,19 @@ struct MainWindow: View {
 
     @State private var notesInBufferMessagePresented: Bool = false
     @State private var mainWindowActions = MainWindowActions()
-    @State private var preferredColumn = NavigationSplitViewColumn.sidebar
+    @State private var editorActions = NoteEditorActions()
     @State private var showSidebarChatPopover: Bool = false
     @State private var showSortPopover: Bool = false
 
     private let sidebarColumnWidth: CGFloat = 360
+
+    private var idealSidebarColumnWidth: CGFloat {
+        #if os(iOS)
+        280
+        #else
+        sidebarColumnWidth
+        #endif
+    }
 
     private var isCompactLayout: Bool {
         horizontalSizeClass == .compact
@@ -151,7 +170,7 @@ struct MainWindow: View {
         @Bindable var takeNoteVM = takeNoteVM
         @Bindable var mainWindowActions = mainWindowActions
 
-        NavigationSplitView(preferredCompactColumn: $preferredColumn) {
+        NavigationSplitView(preferredCompactColumn: $mainWindowActions.preferredCompactColumn) {
             VStack {
                 Sidebar()
 
@@ -196,7 +215,7 @@ struct MainWindow: View {
                                     arrowEdge: .trailing
                                 ) {
                                     ChatWindow()
-                                    .frame(minWidth: 400, minHeight: 500)
+                                    .frame(idealWidth: 400, idealHeight: 500)
                                 }
                             }
                             .visibilityPriority(.takeNotePrimary)
@@ -204,12 +223,12 @@ struct MainWindow: View {
                         #endif
 
                     }
-                    .navigationSplitViewColumnWidth(
-                        min: sidebarColumnWidth,
-                        ideal: sidebarColumnWidth,
-                        max: sidebarColumnWidth
-                    )
             }
+            .navigationSplitViewColumnWidth(
+                min: 240,
+                ideal: idealSidebarColumnWidth,
+                max: sidebarColumnWidth
+            )
         } content: {
             NoteList()
                 .toolbar {
@@ -232,12 +251,23 @@ struct MainWindow: View {
                     .transition(.opacity)
             } else {
                 NoteEditor(
+                    editorActions: editorActions,
                     openNote: $takeNoteVM.openNote,
                 )
                 .transition(.opacity)
             }
         }
         .animation(.default, value: takeNoteVM.multipleNotesSelected)
+        .onChange(of: horizontalSizeClass) { _, sizeClass in
+            if sizeClass == .compact {
+                mainWindowActions.adaptToCompactLayout(selection: takeNoteVM)
+            } else if sizeClass == .regular,
+                      takeNoteVM.selectedContainer == nil,
+                      takeNoteVM.selectedNotes.isEmpty,
+                      takeNoteVM.noteSearchText.isEmpty {
+                takeNoteVM.selectedContainer = takeNoteVM.inboxFolder
+            }
+        }
         #if os(macOS) || os(visionOS)
             .toolbar {
                 ToolbarItemGroup(placement: .navigation) {
@@ -373,6 +403,9 @@ struct MainWindow: View {
             takeNoteVM.folderInit(
                 modelContext,
                 selectInboxOnLaunch: !isCompactLayout
+                    && takeNoteVM.selectedContainer == nil
+                    && takeNoteVM.selectedNotes.isEmpty
+                    && takeNoteVM.noteSearchText.isEmpty
             )
             if !takeNoteVM.bufferIsEmpty {
                 notesInBufferMessagePresented = true

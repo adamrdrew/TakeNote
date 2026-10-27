@@ -44,7 +44,7 @@ struct WelcomeRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: textWidth, alignment: .leading)  // fixed width -> wrap
+            .frame(maxWidth: textWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)  // allow multi-line
             .layoutPriority(1)
             Spacer()

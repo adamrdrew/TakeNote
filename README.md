@@ -14,6 +14,12 @@ A note's title is automatically set from the first line of its content. You can 
 
 Press **Cmd+P** to toggle between the editor and a rendered markdown preview. Switch between the editor and a rendered preview on each platform.
 
+### iPhone Duo
+
+TakeNote uses compact navigation on the outer display and adaptive columns on the inner display. The window owns the selected note and editor state so resizing can preserve edit/preview mode, editor caret, and editor scroll position. Chat and formatting-assistant presentations adapt between popovers and compact sheets. The system keyboard toolbar keeps Markdown shortcuts available, and onboarding and editing forms scroll when space is limited.
+
+Build with Xcode 27.1 or later for Duo's full-screen layout. Duo simulator testing requires an iOS 27.1-or-later runtime; the general app minimum remains iOS 27.
+
 ### Images
 
 You can add images to notes by:

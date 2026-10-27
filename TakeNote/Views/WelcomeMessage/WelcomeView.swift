@@ -4,12 +4,29 @@ struct WelcomeView: View {
     let onDone: () -> Void
 
     var body: some View {
-        VStack(spacing: 24) {
-            Text("What's New in TakeNote")
-                .font(.largeTitle)
-                .bold()
+        ScrollView {
+            VStack(spacing: 24) {
+                Text("What's New in TakeNote")
+                    .font(.largeTitle)
+                    .bold()
+                    .multilineTextAlignment(.center)
 
-            // Rows are centered as a block using Spacer() elements inside WelcomeRow; text remains left aligned
+                WelcomeFeatures()
+            }
+            .frame(maxWidth: 480)
+            .padding(24)
+            .frame(maxWidth: .infinity)
+        }
+        .safeAreaInset(edge: .bottom) {
+            WelcomeContinueButton(onDone: onDone)
+        }
+        .frame(idealWidth: 440, idealHeight: 600)
+    }
+}
+
+private struct WelcomeFeatures: View {
+    var body: some View {
+        VStack(spacing: 24) {
             WelcomeRow(
                 title: "Magic Chat",
                 text: "Chat with your notes! Ask questions and get answers right from your notes.",
@@ -37,12 +54,20 @@ struct WelcomeView: View {
                     "Add notes to Archived to hide them from search and Magic Chat.",
                 systemImage: "archivebox"
             )
-
-            Button("Continue", action: onDone)
-                .keyboardShortcut(.defaultAction)
-                .foregroundStyle(.takeNotePink)
-                .padding(.top, 8)
         }
-        .padding(40)
+    }
+}
+
+private struct WelcomeContinueButton: View {
+    let onDone: () -> Void
+
+    var body: some View {
+        Button("Continue", action: onDone)
+            .keyboardShortcut(.defaultAction)
+            .foregroundStyle(.takeNotePink)
+            .frame(maxWidth: .infinity, minHeight: 44)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 8)
+            .background(.bar)
     }
 }

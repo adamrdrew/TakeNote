@@ -7,11 +7,9 @@
 
 import SwiftUI
 
-/// A ViewModifier that presents content as a `.sheet()` on iPad (centered modal)
-/// and as a `.popover()` on iPhone and macOS.
+/// Keeps one presentation identity while the system adapts between a popover
+/// and a compact sheet, including when moving between Duo's displays.
 struct AdaptivePopover<PopoverContent: View>: ViewModifier {
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
     @Binding private var isPresented: Bool
     private let attachmentAnchor: PopoverAttachmentAnchor
     private let arrowEdge: Edge
@@ -29,27 +27,16 @@ struct AdaptivePopover<PopoverContent: View>: ViewModifier {
         self.popoverContent = popoverContent
     }
 
-    private var prefersSheetPresentation: Bool {
-        #if os(iOS)
-            return horizontalSizeClass == .regular
-        #else
-            return false
-        #endif
-    }
-
     func body(content: Content) -> some View {
-        if prefersSheetPresentation {
-            content.sheet(isPresented: $isPresented) {
-                popoverContent()
-            }
-        } else {
-            content.popover(
-                isPresented: $isPresented,
-                attachmentAnchor: attachmentAnchor,
-                arrowEdge: arrowEdge
-            ) {
-                popoverContent()
-            }
+        content.popover(
+            isPresented: $isPresented,
+            attachmentAnchor: attachmentAnchor,
+            arrowEdge: arrowEdge
+        ) {
+            popoverContent()
+            #if os(iOS)
+            .presentationCompactAdaptation(.sheet)
+            #endif
         }
     }
 }

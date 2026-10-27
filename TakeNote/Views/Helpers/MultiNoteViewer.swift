@@ -50,8 +50,8 @@ struct MultiNoteViewer: View {
     private func paperWidth(in size: CGSize) -> CGFloat {
         // Fit inside the right pane nicely with margins
         // Keep some horizontal margin even when wide
-        let maxW = min(size.width - 120, 680)
-        let maxH = size.height - 120
+        let maxW = max(0, min(size.width - 120, 680))
+        let maxH = max(0, size.height - 120)
         // Respect aspect ratio
         let widthByHeight = maxH * paperAspect
         return min(maxW, widthByHeight)

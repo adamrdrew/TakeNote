@@ -14,6 +14,7 @@
 		66DEFBFD2E7EB4ED00BBA401 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */; };
 		66DEFC0A2E7EB4EE00BBA401 /* NewNoteControlExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 66EEDE102E3FFBDD00A899AE /* MarkdownUI */; };
+		7BC148AF393F969249AF3D47 /* AdaptiveLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */; };
 		93FBFFBECF9E7896661009F1 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D0533CE74DD21001044EDF2 /* MigrationTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -56,6 +57,7 @@
 		66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = /System/Library/Frameworks/WidgetKit.framework; sourceTree = "<absolute>"; };
 		66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
 		66DEFC182E7EBE7700BBA401 /* NewNoteControlExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewNoteControlExtension.entitlements; sourceTree = "<group>"; };
+		7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdaptiveLayoutTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -155,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				2D0533CE74DD21001044EDF2 /* MigrationTests.swift */,
+				7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */,
 			);
 			path = TakeNoteTests;
 			sourceTree = "<group>";
@@ -268,7 +271,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					66B690792E3FCDF20013519B = {
 						CreatedOnToolsVersion = 16.4;
@@ -334,6 +337,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				93FBFFBECF9E7896661009F1 /* MigrationTests.swift in Sources */,
+				7BC148AF393F969249AF3D47 /* AdaptiveLayoutTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -404,6 +408,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -469,6 +474,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -503,7 +509,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 26;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -573,7 +578,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 26;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -638,7 +642,6 @@
 				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 26;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -684,7 +687,6 @@
 				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 26;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -727,7 +729,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
@@ -750,7 +751,6 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				MACOSX_DEPLOYMENT_TARGET = 27.0;
