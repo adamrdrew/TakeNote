@@ -264,6 +264,8 @@ Adds items after `.windowArrangement`: Open Chat (`⌘⇧C`, gated on `chatFeatu
 
 Onboarding sheet shown on first launch (and when `onboardingVersionCurrent` is bumped). Dismissed by calling the provided callback, which updates `@AppStorage(onboardingVersionKey)`.
 
+Welcome version 6 highlights the OS 27 interface refresh, iPhone Duo layouts, system Spotlight search, expanded Siri and Shortcuts actions, and updated Magic Chat. Each feature uses a matching SF Symbol. The version bump presents these release highlights to existing users.
+
 ---
 
 ## Multi-Platform Adaptations
