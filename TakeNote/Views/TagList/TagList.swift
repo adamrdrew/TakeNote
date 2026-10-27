@@ -8,16 +8,18 @@
 import SwiftData
 import SwiftUI
 
-internal struct TagList: View {
-
+struct TagList: View {
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isTag
         }
-    ) var tags: [NoteContainer]
+    ) private var tags: [NoteContainer]
 
     var body: some View {
-        ForEach(tags, id: \.self) { tag in
+        ForEach(tags) { tag in
             TagListEntry(tag: tag)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .tag(tag)
         }
     }
 }

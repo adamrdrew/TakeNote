@@ -5,31 +5,33 @@
 //  Created by Adam Drew on 8/21/25.
 //
 
+import Foundation
 import FoundationModels
+import Observation
 import os
 import SwiftData
-import SwiftUI
 
-enum SortBy : Int {
+enum SortBy: Int, Equatable {
     case created = 0
     case updated =  1
 }
 
-enum SortOrder : Int {
+enum SortOrder: Int, Equatable {
     case oldestFirst = 0
     case newestFirst = 1
 }
 
-@Observable
 @MainActor
-class TakeNoteVM {
+@Observable
+final class TakeNoteVM {
     static let inboxFolderName = "Inbox"
     static let trashFolderName = "Trash"
     static let allNotesFolderName = "All Notes"
     static let archiveFolderName = "Archive"
     static let chatWindowID = "chat-window"
 
-    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "TakeNoteVM")
+    @ObservationIgnored
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "TakeNoteVM")
 
     // The note currently open in the editor
     var openNote: Note?
@@ -38,18 +40,14 @@ class TakeNoteVM {
     // The notes selected in the note list
     var selectedNotes = Set<Note>()
     // The LLM we use throughout the app
-    let languageModel = SystemLanguageModel.default
+    @ObservationIgnored
+    private let languageModel = SystemLanguageModel.default
 
     var emptyTrashAlertIsPresented: Bool = false
-    var linkToNoteErrorIsPresented: Bool = false
-    var linkToNoteErrorMessage: String = ""
-    var folderSectionExpanded: Bool = true
-    var tagSectionExpanded: Bool = true
-    var errorAlertMessage: String = ""
-    var errorAlertIsVisible: Bool = false
+    var linkToNoteErrorMessage: String?
+    var errorAlertMessage: String?
     var orphanRecoveryAlertVisible: Bool = false
     var orphanRecoveryFolderName: String = ""
-    var showMultiNoteView: Bool = false
     var noteSearchText: String = ""
     // Coordination flag: set true by the search submit handler before programmatically
     // switching selectedContainer to All Notes. NoteList reads and resets it to suppress
@@ -62,35 +60,43 @@ class TakeNoteVM {
         selectedContainer = allNotesFolder
     }
 
-    let userDefaults = UserDefaults.standard
-    
-    var sortBy: SortBy {
-            get {
-                access(keyPath: \.sortBy)
-                let raw = userDefaults.object(forKey: "SortBy") as? Int
-                return SortBy(rawValue: raw ?? SortBy.created.rawValue) ?? .created
-            }
-            set {
-                withMutation(keyPath: \.sortBy) {
-                    userDefaults.set(newValue.rawValue, forKey: "SortBy")
-                }
-            }
-        }
+    @ObservationIgnored
+    private let userDefaults = UserDefaults.standard
 
-        var sortOrder: SortOrder {
-            get {
-                access(keyPath: \.sortOrder)
-                let raw = userDefaults.object(forKey: "SortOrder") as? Int
-                return SortOrder(rawValue: raw ?? SortOrder.newestFirst.rawValue) ?? .newestFirst
-            }
-            set {
-                withMutation(keyPath: \.sortOrder) {
-                    userDefaults.set(newValue.rawValue, forKey: "SortOrder")
-                }
+    func presentError(_ message: String) {
+        errorAlertMessage = message
+    }
+
+    private func presentLinkError(_ message: String) {
+        linkToNoteErrorMessage = message
+    }
+
+    var sortBy: SortBy {
+        get {
+            access(keyPath: \.sortBy)
+            let raw = userDefaults.object(forKey: "SortBy") as? Int
+            return SortBy(rawValue: raw ?? SortBy.created.rawValue) ?? .created
+        }
+        set {
+            withMutation(keyPath: \.sortBy) {
+                userDefaults.set(newValue.rawValue, forKey: "SortBy")
             }
         }
-    
-    
+    }
+
+    var sortOrder: SortOrder {
+        get {
+            access(keyPath: \.sortOrder)
+            let raw = userDefaults.object(forKey: "SortOrder") as? Int
+            return SortOrder(rawValue: raw ?? SortOrder.newestFirst.rawValue) ?? .newestFirst
+        }
+        set {
+            withMutation(keyPath: \.sortOrder) {
+                userDefaults.set(newValue.rawValue, forKey: "SortOrder")
+            }
+        }
+    }
+
     var inboxFolder: NoteContainer?
     var trashFolder: NoteContainer?
     var bufferFolder: NoteContainer?
@@ -98,21 +104,21 @@ class TakeNoteVM {
     var allNotesFolder: NoteContainer?
     var archiveFolder: NoteContainer?
 
-    var navigationTitle: String {
+    var navigationTitle: LocalizedStringResource {
         #if DEBUG
-            return "TakeNote (DEBUG)"
+            "TakeNote (DEBUG)"
         #else
-            return "TakeNote"
+            "TakeNote"
         #endif
     }
 
     var aiIsAvailable: Bool {
-        return languageModel.availability == .available
+        languageModel.availability == .available
     }
 
     // MARK: Computed Properties
     var canAddNote: Bool {
-        return selectedContainer?.isTrash == false
+        selectedContainer?.isTrash == false
             && selectedContainer?.isTag == false
             && selectedContainer?.isStarred == false
             && selectedContainer?.isAllNotes == false
@@ -128,27 +134,27 @@ class TakeNoteVM {
     }
 
     var bufferIsEmpty: Bool {
-        return bufferFolder?.notes.isEmpty ?? true
+        bufferFolder?.notes.isEmpty ?? true
     }
 
     var bufferNotesCount: Int {
-        return bufferFolder?.notes.count ?? 0
+        bufferFolder?.notes.count ?? 0
     }
 
     var canEmptyTrash: Bool {
-        return trashFolderSelected && !selectedContainerIsEmpty
+        trashFolderSelected && !selectedContainerIsEmpty
     }
 
     var multipleNotesSelected: Bool {
-        return selectedNotes.count > 1
+        selectedNotes.count > 1
     }
 
     var selectedContainerIsEmpty: Bool {
-        return selectedContainer?.notes.isEmpty ?? true
+        selectedContainer?.notes.isEmpty ?? true
     }
 
     var trashFolderSelected: Bool {
-        return selectedContainer?.isTrash ?? false
+        selectedContainer?.isTrash ?? false
     }
 
     // MARK: Methods
@@ -165,8 +171,7 @@ class TakeNoteVM {
             try modelContext.save()
             self.selectedContainer = newFolder
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -181,8 +186,9 @@ class TakeNoteVM {
             try modelContext.save()
             selectedNotes = [note]
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
+            modelContext.delete(note)
+            return nil
         }
         openNote = note
         return note
@@ -204,8 +210,7 @@ class TakeNoteVM {
             try modelContext.save()
             selectedContainer = newTag
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -225,8 +230,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -246,8 +250,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -267,8 +270,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -289,8 +291,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -311,8 +312,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
@@ -333,31 +333,37 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
     func moveNoteToArchive(_ note: Note, modelContext: ModelContext) {
         guard let archive = archiveFolder else {
-            errorAlertMessage = "Could not find archive folder"
-            errorAlertIsVisible = true
+            presentError(
+                String(
+                    localized: "Could not find the archive folder.",
+                    comment: "Error shown when the app cannot move a note because the archive folder is missing."
+                )
+            )
             return
         }
         note.setFolder(archive)
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
         }
     }
 
     func emptyTrash(_ modelContext: ModelContext) {
         emptyTrashAlertIsPresented = false
         guard let trash = trashFolder else {
-            errorAlertMessage = "Could not find trash folder"
-            errorAlertIsVisible = true
+            presentError(
+                String(
+                    localized: "Could not find the trash folder.",
+                    comment: "Error shown when the app cannot empty trash because the trash folder is missing."
+                )
+            )
             return
         }
         for note in trash.notes {
@@ -369,8 +375,12 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = "Updating DB after emptying trash failed"
-            errorAlertIsVisible = true
+            presentError(
+                String(
+                    localized: "Updating the database after emptying the trash failed.",
+                    comment: "Error shown when deleted trash notes could not be saved to persistent storage."
+                )
+            )
         }
 
         // Cull any NoteImage records that were only referenced by the now-deleted trash notes
@@ -388,8 +398,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
             return
         }
         if deletedFolder != selectedContainer {
@@ -401,29 +410,29 @@ class TakeNoteVM {
         selectedNotes = []
     }
 
-    func folderInit(_ modelContext: ModelContext) {
+    func folderInit(
+        _ modelContext: ModelContext,
+        selectInboxOnLaunch: Bool
+    ) {
         createInboxFolder(modelContext)
         createTrashFolder(modelContext)
         createBufferFolder(modelContext)
         createStarredFolder(modelContext)
         createAllNotesFolder(modelContext)
         createArchiveFolder(modelContext)
-        #if os(macOS)
+        if selectInboxOnLaunch {
             selectedContainer = inboxFolder
-        #endif
-        #if os(iOS)
-        // on iphone we don't want a selected container on start so that it starts on the note container list page
-        // we want ipad however to work more like a mac
-            if UIDevice.current.userInterfaceIdiom == .pad {
-                selectedContainer = inboxFolder
-            }
-        #endif
+        }
     }
 
     func moveNoteToTrash(_ noteToTrash: Note, modelContext: ModelContext) {
         guard let trash = trashFolder else {
-            errorAlertMessage = "Could not find trash folder"
-            errorAlertIsVisible = true
+            presentError(
+                String(
+                    localized: "Could not find the trash folder.",
+                    comment: "Error shown when the app cannot move a note to trash because the trash folder is missing."
+                )
+            )
             return
         }
         noteToTrash.folder = trash
@@ -433,8 +442,7 @@ class TakeNoteVM {
         do {
             try modelContext.save()
         } catch {
-            errorAlertMessage = error.localizedDescription
-            errorAlertIsVisible = true
+            presentError(error.localizedDescription)
             return
         }
         if selectedNotes.first != noteToTrash {
@@ -456,7 +464,11 @@ class TakeNoteVM {
         for note: Note in Array(bf.notes) {
             note.folder = ibx
         }
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            presentError(error.localizedDescription)
+        }
     }
 
     func noteStarredToggle(_ note: Note, modelContext: ModelContext) {
@@ -475,15 +487,23 @@ class TakeNoteVM {
             }
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            presentError(error.localizedDescription)
+        }
     }
 
     func loadNoteFromURL(_ url: URL, modelContext: ModelContext) {
         var notes: [Note] = []
 
         guard let uuid = UUID(uuidString: url.lastPathComponent) else {
-            linkToNoteErrorMessage = "Invalid note link"
-            linkToNoteErrorIsPresented = true
+            presentLinkError(
+                String(
+                    localized: "Invalid note link.",
+                    comment: "Error shown when a TakeNote note URL cannot be parsed."
+                )
+            )
             return
         }
 
@@ -494,14 +514,22 @@ class TakeNoteVM {
                 )
             )
         } catch {
-            linkToNoteErrorMessage = "Error querying notes."
-            linkToNoteErrorIsPresented = true
+            presentLinkError(
+                String(
+                    localized: "Error querying notes.",
+                    comment: "Error shown when a note link could not be resolved because the note query failed."
+                )
+            )
             return
         }
 
         if notes.isEmpty {
-            linkToNoteErrorMessage = "No notes matching link found"
-            linkToNoteErrorIsPresented = true
+            presentLinkError(
+                String(
+                    localized: "No notes matching this link were found.",
+                    comment: "Error shown when a TakeNote note URL is valid but no note exists for it."
+                )
+            )
             return
         }
 
@@ -509,13 +537,15 @@ class TakeNoteVM {
             self.selectedContainer = note.folder
             self.selectedNotes = [note]
             self.openNote = note
-            self.showMultiNoteView = false
             return
         }
 
-        linkToNoteErrorMessage =
-            "Something went wrong setting note from link"
-        linkToNoteErrorIsPresented = true
+        presentLinkError(
+            String(
+                localized: "Something went wrong opening the note link.",
+                comment: "Fallback error shown when a valid note link could not be opened."
+            )
+        )
     }
 
     func onMoveToFolder() {

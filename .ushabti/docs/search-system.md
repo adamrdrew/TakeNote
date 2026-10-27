@@ -1,137 +1,31 @@
 # Search System
 
-## Overview
+## Backend and visibility
 
-TakeNote has one search index:
+Core Spotlight is the production search backend on macOS 27, iOS/iPadOS 27, and visionOS 27. `SearchIndexService` is the `@MainActor`, `@Observable` facade shared by the app windows and App Intents. `NoteSpotlightIndex` adapts Spotlight indexing and ranked `CSUserQuery` searches. The former SQLite/FTS and experimental vector implementations are no longer used.
 
-1. **FTS index** (`SearchIndex`) — SQLite FTS5 for full-text search. The sole implementation used in production for both note list search and chat RAG retrieval.
+`NoteSearchEntity` associates each searchable item with its App Entity and the note UUID. Items belong to `com.adamdrew.takenote.notes`, have no expiration, and contain the title, plain-text content, folder/tag keywords, dates, star ranking, and `takenote://note/<UUID>` URL. Search results use one `SearchHit` per note.
 
-It is managed through `SearchIndexService`, which is the `@Observable` service consumed by the UI.
+Trash, Archive, and the cut/paste Buffer are excluded. `SearchIndexService.isIndexable` enforces this on both full and incremental indexing. Attempting to reindex a hidden note removes it instead. Note-list filtering and entity queries also exclude hidden notes.
 
----
+## Index lifecycle
 
-## SearchIndexService
+Startup, CloudKit remote changes, and note-count changes schedule full snapshots. Note creation/import, note deselection, detached-editor changes, and app backgrounding schedule incremental updates. Trash/archive actions schedule removals. Indexing runs regardless of `MagicChatEnabled`.
 
-**File:** `TakeNote/Library/SearchIndexService.swift`
+One debounced worker serializes every Spotlight write. A full rebuild clears the TakeNote domain and indexes its snapshot; subsequent edits and deletions run afterward. New requests coalesce while work is pending. An in-flight Spotlight write is never replaced by another writer, which prevents a stale snapshot from winning over a newer edit or deletion. Empty snapshots still clear stale items.
 
-`@MainActor`, `@Observable`.
+`waitForPendingIndexing()` waits for queued writes. In-app searches and Magic Chat wait before querying. A search-generation counter discards results from superseded or cancelled searches.
 
-The service layer that wraps `SearchIndex`. Injected into the SwiftUI environment on all windows.
+`NoteSpotlightDelegate` handles system rebuild requests and supplies current content by identifier for `SpotlightSearchTool`. Each fetch owns a separate synchronous `ModelContext`; live SwiftData models never cross suspension points. Every system rebuild request is acknowledged after indexing, including an empty result. The delegate is retained by the search service and installed on the default index.
 
-### Properties
+## Magic Chat
 
-| Property | Type | Description |
-|---|---|---|
-| `index` | `SearchIndex` | The FTS5 index. In-memory in DEBUG; on-disk in release. |
-| `hits` | `[SearchHit]` | Last search results (observable). |
-| `isIndexing` | `Bool` | `true` while a bulk reindex is running. |
-| `reindexTask` | `Task<Void, Never>?` (private) | Holds the in-flight bulk reindex task. Cancelled and replaced on each new `reindexAll` call. |
+`ChatWindow` supplies Apple's `SpotlightSearchTool` with a Core Spotlight source and the app's delegate. It requests up to 12 results, supports text/similarity/date matching, and observes item, scored-item, and grouped-item replies. SDK 27 wraps each result in `SearchableItem`; its `item` property holds the `CSSearchableItem`.
 
-### Methods
+The Intel iOS simulator SDK omits `SpotlightSearchTool`; its integration is excluded for that build target, and model availability guards preserve the ordinary notes UI.
 
-- `reindex(note: Note)` — asynchronously reindexes a single note by UUID and content. Always runs regardless of chat feature flag state.
-- `reindexAll(_ noteData: [(UUID, String)])` — cancel-and-restart bulk reindex. Cancels any in-flight `reindexTask` before starting, sets `isIndexing = true`, assigns a new `Task` to `reindexTask`. Inside the task, calls `index.reindex(noteData)`, then sets `isIndexing = false`. If the task was cancelled while `index.reindex` was running, `isIndexing` is set to `false` and the task exits without logging completion. There is no rate-limit or throttle; each call always starts a fresh reindex.
-- `dropAll()` — clears all indexed data. Always runs regardless of chat feature flag state.
-- `deleteFromIndex(noteID: UUID)` — removes all FTS chunks for one note by UUID. Always runs regardless of chat feature flag state. Logs at debug level.
-- `searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID]` — returns deduplicated note UUIDs in BM25 rank order by delegating to `index.searchNoteIDs`. Used by `NoteList.filteredNotes` for FTS-backed note list search.
+Result UUIDs and domain identifiers are validated before source links are shown. Replies are attached to the corresponding response ID, deduplicated by note UUID, and ignored after cancellation. The observer is cancelled when a turn finishes, the user starts a new chat, or the view disappears.
 
-### When Indexing Runs
+## Verification
 
-- **Single note — deselect**: triggered from `NoteList.onChange(of: takeNoteVM.selectedNotes)` when a note is deselected and content has changed. This is the primary single-note reindex path.
-- **Single note — note creation (New Note button/toolbar)**: `MainWindow` toolbar Add Note button calls `search.reindex(note:)` immediately after `takeNoteVM.addNote()` returns.
-- **Single note — note creation (File menu / keyboard shortcut)**: `FileCommands` New Note command calls `search.reindex(note:)` immediately after `takeNoteVM.addNote()` returns.
-- **Single note — note creation (text drop)**: `NoteList` drop-destination for `String.self` calls `search.reindex(note:)` after `addNote()` and `setContent()`.
-- **Single note — copy-paste**: `NoteList.pasteNote()` calls `search.reindex(note:)` after `modelContext.insert(newNote)` for the copy-paste branch.
-- **Single note — app backgrounding/quit**: `TakeNoteApp.onChange(of: scenePhase)` reindexes `takeNoteVM.openNote` when the scene transitions to `.inactive` or `.background`, capturing mid-edit changes before the process suspends.
-- **Single note — detached editor window note change**: `NoteEditorWindow.onChange(of: editorWindowVM.openNote)` reindexes the previous note when the window switches to a different note.
-- **Single note — detached editor window close**: `NoteEditorWindow.onDisappear` reindexes the current `editorWindowVM.openNote` when the editor window is closed.
-- **Note count change**: triggered from `NoteList.onChange(of: notes.count)` whenever the count of notes in `@Query() var notes` changes — covering note additions, deletions, and CloudKit arrivals (including first hydration on iPhone). This is the primary defense against the startup race condition where the FTS index is built before CloudKit has synced. The cancellation mechanism ensures that rapid successive triggers do not waste resources: each new call cancels the previous in-flight task.
-- **Bulk (CloudKit)**: triggered from `AppBootstrapper.installReconciler()` on `NSPersistentStoreRemoteChange` (CloudKit sync). Fires unconditionally; no rate-limit gate.
-- **Startup**: triggered once per session from `AppBootstrapper.installReconciler()` when `runOnStartup: true`. Fires unconditionally; no rate-limit gate. Runs at app launch. In DEBUG builds the index is in-memory and starts empty each launch, so the startup reindex runs every DEBUG launch — this is expected and harmless.
-
-### When Index Deletion Runs
-
-All deletion paths run unconditionally via `SearchIndexService.deleteFromIndex(noteID:)`. The chat feature flag no longer gates deletion; the FTS index is always-on.
-
-- **Move to Trash — single note**: `NoteListEntry.moveToTrash()` calls `search.deleteFromIndex(noteID: note.uuid)` immediately after `takeNoteVM.moveNoteToTrash()`. This covers swipe-to-trash, the context menu "Move to Trash" item, and the `noteDeleteRegistry` menu bar command (all routes through `moveToTrash()`).
-- **Move to Trash — multi-select**: `NoteListEntry.moveSelectedNotesToTrash()` calls `search.deleteFromIndex(noteID: sn.uuid)` for each note in the selection after its `moveNoteToTrash` call.
-- **Empty Trash**: The Empty Trash confirmation alert action in `MainWindow` captures `takeNoteVM.trashFolder?.notes.map { $0.uuid }` before calling `takeNoteVM.emptyTrash(modelContext)`, then calls `search.deleteFromIndex(noteID:)` for each UUID after the deletion completes.
-
----
-
-## SearchIndex (FTS5)
-
-**File:** `TakeNote/Library/SearchIndex.swift`
-
-SQLite FTS5 full-text index. Uses the `SQLite.swift` SPM package.
-
-### Storage
-
-- **Debug:** in-memory SQLite connection (intentional — prevents stale on-disk search data in development).
-- **Release:** on-disk at the `applicationSupportDirectory` path. On macOS this resolves to `~/Library/Application Support/TakeNote/search.sqlite`. On iOS the path is the app's sandboxed Application Support directory.
-
-### Schema
-
-Single FTS5 virtual table `fts` with columns:
-- `note_id` (UNINDEXED) — UUID string of the note.
-- `chunk` — indexed text chunk.
-
-### SearchHit
-
-```swift
-struct SearchHit: Identifiable {
-    public let id: Int64    // FTS rowid
-    public let noteID: UUID
-    public let chunk: String
-}
-```
-
-### Key Methods
-
-- `reindex(noteID: UUID, markdown: String)` — deletes all existing chunks for this note, then inserts new chunks from `WindowChunker`. Wrapped in a transaction.
-- `reindex(_ notes: [(UUID, String)])` — bulk version, single transaction.
-- `delete(noteID: UUID)` — removes all chunks for one note.
-- `dropAll()` — clears all rows; runs FTS5 `optimize`, WAL checkpoint, and `VACUUM`. Has a fallback path: if the initial clear fails (e.g., table doesn't exist or is corrupted), it drops and recreates the entire FTS table, then checkpoints and vacuums.
-- `search(_ query: String, limit: Int = 5) -> [SearchHit]` — raw FTS5 MATCH query ordered by BM25 relevance.
-- `searchNatural(_ text: String, limit: Int = 5) -> [SearchHit]` — NLP-normalized search. Lemmatizes tokens via `NLTagger`, strips stop words, adds prefix wildcards (`*`) to tokens of 3+ characters, then joins tokens with `" OR "` so any token can match. Results are ordered by BM25 relevance. Example query form: `"note* OR takenot*"`.
-- `searchNoteIDs(_ text: String, limit: Int = 500) -> [UUID]` — calls `searchNatural(text, limit: limit)`, deduplicates `SearchHit` results by `noteID` preserving first-occurrence (highest BM25 rank) order, and returns the ordered `[UUID]` list. Purpose-built for note list search in `NoteList.filteredNotes`.
-- `normalizeQuery(_ text: String, locale: Locale) -> [String]` — returns lemmatized, stop-word-filtered tokens.
-
-### Chunking
-
-**File:** `TakeNote/Library/Chunking.swift`
-
-`WindowChunker` splits a note's Markdown text into `NoteChunk` values of at most `maxChars` characters (default: 1000), splitting at whitespace boundaries. Short notes become a single chunk.
-
-```swift
-struct WindowChunker {
-    let maxChars: Int
-    func chunks(for markdown: String) -> [NoteChunk]
-}
-struct NoteChunk {
-    let text: String
-}
-```
-
----
-
-## Usage in Note List Search
-
-When `NoteList.filteredNotes` is evaluated with a non-empty `noteSearchText`:
-
-1. `search.searchNoteIDs(noteSearchText)` is called (delegates to `index.searchNoteIDs` with a limit of 500).
-2. A `Set<UUID>` is built from the result for O(1) membership tests.
-3. The candidate note pool (all non-trash/non-buffer notes for All Notes, or the container's notes for other containers) is filtered to only notes whose `uuid` is in the result set.
-4. The filtered notes are sorted by the UUID's index in the FTS result array (BM25 rank order). Note: `sortedNotes` subsequently re-sorts by date/updated order, so FTS rank is used for deduplication but not preserved in the final display order.
-
-When `noteSearchText` is empty, `filteredNotes` returns all candidate notes unchanged (existing behavior).
-
----
-
-## Usage in Chat RAG
-
-When `ChatWindow.askQuestion()` is called:
-
-1. `search.index.searchNatural(trimmed)` retrieves up to 5 `SearchHit` values.
-2. Each `SearchHit.chunk` is injected as a `SOURCE EXCERPT` block in the LLM prompt.
-3. The LLM is instructed to answer only from these excerpts.
+`TakeNoteTests/MigrationTests.swift` exercises hidden-note filtering, delegate content retrieval, edits/deletes arriving during a suspended full rebuild, empty-library clearing, delete/restore ordering, and searches waiting for pending edits. The service accepts a `NoteSearchIndex` implementation so these tests do not write to the system index.

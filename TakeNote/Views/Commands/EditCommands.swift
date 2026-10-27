@@ -15,97 +15,64 @@ import SwiftUI
 private let editCommandsLogger = Logger(subsystem: "com.adamdrew.takenote", category: "EditCommands")
 
 struct EditCommands: Commands {
-    @FocusedValue(\.containerDeleteRegistry) var containerDeleteRegistry:
+    @FocusedValue(\.containerDeleteRegistry) private var containerDeleteRegistry:
         CommandRegistry?
-    @FocusedValue(\.containerRenameRegistry) var containerRenameRegistry:
+    @FocusedValue(\.containerRenameRegistry) private var containerRenameRegistry:
         CommandRegistry?
-    
-    @FocusedValue(\.selectedNoteContainer) var selectedNoteContainer:
+
+    @FocusedValue(\.selectedNoteContainer) private var selectedNoteContainer:
         NoteContainer?
 
-    @FocusedValue(\.noteDeleteRegistry) var noteDeleteRegistry: CommandRegistry?
-    @FocusedValue(\.noteCopyMarkdownLinkRegistry) var noteCopyMarkdownLinkRegistry: CommandRegistry?
+    @FocusedValue(\.noteDeleteRegistry) private var noteDeleteRegistry: CommandRegistry?
+    @FocusedValue(\.noteCopyMarkdownLinkRegistry) private var noteCopyMarkdownLinkRegistry: CommandRegistry?
 
-    @FocusedValue(\.noteRenameRegistry) var noteRenameRegistry: CommandRegistry?
-    @FocusedValue(\.selectedNotes) var selectedNotes: Set<Note>?
+    @FocusedValue(\.noteRenameRegistry) private var noteRenameRegistry: CommandRegistry?
+    @FocusedValue(\.selectedNotes) private var selectedNotes: Set<Note>?
 
-    @FocusedValue(\.noteStarToggleRegistry) var noteStarToggleRegistry: CommandRegistry?
+    @FocusedValue(\.noteStarToggleRegistry) private var noteStarToggleRegistry: CommandRegistry?
 
-    
-    @FocusedValue(\.tagSetColorRegistry) var tagSetColorRegistry:
+    @FocusedValue(\.tagSetColorRegistry) private var tagSetColorRegistry:
         CommandRegistry?
 
+    @FocusedValue(\.noteEditorActions) private var noteEditorActions:
+        NoteEditorActions?
 
-    @FocusedValue(\.doMagicFormat) var doMagicFormat: (() -> Void)?
-    @FocusedValue(\.textIsSelected) var textIsSelected: Bool?
-    @FocusedValue(\.showAssistantPopover) var showAssistantPopover:
-        (() -> Void)?
-    @FocusedValue(\.pasteImage) var pasteImage: (() -> Bool)?
-
-    var nothingEditableIsFocused: Bool {
-        return containerDeleteRegistry == nil && noteDeleteRegistry == nil
+    private var nothingEditableIsFocused: Bool {
+        containerDeleteRegistry == nil && noteDeleteRegistry == nil
             && selectedNoteContainer == nil && selectedNotes == nil
     }
 
-    var selectedContainerIsPermanent: Bool {
-        if let snc = selectedNoteContainer {
-            return snc.isTrash || snc.isInbox
-        }
-        return false
+    private var selectedContainerIsPermanent: Bool {
+        selectedNoteContainer?.isTrash == true || selectedNoteContainer?.isInbox == true
     }
 
-    var multipleNotesAreSelected: Bool {
-        if let sn = selectedNotes {
-            return sn.count != 1
-        }
-        return false
+    private var multipleNotesAreSelected: Bool {
+        selectedNotes.map { $0.count != 1 } ?? false
     }
 
-    var noteIsInTrash: Bool {
-        if let sn = selectedNotes {
-            if let note = sn.first {
-                if let folder = note.folder {
-                    return folder.isTrash
-                }
-            }
-        }
-        return false
+    private var noteIsInTrash: Bool {
+        selectedNotes?.first?.folder?.isTrash == true
     }
 
-    var canRename: Bool {
-        if nothingEditableIsFocused {
-            return false
-        }
-        if selectedContainerIsPermanent {
-            return false
-        }
-        if multipleNotesAreSelected {
-            return false
-        }
-        if noteIsInTrash {
-            return false
-        }
-        return true
+    private var canRename: Bool {
+        !nothingEditableIsFocused
+            && !selectedContainerIsPermanent
+            && !multipleNotesAreSelected
+            && !noteIsInTrash
     }
 
-    var canDelete: Bool {
-        if nothingEditableIsFocused {
-            return false
-        }
-        if selectedContainerIsPermanent {
-            return false
-        }
-        if noteIsInTrash {
-            return false
-        }
-        return true
+    private var canDelete: Bool {
+        !nothingEditableIsFocused
+            && !selectedContainerIsPermanent
+            && !noteIsInTrash
     }
 
-    var canSetColor: Bool {
-        if let sc = selectedNoteContainer {
-            return sc.isTag
-        }
-        return false
+    private var canSetColor: Bool {
+        selectedNoteContainer?.isTag == true
+    }
+
+    private var canCopyMarkdownLink: Bool {
+        noteCopyMarkdownLinkRegistry != nil && selectedNotes?.count == 1
     }
 
     var body: some Commands {
@@ -122,7 +89,7 @@ struct EditCommands: Commands {
             .keyboardShortcut("c", modifiers: .command)
 
             Button("Paste") {
-                if let pasteImage, pasteImage() {
+                if noteEditorActions?.pasteImageFromMacOSClipboard() == true {
                     editCommandsLogger.info("Pasted image via Edit > Paste")
                 } else {
                     NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: nil)
@@ -134,16 +101,14 @@ struct EditCommands: Commands {
 
         CommandGroup(after: .pasteboard) {
             Button("Rename", systemImage: "pencil") {
-                if let sc = selectedNoteContainer {
-                    if let dr = containerRenameRegistry {
-                        dr.runCommand(id: sc.id)
-                    }
+                if let selectedNoteContainer {
+                    containerRenameRegistry?.runCommand(
+                        id: selectedNoteContainer.persistentModelID
+                    )
                 }
-                if let sn = selectedNotes {
-                    if let nrr = noteRenameRegistry {
-                        for note in sn {
-                            nrr.runCommand(id: note.id)
-                        }
+                if let selectedNotes, let noteRenameRegistry {
+                    for note in selectedNotes {
+                        noteRenameRegistry.runCommand(id: note.persistentModelID)
                     }
                 }
             }
@@ -152,73 +117,56 @@ struct EditCommands: Commands {
 
             Button("Copy Markdown Link", systemImage: "link.badge.plus") {
                 editCommandsLogger.debug("copyMarkdownLink command invoked")
-                if let sn = selectedNotes {
-                    if let sc = sn.first {
-                        if let cml = noteCopyMarkdownLinkRegistry {
-                            cml.runCommand(id: sc.id)
-                        }
-                    }
+                if let note = selectedNotes?.first {
+                    noteCopyMarkdownLinkRegistry?.runCommand(id: note.persistentModelID)
                 }
             }
-            .disabled(noteCopyMarkdownLinkRegistry == nil || selectedNotes == nil || selectedNotes?.count != 1 )
+            .disabled(!canCopyMarkdownLink)
             .keyboardShortcut("C", modifiers: [.command, .option])
 
             Button("Delete", systemImage: "delete.left") {
-                if let sc = selectedNoteContainer {
-                    if let rr = containerDeleteRegistry {
-                        rr.runCommand(id: sc.id)
-                    }
+                if let selectedNoteContainer {
+                    containerDeleteRegistry?.runCommand(
+                        id: selectedNoteContainer.persistentModelID
+                    )
                 }
-                if let sn = selectedNotes {
-                    if let ndr = noteDeleteRegistry {
-                        for note in sn {
-                            ndr.runCommand(id: note.id)
-                        }
-                    }
+                if let note = selectedNotes?.first {
+                    noteDeleteRegistry?.runCommand(id: note.persistentModelID)
                 }
             }
             .disabled(!canDelete)
             .keyboardShortcut(.delete, modifiers: [.command])
 
             Button("Set Color", systemImage: "paintpalette") {
-                if let sc = selectedNoteContainer {
-                    if sc.isTag {
-                        if let tsc = tagSetColorRegistry {
-                            tsc.runCommand(id: sc.id)
-                        }
-                    }
+                if selectedNoteContainer?.isTag == true, let selectedNoteContainer {
+                    tagSetColorRegistry?.runCommand(
+                        id: selectedNoteContainer.persistentModelID
+                    )
                 }
             }
             .disabled(!canSetColor)
             .keyboardShortcut("c", modifiers: [.command, .option])
 
             Button("MagicFormat", systemImage: "wand.and.sparkles") {
-                if let dmf = doMagicFormat {
-                    dmf()
-                }
+                noteEditorActions?.doMagicFormat()
             }
             .keyboardShortcut("f", modifiers: [.command, .option])
-            .disabled(doMagicFormat == nil)
+            .disabled(noteEditorActions == nil)
 
             Button("Magic Assistant", systemImage: "apple.intelligence") {
-                if let sap = showAssistantPopover {
-                    sap()
-                }
+                noteEditorActions?.showAssistantPopover()
             }
             .keyboardShortcut("a", modifiers: [.command, .option])
-            .disabled(textIsSelected == nil || textIsSelected! == false)
+            .disabled(noteEditorActions?.textIsSelected != true)
 
             Button("Toggle Star", systemImage: "star") {
-                if let sn = selectedNotes {
-                    if let nstr = noteStarToggleRegistry {
-                        for note in sn {
-                            nstr.runCommand(id: note.id)
-                        }
+                if let selectedNotes, let noteStarToggleRegistry {
+                    for note in selectedNotes {
+                        noteStarToggleRegistry.runCommand(id: note.persistentModelID)
                     }
-
                 }
             }
-            .disabled(selectedNotes == nil || selectedNotes!.isEmpty)
+            .disabled(selectedNotes?.isEmpty != false)
             .keyboardShortcut("s", modifiers: [.command])
 
         }

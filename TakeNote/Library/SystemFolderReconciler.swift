@@ -5,9 +5,23 @@
 //  Created by Adam Drew on 8/31/25.
 //
 
+import Foundation
 import os
 import SwiftData
-import SwiftUI
+
+private enum SystemFolderReconcilerError: LocalizedError {
+    case missingCanonicalSystemFolder
+
+    var errorDescription: String? {
+        switch self {
+        case .missingCanonicalSystemFolder:
+            String(
+                localized: "Could not choose a canonical system folder.",
+                comment: "Internal recovery error shown in logs when duplicate system folders cannot be reconciled."
+            )
+        }
+    }
+}
 
 @MainActor
 final class SystemFolderReconciler {
@@ -24,10 +38,10 @@ final class SystemFolderReconciler {
     func runOnce() throws {
         if isRunning { return }
         isRunning = true
-        defer { isRunning = false }   // <— important
+        defer { isRunning = false }
 
-        let inbox  = try reconcile(match: #Predicate { $0.isInbox })
-        let trash  = try reconcile(match: #Predicate { $0.isTrash })
+        let inbox = try reconcile(match: #Predicate { $0.isInbox })
+        let trash = try reconcile(match: #Predicate { $0.isTrash })
         let buffer = try reconcile(match: #Predicate { $0.isBuffer })
         let starred = try reconcile(match: #Predicate { $0.isStarred })
         let allNotes = try reconcile(match: #Predicate { $0.isAllNotes })
@@ -44,42 +58,47 @@ final class SystemFolderReconciler {
     }
     
     private func fetchSingle(_ p: Predicate<NoteContainer>) -> NoteContainer? {
-        try? ctx.fetch(FetchDescriptor(predicate: p)).first
+        do {
+            return try ctx.fetch(FetchDescriptor(predicate: p)).first
+        } catch {
+            logger.error("Failed to fetch system folder: \(error.localizedDescription)")
+            return nil
+        }
     }
     
     private func reconcile(
         match: Predicate<NoteContainer>,
-    ) throws -> NoteContainer?  {
+    ) throws -> NoteContainer? {
         var candidates = try ctx.fetch(
             FetchDescriptor<NoteContainer>(predicate: match)
         )
-        // No matching folder? bail
         guard !candidates.isEmpty else { return nil }
         
+        var repairedSystemFolderColor = false
         for candidate in candidates {
             if candidate.isSystemFolder && candidate.colorRGBA != 0xFF26B9FF {
                 candidate.colorRGBA = 0xFF26B9FF
-                try? ctx.save()
+                repairedSystemFolderColor = true
             }
         }
+        if repairedSystemFolderColor {
+            try ctx.save()
+        }
         
-        // Only one folder? bail
-        guard candidates.count  > 1 else { return nil }
+        guard candidates.count > 1 else { return nil }
         
         logger.info("System folder duplicate found. Reconciling.")
 
+        guard let canonical = chooseCanonical(from: candidates) else {
+            throw SystemFolderReconcilerError.missingCanonicalSystemFolder
+        }
 
-        // Choose canonical
-        let canonical = try chooseCanonical(from: candidates)
-
-        // Remove canonical from dupes list
         candidates.removeAll {
             $0.persistentModelID == canonical.persistentModelID
         }
 
-        // Move notes off duplicates, then delete the dupes
         for dup in candidates {
-            let dupNotes = Array(dup.notes)       // copy
+            let dupNotes = Array(dup.notes)
             if dup.isStarred {
                 for n in dupNotes { n.starredFolder = canonical }
             } else {
@@ -88,7 +107,7 @@ final class SystemFolderReconciler {
             
 
             if let sel = vm.selectedContainer,
-               sel.persistentModelID == dup.persistentModelID {   // compare by ID
+               sel.persistentModelID == dup.persistentModelID {
                 vm.selectedContainer = canonical
             }
             ctx.delete(dup)
@@ -99,15 +118,16 @@ final class SystemFolderReconciler {
         return canonical
     }
 
-    private func chooseCanonical(from containers: [NoteContainer]) throws
-        -> NoteContainer
+    private func chooseCanonical(from containers: [NoteContainer])
+        -> NoteContainer?
     {
-        // most notes, then lowest ID hash
-        return containers.min { a, b in
-            let ca = a.notes.count
-            let cb = b.notes.count
-            if ca != cb { return cb < ca }  // want max; using min with reversed compare
-            return a.persistentModelID.hashValue < b.persistentModelID.hashValue
-        }!
+        containers.max { lhs, rhs in
+            let lhsCount = lhs.notes.count
+            let rhsCount = rhs.notes.count
+            if lhsCount != rhsCount {
+                return lhsCount < rhsCount
+            }
+            return lhs.persistentModelID.hashValue > rhs.persistentModelID.hashValue
+        }
     }
 }

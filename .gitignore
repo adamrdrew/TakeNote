@@ -68,3 +68,8 @@ fastlane/test_output/
 !*.json
 !*.png
 !*.jpg
+
+# Shared build and regression-test scheme
+!TakeNote.xcodeproj/xcshareddata/
+!TakeNote.xcodeproj/xcshareddata/xcschemes/
+!TakeNote.xcodeproj/xcshareddata/xcschemes/TakeNote.xcscheme

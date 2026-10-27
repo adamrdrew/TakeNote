@@ -6,35 +6,55 @@
 //
 
 import CryptoKit
+import Foundation
 import FoundationModels
-import SwiftUI
+import Observation
 import os
 
-struct MagicFormatterResult {
+struct MagicFormatterResult: Equatable, Sendable {
     let inputHash: String
     let formattedText: String
     let didSucceed: Bool
     let wasCancelled: Bool
 }
 
+private enum MagicFormatterError: LocalizedError {
+    case cancelledSessionResolved
+
+    var errorDescription: String? {
+        switch self {
+        case .cancelledSessionResolved:
+            String(
+                localized: "A cancelled session resolved.",
+                comment: "Internal Magic Format error shown if a cancelled AI formatting request still returns a response."
+            )
+        }
+    }
+}
+
 @MainActor
 @Observable
-class MagicFormatter {
+final class MagicFormatter {
 
-    var session: LanguageModelSession
-    let languageModel = TakeNoteLanguageModels.contentTransformation
-    let fallbackLanguageModel = TakeNoteLanguageModels.contentTransformationFallback
-    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MagicFormatter")
+    @ObservationIgnored
+    private var session: LanguageModelSession
+    @ObservationIgnored
+    private let languageModel = TakeNoteLanguageModels.contentTransformation
+    @ObservationIgnored
+    private let fallbackLanguageModel = TakeNoteLanguageModels.contentTransformationFallback
+    @ObservationIgnored
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "MagicFormatter")
 
     var isAvailable: Bool {
-        return languageModel.isAvailable || fallbackLanguageModel.isAvailable
+        languageModel.isAvailable || fallbackLanguageModel.isAvailable
     }
 
-
-    var defaultPrompt: String = "Document to format as Markdown:\n\n"
+    @ObservationIgnored
+    private let defaultPrompt = "Document to format as Markdown:\n\n"
 
     var formatterIsBusy: Bool = false
-    var sessionCancelled: Bool = false
+    @ObservationIgnored
+    private var sessionCancelled: Bool = false
 
     init() {
         self.session = Self.makeSession(model: TakeNoteLanguageModels.contentTransformation)
@@ -54,11 +74,6 @@ class MagicFormatter {
         return digest.compactMap { String(format: "%02x", $0) }.joined()
     }
 
-    /// AFAICT there is no way to cancel a LanguageModelSession once it is off to the races
-    /// So to support "cancelling" a MagicFormatter session we sort of fake it
-    /// We set sessionCancelled. The magicFormat method will see this after the response comes back and
-    /// Throw an error. We plop sessionCancelled onto the MagicFormatterResponse struct as wasCancelled
-    /// Our view code handles this by failing silently and doing nothing.
     func cancel() {
         if !session.isResponding {
             return
@@ -67,7 +82,6 @@ class MagicFormatter {
             return
         }
         self.sessionCancelled = true
-        /// We need this for the View to hide the MagicFormatter popover
         self.formatterIsBusy = false
         logger.debug("Cancelling MagicFormatter session")
     }
@@ -78,7 +92,10 @@ class MagicFormatter {
             logger.debug("Attempted to use MagicFormat without Apple Intelligence support.")
             return MagicFormatterResult(
                 inputHash: inputHash,
-                formattedText: "Language model is not available.",
+                formattedText: String(
+                    localized: "Language model is not available.",
+                    comment: "Magic Format error shown when Apple Intelligence is unavailable."
+                ),
                 didSucceed: false,
                 wasCancelled: false
             )
@@ -87,34 +104,30 @@ class MagicFormatter {
             logger.debug("Attempted to use MagicFormat while session was busy.")
             return MagicFormatterResult(
                 inputHash: inputHash,
-                formattedText:
-                    "The Language Model is busy. Please try again later.",
+                formattedText: String(
+                    localized: "The Language Model is busy. Please try again later.",
+                    comment: "Magic Format error shown when the local AI model is already responding."
+                ),
                 didSucceed: false,
                 wasCancelled: false
             )
         }
         formatterIsBusy = true
         sessionCancelled = false
+        defer {
+            formatterIsBusy = false
+            sessionCancelled = false
+        }
+
         let prompt = TakeNoteLanguageModels.prompt(defaultPrompt + text)
         var response: LanguageModelSession.Response<String>
 
-        /// If the session is not respnding and we are all good to do some formatting we create a new session
-        /// We do this because there's something cumulative about the session context windows. If we keep re-using
-        /// the same session then eventually we get context window size errors even on small documents
         session = Self.makeSession(model: languageModel.isAvailable ? languageModel : fallbackLanguageModel)
         do {
             response = try await session.respond(to: prompt)
             if sessionCancelled {
-                /// The user has cancelled the MagicFormatter session
-                /// There's no real way to cancel a session so we throw an error
-                /// sessionCancelled will be plopped onto the MagicFormatterResult as wasCancelled
-                /// Which our view will use to fail silently
                 logger.debug("A cancelled session resolved.")
-                throw NSError(
-                    domain: "MagicFormatter",
-                    code: 999,
-                    userInfo: ["description": "A cancelled session resolved."]
-                )
+                throw MagicFormatterError.cancelledSessionResolved
             }
         } catch let error where shouldRetryWithFallback(error) && fallbackLanguageModel.isAvailable && !sessionCancelled {
             logger.debug("MagicFormatter content transformation model unsupported; retrying with standard model.")
@@ -123,43 +136,41 @@ class MagicFormatter {
                 response = try await session.respond(to: prompt)
                 if sessionCancelled {
                     logger.debug("A cancelled fallback session resolved.")
-                    throw NSError(
-                        domain: "MagicFormatter",
-                        code: 999,
-                        userInfo: ["description": "A cancelled session resolved."]
-                    )
+                    throw MagicFormatterError.cancelledSessionResolved
                 }
             } catch {
                 logger.warning("MagicFormatter fallback error:\n \(error.localizedDescription)")
-                formatterIsBusy = false
                 return MagicFormatterResult(
                     inputHash: inputHash,
-                    formattedText:
-                        "MagicFormatter Error:\n \(error.localizedDescription)",
+                    formattedText: String(
+                        localized: "MagicFormatter Error:\n \(error.localizedDescription)",
+                        comment: "Magic Format fallback error; the variable is the underlying error description."
+                    ),
                     didSucceed: false,
                     wasCancelled: sessionCancelled
                 )
             }
         } catch {
             logger.warning("MagicFormatter Error:\n \(error.localizedDescription)")
-            formatterIsBusy = false
             return MagicFormatterResult(
                 inputHash: inputHash,
-                formattedText:
-                    "MagicFormatter Error:\n \(error.localizedDescription)",
+                formattedText: String(
+                    localized: "MagicFormatter Error:\n \(error.localizedDescription)",
+                    comment: "Magic Format error; the variable is the underlying error description."
+                ),
                 didSucceed: false,
                 wasCancelled: sessionCancelled
             )
         }
         let formattedDocument = response.content
-        formatterIsBusy = false
-        sessionCancelled = false
         if formattedDocument.contains(MAGIC_FORMAT_FAILURE_TOKEN) {
             logger.warning("MagicFormat error token found in generated response")
             return MagicFormatterResult(
                 inputHash: inputHash,
-                formattedText:
-                    "MagicFormat couldn't figure out how to format your document.",
+                formattedText: String(
+                    localized: "MagicFormat couldn't figure out how to format your document.",
+                    comment: "Magic Format error shown when the AI model returns the explicit formatting failure token."
+                ),
                 didSucceed: false,
                 wasCancelled: false
             )

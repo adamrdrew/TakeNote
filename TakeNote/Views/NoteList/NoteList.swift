@@ -9,58 +9,12 @@ import AudioToolbox  // For system sounds
 import SwiftData
 import SwiftUI
 
-extension FocusedValues {
-    @Entry var noteDeleteRegistry: CommandRegistry?
-    @Entry var noteRenameRegistry: CommandRegistry?
-    @Entry var noteStarToggleRegistry: CommandRegistry?
-    @Entry var noteCopyMarkdownLinkRegistry: CommandRegistry?
-    @Entry var noteOpenEditorWindowRegistry: CommandRegistry?
-    @Entry var selectedNotes: Set<Note>?
-}
-
-private struct NoteCopyMarkdownLinkRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct NoteDeleteRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct NoteRenameRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct NoteStarToggleRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct NoteOpenEditorWindowRegistry: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-extension EnvironmentValues {
-    var noteDeleteRegistry: CommandRegistry {
-        get { self[NoteDeleteRegistryKey.self] }
-        set { self[NoteDeleteRegistryKey.self] = newValue }
-    }
-    var noteCopyMarkdownLinkRegistry: CommandRegistry {
-        get { self[NoteCopyMarkdownLinkRegistryKey.self] }
-        set { self[NoteCopyMarkdownLinkRegistryKey.self] = newValue }
-    }
-    var noteRenameRegistry: CommandRegistry {
-        get { self[NoteRenameRegistryKey.self] }
-        set { self[NoteRenameRegistryKey.self] = newValue }
-    }
-    var noteStarToggleRegistry: CommandRegistry {
-        get { self[NoteStarToggleRegistryKey.self] }
-        set { self[NoteStarToggleRegistryKey.self] = newValue }
-    }
-    var noteOpenEditorWindowRegistry: CommandRegistry {
-        get { self[NoteOpenEditorWindowRegistry.self] }
-        set { self[NoteOpenEditorWindowRegistry.self] = newValue }
-    }
-}
-
 struct NoteList: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(TakeNoteVM.self) var takeNoteVM
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(TakeNoteVM.self) private var takeNoteVM
     @State private var fileImportErrorMessage: String?
-    @Query() var notes: [Note]
+    @Query() private var notes: [Note]
 
     @State private var noteDeleteRegistry: CommandRegistry = CommandRegistry()
     @State private var noteRenameRegistry: CommandRegistry = CommandRegistry()
@@ -69,22 +23,29 @@ struct NoteList: View {
     @State private var noteOpenEditorWindowRegistry: CommandRegistry = CommandRegistry()
     @State private var searchMatchedIDs: [UUID] = []
     @State private var searchTask: Task<Void, Never>?
+    @State private var summaryTasks: [PersistentIdentifier: Task<Void, Never>] = [:]
+    @State private var summaryTaskTokens: [PersistentIdentifier: UUID] = [:]
+    @State private var importTask: Task<Void, Never>?
+    @State private var importTaskToken: UUID?
 
     @Environment(SearchIndexService.self) private var search
 
+    private var isCompactLayout: Bool {
+        horizontalSizeClass == .compact
+    }
+
+    private func isIndexable(_ note: Note) -> Bool {
+        note.folder?.isTrash != true
+            && note.folder?.isBuffer != true
+            && note.folder?.isArchive != true
+    }
+
     private var sortedNotes: [Note] {
-        let allNotesSource = notes.filter {
-            $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true
-        }
+        let allNotesSource = notes.filter(isIndexable)
         let filtered: [Note]
         if !takeNoteVM.noteSearchText.isEmpty {
-            let matchedIDs = searchMatchedIDs
-            let matchedSet = Set(matchedIDs)
-            let matchedNotes = allNotesSource.filter { matchedSet.contains($0.uuid) }
-            let indexMap = Dictionary(uniqueKeysWithValues: matchedIDs.enumerated().map { ($1, $0) })
-            filtered = matchedNotes.sorted { (lhs, rhs) in
-                (indexMap[lhs.uuid] ?? Int.max) < (indexMap[rhs.uuid] ?? Int.max)
-            }
+            let matchedSet = Set(searchMatchedIDs)
+            filtered = allNotesSource.filter { matchedSet.contains($0.uuid) }
         } else if takeNoteVM.selectedContainer?.isAllNotes == true {
             filtered = allNotesSource
         } else {
@@ -108,13 +69,13 @@ struct NoteList: View {
         }
     }
 
-    func playSystemErrorSound() {
+    private func playSystemErrorSound() {
         #if os(macOS)
             AudioServicesPlayAlertSound(kSystemSoundID_UserPreferredAlert)
         #endif
     }
 
-    func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
+    private func pasteNote(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
             // Find the note we're going to move by ID
@@ -154,10 +115,11 @@ struct NoteList: View {
                 search.reindex(note: newNote)
             }
         }
-        takeNoteVM.onMoveToFolder()
         do {
             try modelContext.save()
+            takeNoteVM.onMoveToFolder()
         } catch {
+            takeNoteVM.presentError(error.localizedDescription)
             return
         }
     }
@@ -171,7 +133,7 @@ struct NoteList: View {
         }
         // We look in the previously selected notes so we can generate summaries, link objects, and reindex
         for note in old {
-            Task { await note.generateSummary() }
+            scheduleSummaryGeneration(for: note)
             if note.contentHasChanged() {
                 search.reindex(note: note)
                 NoteLinkManager(modelContext: modelContext)
@@ -182,6 +144,59 @@ struct NoteList: View {
 
         // Cull any NoteImage records that are no longer referenced by any active note
         NoteImageManager(modelContext: modelContext).cullOrphanedImages()
+    }
+
+    private func scheduleSummaryGeneration(for note: Note) {
+        let id = note.persistentModelID
+        let token = UUID()
+        summaryTasks[id]?.cancel()
+        summaryTaskTokens[id] = token
+        summaryTasks[id] = Task {
+            await note.generateSummary()
+            guard summaryTaskTokens[id] == token else { return }
+            summaryTasks[id] = nil
+            summaryTaskTokens[id] = nil
+        }
+    }
+
+    private func cancelSummaryGeneration() {
+        for task in summaryTasks.values {
+            task.cancel()
+        }
+        summaryTasks.removeAll()
+        summaryTaskTokens.removeAll()
+    }
+
+    private func importDroppedFiles(_ items: [URL], into folder: NoteContainer) {
+        importTask?.cancel()
+        let token = UUID()
+        importTaskToken = token
+        importTask = Task { @MainActor in
+            defer {
+                if importTaskToken == token {
+                    importTask = nil
+                    importTaskToken = nil
+                }
+            }
+
+            let outcome = fileImport(
+                items: items,
+                modelContext: modelContext,
+                searchIndex: search,
+                folder: folder
+            )
+            guard !Task.isCancelled else { return }
+            fileImportErrorMessage = outcome.result.errorsEncountered
+                ? outcome.result.toString()
+                : nil
+            await generateImportedNoteSummaries(for: outcome.importedNotes)
+        }
+    }
+
+    private func cancelImport() {
+        importTask?.cancel()
+        importTask = nil
+        importTaskToken = nil
     }
 
     private func updateSearchResults(for text: String) {
@@ -208,34 +223,13 @@ struct NoteList: View {
         VStack {
 
             List(selection: $takeNoteVM.selectedNotes) {
-
-                if !starred.isEmpty {
-                    Section(header: Text("Starred").font(.headline)) {
-                        ForEach(starred, id: \.self) { note in
-                            NoteListEntry(
-                                note: note,
-                            )
-                        }
-                    }
-
-                }
-                if !unstarred.isEmpty {
-                    Section(header: Text("Notes").font(.headline)) {
-                        ForEach(unstarred, id: \.self) { note in
-                            NoteListEntry(
-                                note: note,
-                            )
-                        }
-                    }
-                }
-
+                NoteListSections(starred: starred, unstarred: unstarred)
             }
             .id(sorted.isEmpty ? "empty" : "populated")
             .safeAreaInset(edge: .top) {
                 NoteListHeader()
-                    .frame(maxHeight: 80)
             }
-            /// Add the command registries to the environment so that the list entries can access them
+            // Add the command registries to the environment so that the list entries can access them.
             .environment(\.noteDeleteRegistry, noteDeleteRegistry)
             .environment(
                 \.noteCopyMarkdownLinkRegistry,
@@ -248,7 +242,7 @@ struct NoteList: View {
                 noteOpenEditorWindowRegistry
             )
 
-            /// Make the command registries the focused values for this list so that the menubar commands can access them
+            // Make the command registries the focused values for this list so that the menubar commands can access them.
             .focusedValue(\.noteDeleteRegistry, noteDeleteRegistry)
             .focusedValue(\.noteRenameRegistry, noteRenameRegistry)
             .focusedValue(\.noteStarToggleRegistry, noteStarToggleRegistry)
@@ -261,8 +255,7 @@ struct NoteList: View {
                 noteOpenEditorWindowRegistry
             )
 
-            /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
-            /// command registries
+            // Make the selected notes available to the menu commands.
             .focusedValue(
                 \.selectedNotes,
                 takeNoteVM.selectedNotes
@@ -284,7 +277,11 @@ struct NoteList: View {
                         note.setFolder(bf)
                     }
                 }
-                try? modelContext.save()
+                do {
+                    try modelContext.save()
+                } catch {
+                    takeNoteVM.presentError(error.localizedDescription)
+                }
                 return takeNoteVM.selectedNotes.map {
                     NoteIDWrapper(id: $0.persistentModelID)
                 }
@@ -294,9 +291,10 @@ struct NoteList: View {
                 pasteNote(wrappedIDs)
             }
         #endif
-        .dropDestination(for: String.self) { items, _ in
-            guard takeNoteVM.canAddNote else { return false }
-
+        .dropDestination(
+            for: String.self,
+            isEnabled: takeNoteVM.canAddNote
+        ) { items, _ in
             var added = false
             for raw in items {
                 let text = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -310,18 +308,19 @@ struct NoteList: View {
             }
 
             if added {
-                try? modelContext.save()
+                do {
+                    try modelContext.save()
+                } catch {
+                    takeNoteVM.presentError(error.localizedDescription)
+                    return
+                }
             }
-            return added
         }
-        .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            let result = fileImport(
-                items: items,
-                modelContext: modelContext,
-                searchIndex: search,
-                folder: takeNoteVM.selectedContainer!
-            )
-            fileImportErrorMessage = result.errorsEncountered ? result.toString() : nil
+        .dropDestination(for: URL.self, isEnabled: true) { items, _ in
+            guard let selectedContainer = takeNoteVM.selectedContainer else {
+                return
+            }
+            importDroppedFiles(items, into: selectedContainer)
         }
         .alert("Import Failed", item: $fileImportErrorMessage) { _ in
             Button("OK") {}
@@ -329,7 +328,7 @@ struct NoteList: View {
             Text(message)
         }
         .onChange(of: notes.count) { _, _ in
-            search.reindexAll(notes.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
+            search.reindexAll(notes.filter(isIndexable))
         }
         .onChange(of: takeNoteVM.noteSearchText) { _, newValue in
             updateSearchResults(for: newValue)
@@ -343,7 +342,7 @@ struct NoteList: View {
                 takeNoteVM.selectedContainer = takeNoteVM.allNotesFolder
             }
             #else
-            if UIDevice.current.userInterfaceIdiom != .phone,
+            if !isCompactLayout,
                !newValue.isEmpty,
                takeNoteVM.selectedContainer !== takeNoteVM.allNotesFolder {
                 takeNoteVM.isSearchNavigating = true
@@ -361,6 +360,45 @@ struct NoteList: View {
         .onAppear {
             updateSearchResults(for: takeNoteVM.noteSearchText)
         }
+        .onDisappear {
+            searchTask?.cancel()
+            searchTask = nil
+            cancelSummaryGeneration()
+            cancelImport()
+        }
 
+    }
+}
+
+private struct NoteListSections: View {
+    let starred: [Note]
+    let unstarred: [Note]
+
+    var body: some View {
+        if !starred.isEmpty {
+            Section {
+                ForEach(starred, id: \.persistentModelID) { note in
+                    NoteListEntry(note: note)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .tag(note)
+                }
+            } header: {
+                Text("Starred").font(.headline)
+            }
+        }
+
+        if !unstarred.isEmpty {
+            Section {
+                ForEach(unstarred, id: \.persistentModelID) { note in
+                    NoteListEntry(note: note)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .tag(note)
+                }
+            } header: {
+                Text("Notes").font(.headline)
+            }
+        }
     }
 }

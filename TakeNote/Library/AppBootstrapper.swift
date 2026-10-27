@@ -1,7 +1,7 @@
 //  AppBootstrapper.swift
 //  TakeNote
 //
-//  All the gnarly boot logic lives here so TakeNoteApp stays tidy.
+//  App startup and persistence bootstrap helpers.
 
 import CloudKit
 import CoreData
@@ -10,17 +10,131 @@ import SwiftData
 import os
 
 struct AppBootstrapper {
-    struct ReconcilerHarness {
-        let reconciler: SystemFolderReconciler
-        let orphanRecovery: OrphanRecoveryService
-        let tokens: [NSObjectProtocol]
+    static var isRunningTests: Bool {
+        #if DEBUG
+        let environment = ProcessInfo.processInfo.environment
+        return environment["TAKENOTE_TESTING"] == "1"
+            || environment["XCTestConfigurationFilePath"] != nil
+        #else
+        return false
+        #endif
     }
 
-    static func makeModelConfiguration(debugStoreURL: @autoclosure () -> URL)
+    private enum BootstrapError: LocalizedError {
+        case modelSynthesisFailed
+
+        var errorDescription: String? {
+            switch self {
+            case .modelSynthesisFailed:
+                String(
+                    localized: "Failed to synthesize NSManagedObjectModel.",
+                    comment: "Debug startup error shown when SwiftData cannot produce the Core Data model used for CloudKit schema bootstrap."
+                )
+            }
+        }
+    }
+
+    @MainActor
+    final class ReconcilerHarness {
+        let reconciler: SystemFolderReconciler
+        let orphanRecovery: OrphanRecoveryService
+        private let container: ModelContainer
+        private let searchIndexService: SearchIndexService
+        private let logger: Logger
+        private var observerTasks: [Task<Void, Never>] = []
+
+        init(
+            reconciler: SystemFolderReconciler,
+            orphanRecovery: OrphanRecoveryService,
+            container: ModelContainer,
+            searchIndexService: SearchIndexService,
+            logger: Logger
+        ) {
+            self.reconciler = reconciler
+            self.orphanRecovery = orphanRecovery
+            self.container = container
+            self.searchIndexService = searchIndexService
+            self.logger = logger
+        }
+
+        func observeRemoteChanges() {
+            observerTasks.append(
+                Task { @MainActor [weak self] in
+                    let notifications = NotificationCenter.default.notifications(
+                        named: .NSPersistentStoreRemoteChange
+                    )
+                    for await _ in notifications {
+                        guard !Task.isCancelled else { return }
+                        self?.handleRemoteChange()
+                    }
+                }
+            )
+        }
+
+        func observeLocalSaves() {
+            observerTasks.append(
+                Task { @MainActor [weak self] in
+                    let notifications = NotificationCenter.default.notifications(
+                        named: .NSManagedObjectContextDidSave
+                    )
+                    for await _ in notifications {
+                        guard !Task.isCancelled else { return }
+                        guard let self else { return }
+                        handleLocalSave()
+                    }
+                }
+            )
+        }
+
+        func startStartupReindex() {
+            observerTasks.append(
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    logger.info("Spotlight search startup reindex triggered.")
+                    do {
+                        try reindexAllSearchableNotes()
+                    } catch {
+                        logger.error("Startup search reindex fetch failed: \(error.localizedDescription)")
+                    }
+                }
+            )
+        }
+
+        private func handleRemoteChange() {
+            do {
+                try reconciler.runOnce()
+                try orphanRecovery.sweep()
+                try reindexAllSearchableNotes()
+            } catch {
+                logger.error("Remote-change reconciliation failed: \(error.localizedDescription)")
+            }
+        }
+
+        private func handleLocalSave() {
+            do {
+                try reconciler.runOnce()
+            } catch {
+                logger.error("Local-save reconciliation failed: \(error.localizedDescription)")
+            }
+        }
+
+        private func reindexAllSearchableNotes() throws {
+            let notes = try container.mainContext.fetch(FetchDescriptor<Note>())
+            searchIndexService.reindexAll(notes.filter(AppBootstrapper.isIndexable))
+        }
+
+        isolated deinit {
+            for task in observerTasks {
+                task.cancel()
+            }
+        }
+    }
+
+    static func makeModelConfiguration(debugStoreURL: @autoclosure () throws -> URL) throws
         -> ModelConfiguration
     {
         #if DEBUG
-            return ModelConfiguration(url: debugStoreURL())
+            return try ModelConfiguration(url: debugStoreURL())
         #else
             return ModelConfiguration()
         #endif
@@ -51,14 +165,7 @@ struct AppBootstrapper {
                             for: schema
                         )
                     else {
-                        throw NSError(
-                            domain: "TakeNote.CloudKitInit",
-                            code: 2,
-                            userInfo: [
-                                NSLocalizedDescriptionKey:
-                                    "Failed to synthesize NSManagedObjectModel"
-                            ]
-                        )
+                        throw BootstrapError.modelSynthesisFailed
                     }
 
                     // Describe a persistent store pointing at the SAME file SwiftData will use
@@ -124,6 +231,12 @@ struct AppBootstrapper {
     #endif
 
     // MARK: - Reconciler wiring
+    private static func isIndexable(_ note: Note) -> Bool {
+        note.folder?.isTrash != true
+            && note.folder?.isBuffer != true
+            && note.folder?.isArchive != true
+    }
+
     @MainActor
     static func installReconciler(
         container: ModelContainer,
@@ -132,58 +245,36 @@ struct AppBootstrapper {
         listenForLocalSaves: Bool = false,  // set true if you really want it
         searchIndexService: SearchIndexService
     ) -> ReconcilerHarness {
+        let logger = Logger(subsystem: "com.adamdrew.takenote", category: "AppBootstrapper")
         let reconciler = SystemFolderReconciler(ctx: container.mainContext, vm: vm)
         let orphanRecovery = OrphanRecoveryService(ctx: container.mainContext, vm: vm)
 
-        var tokens: [NSObjectProtocol] = []
+        let harness = ReconcilerHarness(
+            reconciler: reconciler,
+            orphanRecovery: orphanRecovery,
+            container: container,
+            searchIndexService: searchIndexService,
+            logger: logger
+        )
 
         // React to CloudKit sync/merges
-        tokens.append(
-            NotificationCenter.default.addObserver(
-                forName: .NSPersistentStoreRemoteChange,
-                object: nil,
-                queue: .main
-            ) { [weak reconciler, weak orphanRecovery] _ in
-                Task { @MainActor in
-                    try? reconciler?.runOnce()
-                    try? orphanRecovery?.sweep()
-                    // Obtain the main context on the main actor to avoid capturing it in the @Sendable closure
-                    let ctx = container.mainContext
-                    let notes = try? ctx.fetch(FetchDescriptor<Note>())
-                    if let n = notes {
-                        searchIndexService.reindexAll(n.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
-                    }
-                }
-            }
-        )
+        harness.observeRemoteChanges()
 
         // Optional: react to every local save (usually not needed)
         if listenForLocalSaves {
-            tokens.append(
-                NotificationCenter.default.addObserver(
-                    forName: .NSManagedObjectContextDidSave,
-                    object: container.mainContext,
-                    queue: .main
-                ) { [weak reconciler] _ in
-                    Task { @MainActor in try? reconciler?.runOnce() }
-                }
-            )
+            harness.observeLocalSaves()
         }
 
         if runOnStartup {
-            try? reconciler.runOnce()
-            try? orphanRecovery.sweep()
-            Task { @MainActor in
-                let logger = Logger(subsystem: "com.adamdrew.takenote", category: "AppBootstrapper")
-                logger.info("RAG search startup reindex triggered.")
-                let ctx = container.mainContext
-                let notes = try? ctx.fetch(FetchDescriptor<Note>())
-                if let n = notes {
-                    searchIndexService.reindexAll(n.filter { $0.folder?.isTrash != true && $0.folder?.isBuffer != true && $0.folder?.isArchive != true })
-                }
+            do {
+                try reconciler.runOnce()
+                try orphanRecovery.sweep()
+            } catch {
+                logger.error("Startup reconciliation failed: \(error.localizedDescription)")
             }
+            harness.startStartupReindex()
         }
 
-        return ReconcilerHarness(reconciler: reconciler, orphanRecovery: orphanRecovery, tokens: tokens)
+        return harness
     }
 }

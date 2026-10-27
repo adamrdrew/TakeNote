@@ -2,7 +2,7 @@
 
 ## Overview
 
-TakeNote is a native Markdown note-taking app for macOS and iOS (with visionOS compilation paths). It uses SwiftUI for the UI, SwiftData backed by CloudKit for persistence and sync, and Apple's Foundation Models framework (Apple Intelligence) for AI features.
+TakeNote is a native Markdown note-taking app for macOS, iOS/iPadOS, and visionOS. It uses SwiftUI for the UI, SwiftData backed by CloudKit for persistence and sync, and Apple's Foundation Models framework (Apple Intelligence) for AI features.
 
 ## Tech Stack
 
@@ -12,8 +12,7 @@ TakeNote is a native Markdown note-taking app for macOS and iOS (with visionOS c
 | Persistence | SwiftData |
 | Cloud sync | CloudKit (`iCloud.com.adamdrew.takenote`) |
 | AI / LLM | Apple FoundationModels (`SystemLanguageModel`) |
-| Full-text search | SQLite FTS5 via SQLite.swift |
-| Vector search | NLEmbedding (NaturalLanguage framework), in-memory |
+| Search | Core Spotlight, CSUserQuery, and SpotlightSearchTool |
 | Markdown editor | CodeEditorView (SPM) |
 | Markdown renderer | MarkdownUI (SPM) |
 | Widgets | WidgetKit |
@@ -21,8 +20,9 @@ TakeNote is a native Markdown note-taking app for macOS and iOS (with visionOS c
 
 ## Target Platforms
 
-- macOS 26 and later
-- iOS 26 and later
+- macOS 27 and later
+- iOS/iPadOS 27 and later
+- visionOS 27 and later
 - AI features require Apple Intelligence to be enabled on the device
 
 Conditional compilation uses `#if os(macOS)`, `#if os(iOS)`, and `#if DEBUG` throughout the codebase.
@@ -34,8 +34,8 @@ The Xcode project contains three targets:
 | Target | Purpose |
 |---|---|
 | `TakeNote` | Main app |
-| `NewNoteControl` | WidgetKit extension (Inbox widget, Starred widget, New Note control widget) |
-| `TakeNoteShare` | Defined in project but contains no Swift source files at time of survey |
+| `NewNoteControlExtension` | WidgetKit extension (Inbox widget, Starred widget, New Note control widget) |
+| `TakeNoteTests` | Migration regression tests on Mac and iOS simulators |
 
 ## Component Map
 
@@ -46,7 +46,7 @@ TakeNoteApp (entry point)
 ├── TakeNoteVM (@Observable, @MainActor)
 │   └── Shared via SwiftUI Environment
 ├── SearchIndexService (@Observable, @MainActor)
-│   └── SearchIndex (FTS5 / SQLite)
+│   └── NoteSpotlightIndex (Core Spotlight)
 ├── AppBootstrapper
 │   ├── makeModelConfiguration()
 │   ├── bootstrapDevSchemaIfNeeded() [DEBUG only]
@@ -66,10 +66,10 @@ TakeNoteApp (entry point)
 ## Data Flow
 
 1. **User creates a note**: `TakeNoteVM.addNote()` inserts into `ModelContext`, saves; SwiftData syncs to CloudKit.
-2. **Note edited**: `NoteEditor` writes to `Note.content` directly; on note deselection `NoteList` triggers `generateSummary()`, `reindex()`, and `NoteLinkManager.generateLinksFor()`.
+2. **Note edited**: `NoteEditor` writes through `Note.editorContent`; on note deselection `NoteList` triggers `generateSummary()`, `reindex()`, and `NoteLinkManager.generateLinksFor()`.
 3. **CloudKit sync arrives**: `NSPersistentStoreRemoteChange` notification triggers `SystemFolderReconciler.runOnce()` and a full `SearchIndexService.reindexAll()`. The reconciler also runs on every local save because `installReconciler` is called with `listenForLocalSaves: true` in `TakeNoteApp.init()`.
 4. **Widgets**: `SnapshotController.takeSnapshot()` writes a JSON snapshot to the shared App Group on app foreground, background, and every 10 minutes while active. Widgets read the snapshot via `ContainerProvider`.
-5. **AI Chat**: `ChatWindow` calls `SearchIndex.searchNatural()` to retrieve relevant note chunks (RAG), assembles a prompt with excerpts and chat history, and calls `LanguageModelSession.respond()`.
+5. **AI Chat**: `ChatWindow` creates a fresh session per turn with explicit visible history and Apple’s `SpotlightSearchTool`, then streams the response. The creation tool is available only for an explicit current-turn request.
 
 ## URL Scheme
 

@@ -11,7 +11,9 @@ import SwiftUI
 @main
 struct TakeNoteBundle: WidgetBundle {
     var body: some Widget {
+        #if !os(visionOS)
         NewNoteControl()
+        #endif
         InboxWidget()
         StarredWidget()
     }

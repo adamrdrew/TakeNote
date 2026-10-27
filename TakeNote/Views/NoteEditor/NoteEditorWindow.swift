@@ -10,26 +10,21 @@ import SwiftUI
 
 struct NoteEditorWindow: View {
     @Binding var noteID: NoteIDWrapper?
-    
-    @State private var windowTitle: String = ""
+    @State private var editorActions = NoteEditorActions()
 
     @Environment(\.modelContext) private var modelContext
     @Environment(TakeNoteVM.self) private var editorWindowVM
     @Environment(SearchIndexService.self) private var search
 
-    private func makeWindowTitle() -> String {
-        var noteTitle: String = ""
-        var folderName: String = ""
+    private var windowTitle: String {
         let appName = "TakeNote"
 
         guard let note = editorWindowVM.openNote else {
             return appName
         }
 
-        folderName = note.folder!.name
-
-        noteTitle = note.title
-        return "\(appName) / \(folderName) / \(noteTitle)"
+        let folderName = note.folder?.name ?? String(localized: "No Folder")
+        return "\(appName) / \(folderName) / \(note.title)"
     }
 
     private func getNote() {
@@ -43,13 +38,12 @@ struct NoteEditorWindow: View {
         }
 
         editorWindowVM.openNote = loadedNote
-        windowTitle = makeWindowTitle()
-
     }
 
     var body: some View {
         @Bindable var editorWindowVM = editorWindowVM
         NoteEditor(
+            editorActions: editorActions,
             openNote: $editorWindowVM.openNote
         )
             .onAppear {

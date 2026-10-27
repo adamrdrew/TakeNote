@@ -5,16 +5,15 @@
 //  Created by Adam Drew on 8/27/25.
 //
 
+import Foundation
 import os
 import SwiftData
-import SwiftUI
 
 @MainActor
-@Observable
-class NoteLinkManager {
+final class NoteLinkManager {
 
-    var modelContext: ModelContext
-    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteLinkManager")
+    private let modelContext: ModelContext
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteLinkManager")
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -32,36 +31,30 @@ class NoteLinkManager {
     }
 
     func generateLinksFor(_ note: Note) {
-        /// Get the link models for this note
         let linksFromThisNote = getLinksForSourceNote(note)
 
         if !linksFromThisNote.isEmpty {
             deleteLinks(links: linksFromThisNote)
         }
 
-        /// Find all of the markdown links in this note's content
         let linkToUUIDs = extractNoteUUIDs(from: note.content)
         if linkToUUIDs.isEmpty {
-            /// No to-links found. Bail
             return
         }
 
-        /// Create the link models for this note
         createLinksForUUIDs(linkToUUIDs, note: note)
     }
 
     // MARK: Private Methods
 
-    /// ChatGPT wrote this. I don't write this kind of thing lol
     private func extractNoteUUIDs(from text: String) -> [UUID] {
-        /// case-insensitive: (?i)
+        // `(?i)` makes the URL match case-insensitive.
         let pattern =
             #/(?i)takenote:\/\/note\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/#
         var seen = Set<UUID>()
         var result: [UUID] = []
 
         for match in text.matches(of: pattern) {
-            /// First capture group is the UUID substring
             let uuidSub = match.1
             if let uuid = UUID(uuidString: String(uuidSub)),
                 seen.insert(uuid).inserted
@@ -73,42 +66,55 @@ class NoteLinkManager {
     }
 
     private func getLinksForSourceNote(_ note: Note) -> [NoteLink] {
-        /// Query all of the links that have this note as the source
         let uuid = note.uuid
-        return
-            (try? modelContext.fetch(
+        do {
+            return try modelContext.fetch(
                 FetchDescriptor<NoteLink>(
                     predicate: #Predicate { $0.sourceNote?.uuid == uuid }
                 )
-            )) ?? []
+            )
+        } catch {
+            logger.error("Failed to fetch source note links: \(error.localizedDescription)")
+            return []
+        }
     }
 
     private func getLinksForDestinationNote(_ note: Note) -> [NoteLink] {
-        /// Query all of the links that have this note as the source
         let uuid = note.uuid
-        return
-            (try? modelContext.fetch(
+        do {
+            return try modelContext.fetch(
                 FetchDescriptor<NoteLink>(
                     predicate: #Predicate { $0.destinationNote?.uuid == uuid}
                 )
-            )) ?? []
+            )
+        } catch {
+            logger.error("Failed to fetch destination note links: \(error.localizedDescription)")
+            return []
+        }
     }
 
     private func deleteLinks(links: [NoteLink]) {
-        /// Delete all of these links
         for link in links {
             modelContext.delete(link)
         }
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            logger.error("Failed to delete note links: \(error.localizedDescription)")
+        }
     }
 
     private func getNotesForUUIDs(_ linkToUUIDs: [UUID]) -> [Note]? {
         var results: [Note] = []
         for uuid in linkToUUIDs {
-            if let notes = try? modelContext.fetch(
-                FetchDescriptor<Note>(predicate: #Predicate { $0.uuid == uuid })
-            ), let note = notes.first {
+            do {
+                let notes = try modelContext.fetch(
+                    FetchDescriptor<Note>(predicate: #Predicate { $0.uuid == uuid })
+                )
+                guard let note = notes.first else { continue }
                 results.append(note)
+            } catch {
+                logger.error("Failed to fetch note for link UUID \(uuid): \(error.localizedDescription)")
             }
         }
         return results.isEmpty ? nil : results
@@ -124,12 +130,10 @@ class NoteLinkManager {
 
     func createLinksForUUIDs(_ linkToUUIDs: [UUID], note: Note) {
         let fetchedTargets = getNotesForUUIDs(linkToUUIDs)
-        /// Make sure we have results, if not bail
         guard let targets = fetchedTargets else { return }
 
         let noteByUUID = makeUUIDNoteMap(targets)
 
-        /// Create links for any UUIDs that resolved to a Note
         for linkToUUID in linkToUUIDs {
             guard let targetNote = noteByUUID[linkToUUID] else { continue }
             let newLink = NoteLink(
@@ -140,7 +144,11 @@ class NoteLinkManager {
             modelContext.insert(newLink)
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            logger.error("Failed to create note links: \(error.localizedDescription)")
+        }
     }
 
 }

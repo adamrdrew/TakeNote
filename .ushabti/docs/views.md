@@ -85,7 +85,7 @@ Middle column. Renders notes for the selected container.
 - Search text state lives in `TakeNoteVM.noteSearchText` (not a local `@State` on `NoteList`). This is the single source of truth for search text shared across platforms.
 - Filters and sorts notes via `rebuildNoteCache()`, which is called on `.onAppear` and via `onChange` whenever any of the five cache inputs change: `notes` (the `@Query` array), `takeNoteVM.noteSearchText`, `takeNoteVM.selectedContainer`, `takeNoteVM.sortBy`, or `takeNoteVM.sortOrder`. The results are stored in four `@State private` arrays: `cachedFilteredNotes`, `cachedSortedNotes`, `cachedStarredNotes`, and `cachedUnstarredNotes`. The body uses these cached arrays directly; there are no computed `filteredNotes` or `sortedNotes` properties evaluated on every render.
 - The `.onChange(of: takeNoteVM.selectedContainer)` handler clears `noteSearchText` on a user-initiated container switch. It first checks `takeNoteVM.isSearchNavigating`: if `true` (the switch was triggered programmatically by the search submit handler), it resets the flag to `false` and skips clearing the search text; if `false` (a manual user switch), it clears `noteSearchText`. `rebuildNoteCache()` is always called after, so the note list reflects the correct state for either path.
-- `rebuildNoteCache()` logic: when `noteSearchText` is non-empty, the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search); FTS results are ordered by BM25 rank. When search text is empty, returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected). Results are then sorted by `sortBy`/`sortOrder` from `TakeNoteVM`. The sorted result is split into `cachedStarredNotes` and `cachedUnstarredNotes` to avoid per-render `filter` calls in `ForEach`.
+- `rebuildNoteCache()` logic: when `noteSearchText` is non-empty, the candidate pool is **all non-trash/non-buffer/non-archive notes** regardless of the selected container (global search); search results come from ranked Spotlight queries. When search text is empty, returns notes scoped to the selected container (or all non-trash/non-buffer/non-archive notes if All Notes is selected). Results are then sorted by `sortBy`/`sortOrder` from `TakeNoteVM`. The sorted result is split into `cachedStarredNotes` and `cachedUnstarredNotes` to avoid per-render `filter` calls in `ForEach`.
 - The `.searchable()` modifier placement differs by platform:
   - **macOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `List` inside `NoteList`.
   - **iOS:** `.searchable(text: $takeNoteVM.noteSearchText)` is applied to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern — search bar appears at the bottom of the sidebar column on iPhone).
@@ -201,8 +201,7 @@ AI chat interface. Flexible enough to serve two purposes:
 |---|---|---|
 | `context` | `nil` | Pre-injected context string (selected note text for Magic Assistant). |
 | `instructions` | `nil` | LLM system instructions. Defaults to `MAGIC_CHAT_PROMPT`. |
-| `prompt` | `nil` | Prompt prefix. Defaults to `"Provide an answer to the following question:\n\n"`. |
-| `searchEnabled` | `true` | Whether to run FTS search and include excerpts in the prompt. |
+| `searchEnabled` | `true` | Whether to offer SpotlightSearchTool for note retrieval. |
 | `onBotMessageClick` | `nil` | Callback receiving bot response text (used by Magic Assistant to replace selected text). |
 | `toolbarVisible` | `true` | Whether to show the "New Chat" toolbar button. |
 | `useHistory` | `true` | Whether to include chat history in prompts. |
@@ -210,11 +209,11 @@ AI chat interface. Flexible enough to serve two purposes:
 ### Data Types
 
 - `Sender` — enum: `.human` / `.bot`
-- `ConversationEntry` — `Identifiable, Hashable`. Fields: `id: UUID`, `sender: Sender`, `text: String`.
+- `ConversationEntry` — `Identifiable, Hashable, Sendable`. Holds the message UUID, sender, text, source hits, completion state, and tool status.
 
 ### Behavior
 
-- On submit: appends user message, runs `SearchIndex.searchNatural()` if `searchEnabled`, assembles prompt with context + excerpts + history, calls `LanguageModelSession.respond()`.
+- On submit: appends the user message, builds a fresh session with explicit visible history and selected-text context, and streams the response. SpotlightSearchTool is offered when search is enabled; the creation tool requires an explicit current-turn request.
 - A new `LanguageModelSession` is created per response (stateless).
 - Bot responses are stripped of wrapping Markdown fences via `unwrapMarkdownFence()`.
 - "New Chat" button clears `conversation`, `userQuery`, and resets state.
@@ -222,7 +221,7 @@ AI chat interface. Flexible enough to serve two purposes:
 ### Supporting Views
 
 - `ContextBubble` — styled bubble displaying the injected `context` string at the top of the conversation.
-- `MessageBubble` — individual message bubble. Bot messages are tappable if `onBotMessageClick` is provided. Accepts `noteTitles: [UUID: String]` (a pre-computed title map) instead of `notes: [Note]`, to avoid full-list re-renders on any note change. `ChatWindow` pre-computes `noteTitleMap` as a computed property mapping `allNotes` UUIDs to titles, and passes it to each `MessageBubble`.
+- `MessageBubble` — displays a message, tool status, and validated source links. Assistant replies invoke `onBotMessageClick` when selection replacement is enabled.
 
 ---
 
@@ -265,6 +264,8 @@ Adds items after `.windowArrangement`: Open Chat (`⌘⇧C`, gated on `chatFeatu
 
 Onboarding sheet shown on first launch (and when `onboardingVersionCurrent` is bumped). Dismissed by calling the provided callback, which updates `@AppStorage(onboardingVersionKey)`.
 
+Welcome version 6 highlights the OS 27 interface refresh, iPhone Duo layouts, system Spotlight search, expanded Siri and Shortcuts actions, and updated Magic Chat. Each feature uses a matching SF Symbol. The version bump presents these release highlights to existing users.
+
 ---
 
 ## Multi-Platform Adaptations
@@ -277,3 +278,17 @@ Key platform differences handled throughout:
 - Copy/cut/paste system is macOS-only.
 - AI Chat is a separate window on macOS; a popover on iOS.
 - Search bar placement: on macOS `.searchable()` is attached to the `List` in `NoteList`; on iOS `.searchable()` is attached to the `NavigationSplitView` in `MainWindow` (Apple Notes pattern), placing the search bar at the bottom of the sidebar column on iPhone. Both use `TakeNoteVM.noteSearchText` as the shared binding. When search text is non-empty, results span all non-trash/non-buffer notes regardless of selected folder (global search). Pressing Enter/Return in a non-empty search field navigates to All Notes (via `MainWindow.onSubmit(of: .search)`) so the sidebar communicates the global scope. Manually switching to a different folder while search text is non-empty clears the search text (via `NoteList.onChange(of: selectedContainer)`).
+
+## iPhone Duo and window resizing
+
+The app is built with the iOS 27.1 SDK for full-screen Duo support. Layout depends on the current window's size classes and safe areas, with no device-model, global-screen, or orientation-based geometry assumptions. NavigationSplitView handles native camera/fold adaptation.
+
+`MainWindowActions` owns the preferred compact column. On a transition to compact width, selected notes stay in the detail column, a selected folder or active search stays in the content column, and an empty selection shows the sidebar. Existing folder selection and active searches are preserved when the main view reappears. The sidebar can shrink from its ideal width to 240 points.
+
+Each window owns its own `NoteEditorActions`. Reattaching the editor to the same saved note preserves preview/edit mode, caret selection, and scroll position; selecting another note resets the presentation. Editing focus is restored when the editor reattaches. Markdown commands use the system keyboard toolbar rather than a custom fixed bar.
+
+`AdaptivePopover` has a single popover host and uses native compact-sheet adaptation. It no longer changes the presenting content's structural identity when size classes change. Chat uses flexible ideal sizes. Sort/detail forms and onboarding scroll at short heights; onboarding keeps Continue available outside the scroll content. Multi-note card geometry clamps to nonnegative sizes.
+
+`TakeNoteTests/AdaptiveLayoutTests.swift` covers compact-navigation selection and editor reattachment. Validate closed/open, landscape, book/tabletop, camera-active, and Split View poses on a Duo running iOS 27.1 or later, including keyboard and modal transitions. State tests and successful compilation do not replace device layout verification.
+
+The October 27, 2026 simulator verification attempt used the installed iOS 27.1 runtime and an ad-hoc-signed build. The temporary Duo simulator remained at the Apple boot logo, and installation never completed; the temporary simulator was cleaned up. The user subsequently verified the app on a real Duo and reported that it looks good. The pose matrix above remains a regression checklist; individual poses were not separately reported.

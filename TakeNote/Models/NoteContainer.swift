@@ -13,28 +13,23 @@ import AppKit
 import UIKit
 #endif
 
-
-// Hey!
-// Hey you!
-// If you change model schema remember to bump ckBootstrapVersionCurrent
-// in TakeNoteApp.swift
-//
-// And don't forget to promote to prod!!!
+// If persisted fields change, bump ckBootstrapVersionCurrent in TakeNoteApp.swift,
+// run a DEBUG build to update the CloudKit development schema, then promote it.
 
 @Model
-class NoteContainer: Identifiable {
+final class NoteContainer: Identifiable {
     var name: String = ""
     var folderNotes: [Note]? = []
     var tagNotes: [Note]? = []
     var starredNotes: [Note]? = []
-    internal var canBeDeleted: Bool = true
-    internal var isTrash: Bool = false
-    internal var isInbox: Bool = false
-    internal var isStarred: Bool = false
-    internal var isTag: Bool = false
-    internal var isBuffer: Bool = false
-    internal var isAllNotes: Bool = false
-    internal var isArchive: Bool = false
+    var canBeDeleted: Bool = true
+    var isTrash: Bool = false
+    var isInbox: Bool = false
+    var isStarred: Bool = false
+    var isTag: Bool = false
+    var isBuffer: Bool = false
+    var isAllNotes: Bool = false
+    var isArchive: Bool = false
     var colorRGBA: UInt32 = 0xFF26B9FF
     var symbol: String = "folder"
     var notes: [Note] {
@@ -67,30 +62,33 @@ class NoteContainer: Identifiable {
 
     func getSystemImageName() -> String {
         if !isTag {
-            if isTrash && folderNotes!.isEmpty {
+            let folderNotesAreEmpty = folderNotes?.isEmpty ?? true
+            if isTrash && folderNotesAreEmpty {
                 return "trash"
             }
-            if isTrash && !folderNotes!.isEmpty {
+            if isTrash && !folderNotesAreEmpty {
                 return "trash.fill"
             }
-            if isInbox && folderNotes!.isEmpty {
+            if isInbox && folderNotesAreEmpty {
                 return "tray"
             }
-            if isInbox && !folderNotes!.isEmpty {
+            if isInbox && !folderNotesAreEmpty {
                 return "tray.fill"
             }
             return symbol
         }
 
-        if tagNotes!.isEmpty {
+        let tagNotesAreEmpty = tagNotes?.isEmpty ?? true
+        if tagNotesAreEmpty {
             return "tag"
         }
-        if !tagNotes!.isEmpty {
+        if !tagNotesAreEmpty {
             return "tag.fill"
         }
         return symbol
     }
     
+    @MainActor
     func getColor() -> Color {
         if isSystemFolder { return .takeNotePink }
         let r = Double((colorRGBA >> 24) & 0xFF) / 255.0
@@ -100,6 +98,7 @@ class NoteContainer: Identifiable {
         return Color(.sRGB, red: r, green: g, blue: b, opacity: a)
     }
     
+    @MainActor
     func setColor(_ color: Color) {
         #if os(macOS)
         guard let ns = NSColor(color).usingColorSpace(.sRGB) else { return }

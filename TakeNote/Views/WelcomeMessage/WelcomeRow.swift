@@ -8,10 +8,22 @@
 import SwiftUI
 
 struct WelcomeRow: View {
-    var title: String
-    var text: String
-    var systemImage: String
-    var textWidth: CGFloat = 175  // tweak as needed
+    let title: LocalizedStringResource
+    let text: LocalizedStringResource
+    let systemImage: String
+    let textWidth: CGFloat
+
+    init(
+        title: LocalizedStringResource,
+        text: LocalizedStringResource,
+        systemImage: String,
+        textWidth: CGFloat = 175
+    ) {
+        self.title = title
+        self.text = text
+        self.systemImage = systemImage
+        self.textWidth = textWidth
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -32,7 +44,7 @@ struct WelcomeRow: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
-            .frame(width: textWidth, alignment: .leading)  // fixed width -> wrap
+            .frame(maxWidth: textWidth, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)  // allow multi-line
             .layoutPriority(1)
             Spacer()

@@ -7,35 +7,36 @@
 
 import SwiftUI
 
-/// A ViewModifier that presents content as a `.sheet()` on iPad (centered modal)
-/// and as a `.popover()` on iPhone and macOS.
+/// Keeps one presentation identity while the system adapts between a popover
+/// and a compact sheet, including when moving between Duo's displays.
 struct AdaptivePopover<PopoverContent: View>: ViewModifier {
-    @Binding var isPresented: Bool
-    var attachmentAnchor: PopoverAttachmentAnchor
-    var arrowEdge: Edge
-    @ViewBuilder let popoverContent: () -> PopoverContent
+    @Binding private var isPresented: Bool
+    private let attachmentAnchor: PopoverAttachmentAnchor
+    private let arrowEdge: Edge
+    @ViewBuilder private let popoverContent: () -> PopoverContent
 
-    private var isIPad: Bool {
-        #if os(iOS)
-            return UIDevice.current.userInterfaceIdiom == .pad
-        #else
-            return false
-        #endif
+    init(
+        isPresented: Binding<Bool>,
+        attachmentAnchor: PopoverAttachmentAnchor,
+        arrowEdge: Edge,
+        @ViewBuilder popoverContent: @escaping () -> PopoverContent
+    ) {
+        self._isPresented = isPresented
+        self.attachmentAnchor = attachmentAnchor
+        self.arrowEdge = arrowEdge
+        self.popoverContent = popoverContent
     }
 
     func body(content: Content) -> some View {
-        if isIPad {
-            content.sheet(isPresented: $isPresented) {
-                popoverContent()
-            }
-        } else {
-            content.popover(
-                isPresented: $isPresented,
-                attachmentAnchor: attachmentAnchor,
-                arrowEdge: arrowEdge
-            ) {
-                popoverContent()
-            }
+        content.popover(
+            isPresented: $isPresented,
+            attachmentAnchor: attachmentAnchor,
+            arrowEdge: arrowEdge
+        ) {
+            popoverContent()
+            #if os(iOS)
+            .presentationCompactAdaptation(.sheet)
+            #endif
         }
     }
 }

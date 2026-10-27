@@ -1,9 +1,5 @@
-// Hey! // Hey you!
-// If you change any persisted fields in this model you need to:
-// 1. Bump ckBootstrapVersionCurrent in TakeNoteApp.swift
-// 2. Run a DEBUG build to push the schema to the CloudKit dev environment
-// 3. Promote the schema from dev to production via the CloudKit Dashboard
-// And don't forget to promote to prod!!!
+// If persisted fields change, bump ckBootstrapVersionCurrent in TakeNoteApp.swift,
+// run a DEBUG build to update the CloudKit development schema, then promote it.
 
 import Foundation
 import SwiftData

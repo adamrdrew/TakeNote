@@ -5,23 +5,24 @@
 //  Created by Adam Drew on 8/13/25.
 //
 
+import CoreSpotlight
 import FoundationModels
 import os
 import SwiftData
 import SwiftUI
 
-enum Sender {
+enum Sender: Hashable, Sendable {
     case human
     case bot
 }
 
-struct ConversationEntry: Identifiable, Hashable {
-    var id: UUID
-    var sender: Sender
+struct ConversationEntry: Identifiable, Hashable, Sendable {
+    let id: UUID
+    let sender: Sender
     var text: String
     var sources: [SearchHit] = []
     var isComplete: Bool = false
-    var toolCallStatus: String? = nil
+    var toolCallStatus: ToolCallStatus? = nil
 
     init(sender: Sender, text: String) {
         self.id = UUID()
@@ -35,33 +36,94 @@ struct ConversationEntry: Identifiable, Hashable {
 private let titleColors: [Color] = [.takeNotePink, .orange, .purple, .blue]
 #endif
 
+private struct ChatEmptyStatePlaceholder: View {
+    let title: LocalizedStringResource
+    let description: LocalizedStringResource
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            Text(title)
+                .font(.title2)
+                .bold()
+                .foregroundStyle(.secondary)
+            Text(description)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 32)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
+#if os(iOS)
+private struct ChatTitleBar: View {
+    let responseIsGenerating: Bool
+    let reduceMotion: Bool
+    let titleColorPhase: Int
+    let title: LocalizedStringResource
+    let newChat: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            ZStack {
+                Text(title)
+                    .font(.headline)
+                    .foregroundStyle(
+                        responseIsGenerating && !reduceMotion
+                            ? titleColors[titleColorPhase]
+                            : Color.takeNotePink
+                    )
+                    .animation(.easeInOut(duration: 0.4), value: titleColorPhase)
+
+                HStack {
+                    Spacer()
+                    Button {
+                        newChat()
+                    } label: {
+                        Image(systemName: "plus.message")
+                            .foregroundStyle(Color.takeNotePink)
+                    }
+                    .help("New Chat")
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+
+            Divider()
+        }
+    }
+}
+#endif
+
 struct ChatWindow: View {
+    private static let logger = Logger(subsystem: "com.adamdrew.takenote", category: "ChatWindow")
+
     @Environment(SearchIndexService.self) private var search
     @Environment(\.modelContext) private var modelContext
-
-    @Query() var allNotes: [Note]
 
     @State private var conversation: [ConversationEntry] = []
     @State private var userQuery: String = ""
     @State private var session: LanguageModelSession? = nil
     @State private var pendingSources: [SearchHit] = []
     @State private var responseIsGenerating: Bool = false
+    @State private var responseTask: Task<Void, Never>?
+    @State private var searchResultsTask: Task<Void, Never>?
+    @State private var responseID: UUID?
 
-    var context: String?
-    var instructions: String?
-    var searchEnabled: Bool = true
-    var onBotMessageClick: ((String) -> Void)?
-    var toolbarVisible: Bool = true
-    var useHistory: Bool = true
-    var windowTitleText = "Magic Chat"
-    var windowTitleDescription = "Chat with your notes using natural language and on-device, private AI."
-    var chatBoxPlaceholder = "What do you want to know?"
+    let context: String?
+    let instructions: String?
+    let searchEnabled: Bool
+    let onBotMessageClick: ((String) -> Void)?
+    let toolbarVisible: Bool
+    let useHistory: Bool
+    let windowTitleText: LocalizedStringResource
+    let windowTitleDescription: LocalizedStringResource
+    let chatBoxPlaceholder: LocalizedStringResource
 
     @FocusState private var textFieldFocused: Bool
-
-    private var noteTitleMap: [UUID: String] {
-        Dictionary(uniqueKeysWithValues: allNotes.map { ($0.uuid, $0.title) })
-    }
 
     // MARK: - iOS-only state
 
@@ -70,6 +132,28 @@ struct ChatWindow: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var titleColorPhase: Int = 0
     #endif
+
+    init(
+        context: String? = nil,
+        instructions: String? = nil,
+        searchEnabled: Bool = true,
+        onBotMessageClick: ((String) -> Void)? = nil,
+        toolbarVisible: Bool = true,
+        useHistory: Bool = true,
+        windowTitleText: LocalizedStringResource = "Magic Chat",
+        windowTitleDescription: LocalizedStringResource = "Chat with your notes using natural language and on-device, private AI.",
+        chatBoxPlaceholder: LocalizedStringResource = "What do you want to know?"
+    ) {
+        self.context = context
+        self.instructions = instructions
+        self.searchEnabled = searchEnabled
+        self.onBotMessageClick = onBotMessageClick
+        self.toolbarVisible = toolbarVisible
+        self.useHistory = useHistory
+        self.windowTitleText = windowTitleText
+        self.windowTitleDescription = windowTitleDescription
+        self.chatBoxPlaceholder = chatBoxPlaceholder
+    }
 
     // MARK: - Actions
 
@@ -86,72 +170,96 @@ struct ChatWindow: View {
         self.userQuery = ""
         self.textFieldFocused = true
 
-        Task { await generateResponse(userPrompt: trimmed) }
+        let requestID = UUID()
+        responseID = requestID
+        responseTask = Task { await generateResponse(userPrompt: trimmed, requestID: requestID) }
     }
 
-    private func generateResponse(userPrompt: String) async {
+    private func generateResponse(userPrompt: String, requestID: UUID) async {
+        defer {
+            if responseID == requestID {
+                searchResultsTask?.cancel()
+                searchResultsTask = nil
+                responseIsGenerating = false
+                textFieldFocused = true
+            }
+        }
+
         guard activeLanguageModel.availability == .available else {
             var unavailableEntry = ConversationEntry(sender: .bot, text: "Apple Intelligence is not available on this device.")
             unavailableEntry.isComplete = true
             conversation.append(unavailableEntry)
-            responseIsGenerating = false
             return
         }
-
-        // Magic Assistant (useHistory == false) gets a fresh session each turn
-        if !useHistory {
-            session = nil
+        if searchEnabled {
+            await search.waitForPendingIndexing()
+            guard responseID == requestID, !Task.isCancelled else { return }
         }
 
-        // Lazily create session on first question (or after reset)
-        if session == nil {
-            session = buildSession()
-        }
-
-        // Build user prompt — include context for Magic Assistant if present
-        var prompt = userPrompt
-        if let context {
-            prompt = "CONTEXT:\n\(context)\n\nQUESTION: \(prompt)"
-        }
+        // Each turn gets its own tools and tasks. Visible history survives changes
+        // in write-tool access without retaining hidden tool output indefinitely.
+        let history = useHistory ? Array(conversation.dropLast()) : []
+        let prompt = ChatRequest.prompt(userPrompt, context: context, history: history)
 
         // Append bot entry before streaming begins so SwiftUI renders the bubble immediately
         conversation.append(ConversationEntry(sender: .bot, text: ""))
         let botIndex = conversation.count - 1
+        let botID = conversation[botIndex].id
+        session = buildSession(
+            allowsNoteCreation: searchEnabled && ChatRequest.allowsNoteCreation(userPrompt),
+            requestID: requestID,
+            botID: botID
+        )
 
         #if DEBUG
-        let logger = search.logger
-        logger.debug("User prompt for LLM:\n\(prompt)")
+        Self.logger.debug(
+            "Sending LLM prompt. length=\(prompt.count), hasContext=\(context != nil)"
+        )
         #endif
 
         do {
-            let stream = session!.streamResponse(
+            guard let session else {
+                if conversation.indices.contains(botIndex) {
+                    conversation[botIndex].text = "Something went wrong. Sorry."
+                    conversation[botIndex].isComplete = true
+                }
+                return
+            }
+            let stream = session.streamResponse(
                 to: TakeNoteLanguageModels.prompt(prompt),
                 options: chatGenerationOptions,
                 contextOptions: chatContextOptions
             )
             for try await partial in stream {
+                try Task.checkCancellation()
+                guard responseID == requestID, conversation.indices.contains(botIndex) else { return }
                 let content = partial.content
                 if content != "null" {
                     conversation[botIndex].text = content
                 }
             }
+            try Task.checkCancellation()
+            guard responseID == requestID, conversation.indices.contains(botIndex) else { return }
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
             conversation[botIndex].sources = pendingSources
             conversation[botIndex].isComplete = true
         } catch let error as LanguageModelError where isContextOverflow(error) {
             // Compact the conversation and retry instead of losing context
-            await compactAndRetry(userPrompt: userPrompt, botIndex: botIndex)
+            guard responseID == requestID, !Task.isCancelled else { return }
+            await compactAndRetry(userPrompt: userPrompt, botIndex: botIndex, requestID: requestID)
+        } catch is CancellationError {
+            if responseID == requestID, conversation.indices.contains(botIndex) {
+                conversation[botIndex].isComplete = true
+            }
         } catch {
             #if DEBUG
-            let logger = search.logger
-            logger.error("generateResponse error: \(error)")
+            Self.logger.error("generateResponse error: \(error)")
             #endif
-            conversation[botIndex].text = "Something went wrong. Sorry."
-            conversation[botIndex].isComplete = true
+            if responseID == requestID, conversation.indices.contains(botIndex) {
+                conversation[botIndex].text = "Something went wrong. Sorry."
+                conversation[botIndex].isComplete = true
+            }
         }
-
-        responseIsGenerating = false
-        textFieldFocused = true
     }
 
     private var activeLanguageModel: SystemLanguageModel {
@@ -170,7 +278,12 @@ struct ChatWindow: View {
         ContextOptions()
     }
 
-    private func buildSession(conversationSummary: String? = nil) -> LanguageModelSession {
+    private func buildSession(
+        conversationSummary: String? = nil,
+        allowsNoteCreation: Bool = false,
+        requestID: UUID,
+        botID: UUID
+    ) -> LanguageModelSession {
         let now = Date.now.formatted(date: .complete, time: .shortened)
         let baseInstructions = instructions ?? MAGIC_CHAT_PROMPT
         var modelInstructions = "\(baseInstructions)\n\nCurrent date and time: \(now)"
@@ -179,37 +292,35 @@ struct ChatWindow: View {
         }
 
         let newSession: LanguageModelSession
+        #if targetEnvironment(simulator) && arch(x86_64)
+        // The Intel simulator SDK omits SpotlightSearchTool. Model availability
+        // is checked before generation, so unsupported hosts retain normal notes.
+        newSession = LanguageModelSession(
+            model: activeLanguageModel,
+            instructions: TakeNoteLanguageModels.instructions(modelInstructions)
+        )
+        #else
         if searchEnabled {
-            let searchTool = NoteSearchTool(
-                search: search,
-                onSearchStart: { [self] query in
-                    let idx = conversation.count - 1
-                    if idx >= 0 { conversation[idx].toolCallStatus = "Searching notes..." }
-                },
-                onResults: { [self] hits in
-                    let idx = conversation.count - 1
-                    if idx >= 0 {
-                        if hits.isEmpty {
-                            conversation[idx].toolCallStatus = "No results found"
-                        } else {
-                            conversation[idx].toolCallStatus = "Found \(hits.count) result\(hits.count == 1 ? "" : "s")"
-                        }
+            let searchTool = makeSpotlightSearchTool()
+            observeSearchResults(from: searchTool, requestID: requestID, botID: botID)
+            var tools: [any Tool] = [searchTool]
+            if allowsNoteCreation {
+                let createTool = CreateNoteTool(
+                    onStatusChange: { [self] status in
+                        guard responseID == requestID, !Task.isCancelled,
+                              let idx = conversation.firstIndex(where: { $0.id == botID }) else { return }
+                        conversation[idx].toolCallStatus = status
+                    },
+                    onCreate: { [self] title, content in
+                        guard responseID == requestID, !Task.isCancelled else { return nil }
+                        return createNoteInInbox(title: title, content: content)
                     }
-                    pendingSources.append(contentsOf: hits)
-                }
-            )
-            let createTool = CreateNoteTool(
-                onStatusChange: { [self] status in
-                    let idx = conversation.count - 1
-                    if idx >= 0 { conversation[idx].toolCallStatus = status }
-                },
-                onCreate: { [self] title, content in
-                    createNoteInInbox(title: title, content: content)
-                }
-            )
+                )
+                tools.append(createTool)
+            }
             newSession = LanguageModelSession(
                 model: activeLanguageModel,
-                tools: [searchTool, createTool],
+                tools: tools,
                 instructions: TakeNoteLanguageModels.instructions(modelInstructions)
             )
         } else {
@@ -218,13 +329,145 @@ struct ChatWindow: View {
                 instructions: TakeNoteLanguageModels.instructions(modelInstructions)
             )
         }
+        #endif
         newSession.prewarm(promptPrefix: TakeNoteLanguageModels.prompt(context ?? ""))
         return newSession
     }
 
+    #if !(targetEnvironment(simulator) && arch(x86_64))
+    private func makeSpotlightSearchTool() -> SpotlightSearchTool {
+        var source = CoreSpotlightSource(
+            searchableIndexDelegate: search.searchableIndexDelegate,
+            fetchAttributes: [
+                .title,
+                .displayName,
+                .subject,
+                .textContent,
+                .contentDescription,
+                .keywords,
+                .identifier,
+                .domainIdentifier,
+                .contentCreationDate,
+                .contentModificationDate,
+                .containerTitle
+            ]
+        )
+        source.maximumResultCount = 12
+
+        let profile = SpotlightSearchTool.GuidanceProfile(
+            textMatch: true,
+            similarityMatch: true,
+            numericMatch: false,
+            dates: true,
+            people: false,
+            contentType: false,
+            attributes: [
+                .title,
+                .displayName,
+                .subject,
+                .textContent,
+                .contentDescription,
+                .keywords,
+                .containerTitle,
+                .contentCreationDate,
+                .contentModificationDate,
+                .metadataModificationDate
+            ]
+        )
+        let guide = SpotlightSearchTool.Guide(
+            level: .dynamic(profile),
+            format: .compact
+        )
+        let configuration = SpotlightSearchTool.Configuration(
+            sources: [.coreSpotlight(source)],
+            guide: guide
+        )
+        return SpotlightSearchTool(configuration: configuration)
+    }
+
+    private func observeSearchResults(from tool: SpotlightSearchTool, requestID: UUID, botID: UUID) {
+        searchResultsTask?.cancel()
+        searchResultsTask = Task {
+            for await reply in tool.searchResults {
+                guard !Task.isCancelled, responseID == requestID else { return }
+                handleSearchReply(reply, botID: botID)
+            }
+        }
+    }
+
+    private func handleSearchReply(_ reply: SpotlightSearchTool.SearchReply, botID: UUID) {
+        let hits = searchHits(from: reply.content)
+        mergePendingSources(hits)
+
+        guard let idx = conversation.firstIndex(where: { $0.id == botID }) else { return }
+        conversation[idx].sources = pendingSources
+
+        if pendingSources.isEmpty {
+            conversation[idx].toolCallStatus = reply.status == .complete ? .noResultsFound : .searchingNotes
+        } else {
+            conversation[idx].toolCallStatus = .foundResults(pendingSources.count)
+        }
+    }
+
+    private func searchHits(from content: SpotlightSearchTool.SearchReply.Content) -> [SearchHit] {
+        switch content {
+        case .items(let items):
+            items.compactMap(searchHit(from:))
+        case .scoredItems(let scoredItems):
+            scoredItems.compactMap { searchHit(from: $0.item) }
+        case .groupedItems(let groupedItems):
+            groupedItems.values.flatMap { items in
+                items.compactMap(searchHit(from:))
+            }
+        case .count, .table, .statistic, .text:
+            []
+        @unknown default:
+            []
+        }
+    }
+
+    private func searchHit(from result: SearchableItem) -> SearchHit? {
+        let item = result.item
+        guard item.domainIdentifier == NoteSpotlightIndex.domainIdentifier else {
+            return nil
+        }
+        guard let noteID = UUID(uuidString: item.uniqueIdentifier) else {
+            return nil
+        }
+
+        let attributes = item.attributeSet
+        let chunk = attributes.textContent
+            ?? attributes.contentDescription
+            ?? attributes.title
+            ?? ""
+
+        return SearchHit(
+            id: item.uniqueIdentifier,
+            noteID: noteID,
+            noteTitle: attributes.title ?? attributes.displayName,
+            chunk: chunk
+        )
+    }
+
+    private func mergePendingSources(_ hits: [SearchHit]) {
+        for hit in hits where !pendingSources.contains(where: { $0.id == hit.id }) {
+            pendingSources.append(hit)
+        }
+    }
+    #endif
+
     /// Summarize the conversation so far, rebuild the session with the summary
     /// baked into instructions, and retry the user's last message.
-    private func compactAndRetry(userPrompt: String, botIndex: Int) async {
+    private func compactAndRetry(userPrompt: String, botIndex: Int, requestID: UUID) async {
+        guard responseID == requestID, conversation.indices.contains(botIndex) else { return }
+        searchResultsTask?.cancel()
+
+        guard TakeNoteLanguageModels.contentTagging.isAvailable else {
+            conversation[botIndex].text = "The conversation grew too long. Please start a new chat."
+            conversation[botIndex].isComplete = true
+            return
+        }
+
         // Build a text summary of the conversation (exclude the current empty bot entry)
         let historyText = conversation.prefix(botIndex).map { entry in
             let role = entry.sender == .human ? "User" : "Assistant"
@@ -236,7 +479,7 @@ struct ChatWindow: View {
             Capture key topics, facts discussed, user preferences, and any decisions made.
             Keep it under 150 words.
 
-            \(String(historyText.prefix(2000)))
+            \(String(historyText.suffix(6000)))
             """
         let summarySession = LanguageModelSession(
             profile: TakeNoteLanguageModels.profile(
@@ -250,16 +493,32 @@ struct ChatWindow: View {
         do {
             let response = try await summarySession.respond(to: TakeNoteLanguageModels.prompt(summaryPrompt))
             summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+        } catch is CancellationError {
+            if responseID == requestID, conversation.indices.contains(botIndex) {
+                conversation[botIndex].isComplete = true
+            }
+            return
         } catch {
             // If summarization itself fails, fall back to a hard reset
-            conversation[botIndex].text = "The conversation grew too long. Starting a fresh session — please ask your question again."
-            conversation[botIndex].isComplete = true
+            guard responseID == requestID else { return }
+            if conversation.indices.contains(botIndex) {
+                conversation[botIndex].text = "The conversation grew too long. Starting a fresh session — please ask your question again."
+                conversation[botIndex].isComplete = true
+            }
             session = nil
             return
         }
 
+        guard responseID == requestID, !Task.isCancelled, conversation.indices.contains(botIndex) else { return }
+
         // Rebuild session with summary context and retry
-        session = buildSession(conversationSummary: summary)
+        let allowsNoteCreation = searchEnabled && ChatRequest.allowsNoteCreation(userPrompt)
+        session = buildSession(
+            conversationSummary: summary,
+            allowsNoteCreation: allowsNoteCreation,
+            requestID: requestID,
+            botID: conversation[botIndex].id
+        )
 
         var prompt = userPrompt
         if let context {
@@ -267,23 +526,41 @@ struct ChatWindow: View {
         }
 
         do {
-            let stream = session!.streamResponse(
+            guard let session else {
+                if conversation.indices.contains(botIndex) {
+                    conversation[botIndex].text = "Something went wrong after compacting the conversation. Sorry."
+                    conversation[botIndex].isComplete = true
+                }
+                return
+            }
+            let stream = session.streamResponse(
                 to: TakeNoteLanguageModels.prompt(prompt),
                 options: chatGenerationOptions,
                 contextOptions: chatContextOptions
             )
             for try await partial in stream {
+                try Task.checkCancellation()
+                guard responseID == requestID, conversation.indices.contains(botIndex) else { return }
                 let content = partial.content
                 if content != "null" {
                     conversation[botIndex].text = content
                 }
             }
+            try Task.checkCancellation()
+            guard responseID == requestID, conversation.indices.contains(botIndex) else { return }
             conversation[botIndex].text = unwrapMarkdownFence(conversation[botIndex].text)
             conversation[botIndex].sources = pendingSources
             conversation[botIndex].isComplete = true
+        } catch is CancellationError {
+            if responseID == requestID, conversation.indices.contains(botIndex) {
+                conversation[botIndex].isComplete = true
+            }
         } catch {
-            conversation[botIndex].text = "Something went wrong after compacting the conversation. Sorry."
-            conversation[botIndex].isComplete = true
+            guard responseID == requestID else { return }
+            if conversation.indices.contains(botIndex) {
+                conversation[botIndex].text = "Something went wrong after compacting the conversation. Sorry."
+                conversation[botIndex].isComplete = true
+            }
             session = nil
         }
     }
@@ -294,11 +571,17 @@ struct ChatWindow: View {
     }
 
     private func createNoteInInbox(title: String, content: String) -> UUID? {
-        let logger = search.logger
         let inboxPredicate = #Predicate<NoteContainer> { $0.isInbox == true }
         let descriptor = FetchDescriptor(predicate: inboxPredicate)
-        guard let inbox = try? modelContext.fetch(descriptor).first else {
-            logger.error("CreateNote failed: could not find Inbox folder")
+        let inbox: NoteContainer?
+        do {
+            inbox = try modelContext.fetch(descriptor).first
+        } catch {
+            Self.logger.error("CreateNote failed while fetching Inbox: \(error.localizedDescription)")
+            return nil
+        }
+        guard let inbox else {
+            Self.logger.error("CreateNote failed: could not find Inbox folder")
             return nil
         }
         let note = Note(folder: inbox)
@@ -308,79 +591,28 @@ struct ChatWindow: View {
         do {
             try modelContext.save()
         } catch {
-            logger.error("CreateNote failed: \(error.localizedDescription)")
+            Self.logger.error("CreateNote failed: \(error.localizedDescription)")
+            modelContext.delete(note)
             return nil
         }
         search.reindex(note: note)
-        logger.debug("CreateNote succeeded: \(note.uuid)")
+        Self.logger.debug("CreateNote succeeded: \(note.uuid)")
         return note.uuid
     }
 
     private func newChat() {
+        responseTask?.cancel()
+        responseTask = nil
+        searchResultsTask?.cancel()
+        searchResultsTask = nil
         conversation.removeAll()
         session = nil
+        responseID = nil
         pendingSources = []
         userQuery = ""
         responseIsGenerating = false
         textFieldFocused = true
     }
-
-    // MARK: - Sub-Views
-
-    /// Centered placeholder shown when the conversation is empty. Cross-platform (macOS and iOS).
-    var EmptyStatePlaceholder: some View {
-        VStack(spacing: 12) {
-            Spacer()
-            Text(windowTitleText)
-                .font(.title2)
-                .bold()
-                .foregroundStyle(.secondary)
-            Text(windowTitleDescription)
-                .font(.subheadline)
-                .multilineTextAlignment(.center)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 32)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    // MARK: - iOS Sub-Views
-
-    #if os(iOS)
-    /// Title bar shown at the top of the iOS chat overlay when toolbarVisible is true.
-    var TitleBar: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                // Centered title
-                Text("Magic Chat")
-                    .font(.headline)
-                    .foregroundStyle(
-                        responseIsGenerating && !reduceMotion
-                            ? titleColors[titleColorPhase]
-                            : Color.takeNotePink
-                    )
-                    .animation(.easeInOut(duration: 0.4), value: titleColorPhase)
-
-                // New Chat button pinned to the trailing edge
-                HStack {
-                    Spacer()
-                    Button {
-                        newChat()
-                    } label: {
-                        Image(systemName: "plus.message")
-                            .foregroundStyle(Color.takeNotePink)
-                    }
-                    .help("New Chat")
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-
-            Divider()
-        }
-    }
-    #endif
 
     // MARK: - View
 
@@ -390,7 +622,13 @@ struct ChatWindow: View {
             // iOS title bar (replaces toolbar New Chat button on iOS)
             #if os(iOS)
             if toolbarVisible {
-                TitleBar
+                ChatTitleBar(
+                    responseIsGenerating: responseIsGenerating,
+                    reduceMotion: reduceMotion,
+                    titleColorPhase: titleColorPhase,
+                    title: windowTitleText,
+                    newChat: newChat
+                )
             }
             #endif
 
@@ -403,7 +641,10 @@ struct ChatWindow: View {
                             ContextBubble(text: context ?? "")
                         }
                         ForEach(conversation) { entry in
-                            MessageBubble(entry: entry, onBotMessageClick: onBotMessageClick, noteTitles: noteTitleMap)
+                            MessageBubble(
+                                entry: entry,
+                                onBotMessageClick: onBotMessageClick
+                            )
                                 .id(entry.id)
                                 .padding(.horizontal, 12)
                                 .padding(.top, 2)
@@ -426,7 +667,10 @@ struct ChatWindow: View {
                 // Empty-state placeholder layered inside the scroll area (macOS and iOS)
                 .overlay {
                     if conversation.isEmpty {
-                        EmptyStatePlaceholder
+                        ChatEmptyStatePlaceholder(
+                            title: windowTitleText,
+                            description: windowTitleDescription
+                        )
                     }
                 }
             }
@@ -437,7 +681,9 @@ struct ChatWindow: View {
             HStack(spacing: 8) {
                 // Rounded, iMessage-like input
                 HStack(spacing: 8) {
-                    TextField(chatBoxPlaceholder, text: $userQuery)
+                    TextField(text: $userQuery, prompt: Text(chatBoxPlaceholder)) {
+                        EmptyView()
+                    }
                         .textFieldStyle(.plain)
                         .focused($textFieldFocused)
                         .onSubmit(askQuestion)
@@ -445,14 +691,14 @@ struct ChatWindow: View {
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 12)
-                .background(
+                .background {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .fill(Color.primary.opacity(0.06))
-                )
-                .overlay(
+                }
+                .overlay {
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                         .strokeBorder(Color.primary.opacity(0.12), lineWidth: 1)
-                )
+                }
                 .disabled(responseIsGenerating)
             }
             .padding(10)
@@ -489,20 +735,33 @@ struct ChatWindow: View {
         .onAppear {
             textFieldFocused = true
         }
-        // S001: Dismiss iOS chat overlay when a takenote:// citation link is tapped.
-        // SwiftUI URL propagation allows both this handler and MainWindow's onOpenURL to fire.
+        .onDisappear {
+            responseID = nil
+            responseTask?.cancel()
+            responseTask = nil
+            searchResultsTask?.cancel()
+            searchResultsTask = nil
+            session = nil
+            responseIsGenerating = false
+        }
         #if os(iOS)
         .onOpenURL { _ in
             dismiss()
         }
-        // S004: Start/stop color cycling when generation state changes.
         .task(id: responseIsGenerating) {
             guard responseIsGenerating, !reduceMotion else {
                 titleColorPhase = 0
                 return
             }
             while responseIsGenerating && !reduceMotion {
-                try? await Task.sleep(for: .milliseconds(500))
+                do {
+                    try await Task.sleep(for: .milliseconds(500))
+                } catch {
+                    return
+                }
+                guard responseIsGenerating && !reduceMotion else {
+                    return
+                }
                 titleColorPhase = (titleColorPhase + 1) % titleColors.count
             }
         }

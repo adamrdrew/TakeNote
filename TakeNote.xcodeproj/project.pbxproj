@@ -7,14 +7,15 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		665396ED2F99B26100106894 /* Reductio in Frameworks */ = {isa = PBXBuildFile; productRef = 665396EC2F99B26100106894 /* Reductio */; };
-		66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; productRef = 66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */; };
+		66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */ = {isa = PBXBuildFile; platformFilters = (ios, macos, ); productRef = 66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */; };
 		66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC246E2E4609FB009B0C3F /* CodeEditorView */; };
 		66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */ = {isa = PBXBuildFile; productRef = 66AC24702E4609FB009B0C3F /* LanguageSupport */; };
 		66DEFBFB2E7EB4ED00BBA401 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */; };
 		66DEFBFD2E7EB4ED00BBA401 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */; };
 		66DEFC0A2E7EB4EE00BBA401 /* NewNoteControlExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 66EEDE102E3FFBDD00A899AE /* MarkdownUI */; };
+		7BC148AF393F969249AF3D47 /* AdaptiveLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */; };
+		93FBFFBECF9E7896661009F1 /* MigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D0533CE74DD21001044EDF2 /* MigrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = 66DEFBF72E7EB4ED00BBA401;
 			remoteInfo = NewNoteControlExtension;
+		};
+		BAC002334E80E871729D1440 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 66B690722E3FCDF20013519B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 66B690792E3FCDF20013519B;
+			remoteInfo = TakeNote;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -42,17 +50,21 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		145A969137D46F863A6068A1 /* TakeNoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TakeNoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		2D0533CE74DD21001044EDF2 /* MigrationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MigrationTests.swift; sourceTree = "<group>"; };
 		66B6907A2E3FCDF20013519B /* TakeNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TakeNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NewNoteControlExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = /System/Library/Frameworks/WidgetKit.framework; sourceTree = "<absolute>"; };
 		66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = /System/Library/Frameworks/SwiftUI.framework; sourceTree = "<absolute>"; };
 		66DEFC182E7EBE7700BBA401 /* NewNoteControlExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NewNoteControlExtension.entitlements; sourceTree = "<group>"; };
+		7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = AdaptiveLayoutTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		66D0A7522E44D623003569BC /* Exceptions for "TakeNote" folder in "TakeNote" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"Info-iOS.plist",
 				Info.plist,
 			);
 			platformFiltersByRelativePath = {
@@ -104,13 +116,19 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		50B085F5600687C4F1CE80AC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		66B690772E3FCDF20013519B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 				66EEDE112E3FFBDD00A899AE /* MarkdownUI in Frameworks */,
 				66AC24712E4609FB009B0C3F /* LanguageSupport in Frameworks */,
-				665396ED2F99B26100106894 /* Reductio in Frameworks */,
 				66AC246F2E4609FB009B0C3F /* CodeEditorView in Frameworks */,
 				66675A0E2E81D4F000BF0733 /* SFSymbolsPicker in Frameworks */,
 			);
@@ -128,6 +146,22 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0503A282488A21B86550408C /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		0E6554D26DDB9F9CC1CB957E /* TakeNoteTests */ = {
+			isa = PBXGroup;
+			children = (
+				2D0533CE74DD21001044EDF2 /* MigrationTests.swift */,
+				7F5B52268196F31F6138B697 /* AdaptiveLayoutTests.swift */,
+			);
+			path = TakeNoteTests;
+			sourceTree = "<group>";
+		};
 		66B690712E3FCDF20013519B = {
 			isa = PBXGroup;
 			children = (
@@ -136,6 +170,7 @@
 				66DEFBFE2E7EB4ED00BBA401 /* NewNoteControl */,
 				66DEFBF92E7EB4ED00BBA401 /* Frameworks */,
 				66B6907B2E3FCDF20013519B /* Products */,
+				0E6554D26DDB9F9CC1CB957E /* TakeNoteTests */,
 			);
 			sourceTree = "<group>";
 		};
@@ -144,6 +179,7 @@
 			children = (
 				66B6907A2E3FCDF20013519B /* TakeNote.app */,
 				66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */,
+				145A969137D46F863A6068A1 /* TakeNoteTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -153,6 +189,7 @@
 			children = (
 				66DEFBFA2E7EB4ED00BBA401 /* WidgetKit.framework */,
 				66DEFBFC2E7EB4ED00BBA401 /* SwiftUI.framework */,
+				0503A282488A21B86550408C /* OS X */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -183,7 +220,6 @@
 				66AC246E2E4609FB009B0C3F /* CodeEditorView */,
 				66AC24702E4609FB009B0C3F /* LanguageSupport */,
 				66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */,
-				665396EC2F99B26100106894 /* Reductio */,
 			);
 			productName = TakeNote;
 			productReference = 66B6907A2E3FCDF20013519B /* TakeNote.app */;
@@ -205,11 +241,27 @@
 				66DEFBFE2E7EB4ED00BBA401 /* NewNoteControl */,
 			);
 			name = NewNoteControlExtension;
-			packageProductDependencies = (
-			);
 			productName = NewNoteControlExtension;
 			productReference = 66DEFBF82E7EB4ED00BBA401 /* NewNoteControlExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
+		};
+		B7C811965E6596AA8138E470 /* TakeNoteTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6D1551BAD2F39DC21D5D3CC2 /* Build configuration list for PBXNativeTarget "TakeNoteTests" */;
+			buildPhases = (
+				0C5D28F7FF4CD3194669766E /* Sources */,
+				50B085F5600687C4F1CE80AC /* Frameworks */,
+				D64E213827357E1DF77BA87C /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AB3569706862683B2D0E835D /* PBXTargetDependency */,
+			);
+			name = TakeNoteTests;
+			productName = TakeNoteTests;
+			productReference = 145A969137D46F863A6068A1 /* TakeNoteTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -219,7 +271,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 2600;
-				LastUpgradeCheck = 2600;
+				LastUpgradeCheck = 2710;
 				TargetAttributes = {
 					66B690792E3FCDF20013519B = {
 						CreatedOnToolsVersion = 16.4;
@@ -242,7 +294,6 @@
 				66EEDE0F2E3FFBDD00A899AE /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 				66AC246D2E4609FB009B0C3F /* XCRemoteSwiftPackageReference "CodeEditorView" */,
 				66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */,
-				665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 66B6907B2E3FCDF20013519B /* Products */;
@@ -251,6 +302,7 @@
 			targets = (
 				66B690792E3FCDF20013519B /* TakeNote */,
 				66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */,
+				B7C811965E6596AA8138E470 /* TakeNoteTests */,
 			);
 		};
 /* End PBXProject section */
@@ -270,9 +322,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		D64E213827357E1DF77BA87C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		0C5D28F7FF4CD3194669766E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				93FBFFBECF9E7896661009F1 /* MigrationTests.swift in Sources */,
+				7BC148AF393F969249AF3D47 /* AdaptiveLayoutTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		66B690762E3FCDF20013519B /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -294,6 +362,12 @@
 			isa = PBXTargetDependency;
 			target = 66DEFBF72E7EB4ED00BBA401 /* NewNoteControlExtension */;
 			targetProxy = 66DEFC082E7EB4EE00BBA401 /* PBXContainerItemProxy */;
+		};
+		AB3569706862683B2D0E835D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = TakeNote;
+			target = 66B690792E3FCDF20013519B /* TakeNote */;
+			targetProxy = BAC002334E80E871729D1440 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -334,6 +408,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -399,6 +474,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -433,7 +509,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 26;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -451,6 +526,8 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TakeNote/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "TakeNote/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "TakeNote/Info-iOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = TakeNote;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -475,13 +552,15 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Debug;
@@ -499,7 +578,6 @@
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 26;
 				DEAD_CODE_STRIPPING = YES;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
@@ -517,6 +595,8 @@
 				ENABLE_USER_SELECTED_FILES = readwrite;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = TakeNote/Info.plist;
+				"INFOPLIST_FILE[sdk=iphoneos*]" = "TakeNote/Info-iOS.plist";
+				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "TakeNote/Info-iOS.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = TakeNote;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
@@ -541,13 +621,15 @@
 				RUNTIME_EXCEPTION_DISABLE_EXECUTABLE_PAGE_PROTECTION = NO;
 				RUNTIME_EXCEPTION_DISABLE_LIBRARY_VALIDATION = NO;
 				SDKROOT = macosx;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
@@ -560,7 +642,6 @@
 				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 26;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -588,7 +669,9 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
@@ -604,7 +687,6 @@
 				CODE_SIGN_ENTITLEMENTS = NewNoteControlExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 26;
-				DEVELOPMENT_TEAM = P8645Z2MB8;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -632,13 +714,59 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx xros xrsimulator";
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 6.0;
 				TARGETED_DEVICE_FAMILY = "1,2,7";
 				XROS_DEPLOYMENT_TARGET = 27.0;
 			};
 			name = Release;
+		};
+		ABF602C7C65064CA57362CF6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TakeNote.app/Contents/MacOS/TakeNote";
+				"TEST_HOST[sdk=iphone*]" = "$(BUILT_PRODUCTS_DIR)/TakeNote.app/TakeNote";
+			};
+			name = Release;
+		};
+		CD60E7873A499F20280AF50F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.adamdrew.takenote.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = "macosx iphoneos iphonesimulator";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/TakeNote.app/Contents/MacOS/TakeNote";
+				"TEST_HOST[sdk=iphone*]" = "$(BUILT_PRODUCTS_DIR)/TakeNote.app/TakeNote";
+			};
+			name = Debug;
 		};
 /* End XCBuildConfiguration section */
 
@@ -670,17 +798,18 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		6D1551BAD2F39DC21D5D3CC2 /* Build configuration list for PBXNativeTarget "TakeNoteTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ABF602C7C65064CA57362CF6 /* Release */,
+				CD60E7873A499F20280AF50F /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/fdzsergio/Reductio";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 1.7.0;
-			};
-		};
 		66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/alessiorubicini/SFSymbolsPicker";
@@ -708,11 +837,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		665396EC2F99B26100106894 /* Reductio */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 665396EB2F99B26100106894 /* XCRemoteSwiftPackageReference "Reductio" */;
-			productName = Reductio;
-		};
 		66675A0D2E81D4F000BF0733 /* SFSymbolsPicker */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 66675A0C2E81D4F000BF0733 /* XCRemoteSwiftPackageReference "SFSymbolsPicker" */;

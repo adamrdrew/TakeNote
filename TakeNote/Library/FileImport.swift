@@ -5,30 +5,60 @@
 //  Created by Adam Drew on 8/16/25.
 //
 
-import SwiftUI
+import Foundation
 import SwiftData
 import os
 import UniformTypeIdentifiers
 
-struct ImportResult {
+struct ImportResult: Equatable, Sendable {
     var noteImportCount: Int = 0
-    var errorMessages : [String] = []
+    var errorMessages: [String] = []
     
-    var errorsEncountered : Bool  {
-        errorMessages.count > 0
+    var errorsEncountered: Bool {
+        !errorMessages.isEmpty
     }
     
-    var uniqueErrorMessages : [String] {
-        Array(Set(errorMessages))
+    var uniqueErrorMessages: [String] {
+        Array(Set(errorMessages)).sorted()
     }
     
     func toString() -> String {
         var resultReport = ""
         if noteImportCount > 0 {
-            resultReport.append("Successfully imported \(noteImportCount) notes.\n")
+            if noteImportCount == 1 {
+                resultReport.append(
+                    String(
+                        localized: "Successfully imported 1 note.",
+                        comment: "Import result summary for one successfully imported note."
+                    )
+                )
+            } else {
+                resultReport.append(
+                    String(
+                        localized: "Successfully imported \(noteImportCount) notes.",
+                        comment: "Import result summary; the variable is the number of successfully imported notes."
+                    )
+                )
+            }
+            resultReport.append("\n")
         }
-        if errorMessages.count > 0  {
-            resultReport.append("Error\(uniqueErrorMessages.count == 1 ? "" : "s") Encountered:\n")
+        if !errorMessages.isEmpty {
+            if uniqueErrorMessages.count == 1 {
+                resultReport.append(
+                    String(
+                        localized: "Error Encountered:",
+                        comment: "Header shown above a single import error message."
+                    )
+                )
+            } else {
+                resultReport.append(
+                    String(
+                        localized: "Errors Encountered:",
+                        comment: "Header shown above multiple import error messages."
+                    )
+                )
+            }
+            resultReport.append("\n")
             uniqueErrorMessages.forEach { (message) in
                 resultReport.append("\(message)\n")
             }
@@ -37,23 +67,76 @@ struct ImportResult {
     }
 }
 
-private func isDirectory(_ url: URL) -> Bool {
-    (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) ?? false
+struct ImportOutcome {
+    var result = ImportResult()
+    var importedNotes: [Note] = []
+}
+
+private func isDirectory(_ url: URL) throws -> Bool {
+    try url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory ?? false
 }
 
 @MainActor
-func folderImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService) -> ImportResult {
+func folderImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService) -> ImportOutcome {
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "FolderImport")
-    var result = ImportResult()
+    var outcome = ImportOutcome()
     let fileManager = FileManager.default
-    var fileURLs : [URL] = []
     let resourceKeys: Set<URLResourceKey> = [.isDirectoryKey, .isRegularFileKey]
     
     for url in items {
-        if !isDirectory(url) {
-            result.errorMessages.append("Attempted to import something other than a folder.")
+        do {
+            guard try isDirectory(url) else {
+                outcome.result.errorMessages.append(
+                    String(
+                        localized: "Attempted to import something other than a folder.",
+                        comment: "Import error shown when a folder import receives a non-folder item."
+                    )
+                )
+                continue
+            }
+        } catch {
+            logger.error("Failed to inspect import URL \(url.lastPathComponent): \(error.localizedDescription)")
+            outcome.result.errorMessages.append(
+                String(
+                    localized: "Could not inspect \(url.lastPathComponent).",
+                    comment: "Import error; the variable is the file or folder name."
+                )
+            )
             continue
         }
+
+        let fileURLs: [URL]
+        do {
+            let children = try fileManager.contentsOfDirectory(
+                at: url,
+                includingPropertiesForKeys: Array(resourceKeys),
+                options: [.skipsHiddenFiles]
+            )
+            fileURLs = children.filter { child in
+                do {
+                    return try !isDirectory(child)
+                } catch {
+                    logger.error("Failed to inspect child URL \(child.lastPathComponent): \(error.localizedDescription)")
+                    outcome.result.errorMessages.append(
+                        String(
+                            localized: "Could not inspect \(child.lastPathComponent).",
+                            comment: "Import error; the variable is the file or folder name."
+                        )
+                    )
+                    return false
+                }
+            }
+        } catch {
+            logger.error("Failed to read folder \(url.lastPathComponent): \(error.localizedDescription)")
+            outcome.result.errorMessages.append(
+                String(
+                    localized: "Could not read \(url.lastPathComponent).",
+                    comment: "Import error; the variable is the folder name."
+                )
+            )
+            continue
+        }
+
         let newFolder = NoteContainer(
             name: url.lastPathComponent,
         )
@@ -63,63 +146,102 @@ func folderImport(items: [URL], modelContext: ModelContext, searchIndex: SearchI
         newFolder.canBeDeleted = true
         
         modelContext.insert(newFolder)
-        
-        if let children = try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: Array(resourceKeys), options: [.skipsHiddenFiles]) {
-            fileURLs = children.filter { !isDirectory($0) }
-        }
-        
-        let fileImportResults = fileImport(items: fileURLs, modelContext: modelContext, searchIndex: searchIndex, folder: newFolder)
-        result.errorMessages += fileImportResults.errorMessages
+
+        let fileImportResults = fileImport(
+            items: fileURLs,
+            modelContext: modelContext,
+            searchIndex: searchIndex,
+            folder: newFolder
+        )
+        outcome.result.noteImportCount += fileImportResults.result.noteImportCount
+        outcome.result.errorMessages += fileImportResults.result.errorMessages
+        outcome.importedNotes += fileImportResults.importedNotes
         
         do {
             try modelContext.save()
         } catch {
-            logger.critical("Failed to save modelContext: \(error)")
-            result.errorMessages.append("Failed to save to database.")
+            logger.error("Failed to save modelContext: \(error)")
+            outcome.result.errorMessages.append(
+                String(
+                    localized: "Failed to save to database.",
+                    comment: "Import error shown when imported data could not be saved."
+                )
+            )
         }
     }
     
-    return result
+    return outcome
 }
 
 
 
 @MainActor
-func fileImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService, folder: NoteContainer) -> ImportResult {
+func fileImport(items: [URL], modelContext: ModelContext, searchIndex: SearchIndexService, folder: NoteContainer) -> ImportOutcome {
     let logger = Logger(subsystem: "com.adamdrew.takenote", category: "FileImport")
     var noteImported = false
-    var result = ImportResult()
+    var outcome = ImportOutcome()
     for url in items {
         if url.pathExtension != "md" && url.pathExtension != "txt" {
-            result.errorMessages.append("Attempted to import an unsupported file.")
+            outcome.result.errorMessages.append(
+                String(
+                    localized: "Attempted to import an unsupported file.",
+                    comment: "Import error shown for unsupported file types."
+                )
+            )
             continue
         }
-        guard
-            let fileContents = try? String(
+        let fileContents: String
+        do {
+            fileContents = try String(
                 contentsOf: url,
                 encoding: .utf8
             )
-        else {
-            result.errorMessages.append("Loading a file failed.")
+        } catch {
+            logger.error("Failed to load \(url.lastPathComponent): \(error.localizedDescription)")
+            outcome.result.errorMessages.append(
+                String(
+                    localized: "Loading \(url.lastPathComponent) failed.",
+                    comment: "Import error; the variable is the file name."
+                )
+            )
             continue
         }
         let newNote = Note(folder: folder)
         newNote.setTitle(url.lastPathComponent)
         newNote.setContent(fileContents)
         modelContext.insert(newNote)
-        Task { await newNote.generateSummary() }
         searchIndex.reindex(note: newNote)
+        outcome.result.noteImportCount += 1
+        outcome.importedNotes.append(newNote)
         noteImported = true
     }
     if !noteImported {
-        result.errorMessages.append("No notes were imported.")
-        return result
+        outcome.result.errorMessages.append(
+            String(
+                localized: "No notes were imported.",
+                comment: "Import result shown when no supported note files were imported."
+            )
+        )
+        return outcome
     }
     do {
         try modelContext.save()
     } catch {
-        logger.critical("Failed to save modelContext: \(error)")
-        result.errorMessages.append("Failed to save to database.")
+        logger.error("Failed to save modelContext: \(error)")
+        outcome.result.errorMessages.append(
+            String(
+                localized: "Failed to save to database.",
+                comment: "Import error shown when imported data could not be saved."
+            )
+        )
     }
-    return result
+    return outcome
+}
+
+@MainActor
+func generateImportedNoteSummaries(for notes: [Note]) async {
+    for note in notes {
+        guard !Task.isCancelled else { return }
+        await note.generateSummary()
+    }
 }

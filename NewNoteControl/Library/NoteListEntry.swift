@@ -9,14 +9,14 @@ import SwiftUI
 import WidgetKit
 
 
-struct NoteRow: Identifiable, Hashable {
+struct NoteRow: Identifiable, Hashable, Sendable {
     let id: UUID
     let title: String
     let excerpt: String
     let url: String
 }
 
-struct NoteListEntry: TimelineEntry {
+struct NoteListEntry: TimelineEntry, Sendable {
     let date: Date
     let rows: [NoteRow]
     let isPlaceholder: Bool

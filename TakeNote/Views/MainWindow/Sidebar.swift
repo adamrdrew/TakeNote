@@ -11,22 +11,15 @@ import SwiftUI
 /*
  How delete and rename commands work with the List entries, and why:
 
- Menubar commands sit outside of the view hierarchy. This makes accessing state and functionality
- within the View hierarchy challenging. The correct way to do this is with FocusedValues. When a
- View has focus you can have it pop data into the FocusedValues that the Menubar Commands can read.
+ Menu bar commands sit outside this view hierarchy, so they receive the current
+ list context through FocusedValues. SwiftUI Lists receive focus, but row views
+ do not, while TakeNote's rename and delete actions live at the row level.
 
- There's a problem though. SwiftUI Lists get focus, but their child list items do not. In TakeNote
- the functionality and UI for rename and delete happen in the list items. This made implementing rename
- and delete challenging. I could find no information on how SwiftUI developers for macOS are supposed to
- address this issue, so I came up with the following solution.
+ CommandRegistry maps SwiftData PersistentIdentifiers to row-local closures.
+ Rows register their actions on appear and unregister on disappear.
 
- I created a class called CommandRegistry. Instances of CommandRegistry can map SwiftData PersistantIdentfiers
- to functions of type () -> Void. This is done via the CommandRegistry.registerCommand(id:) method. The registered
- commands can then be run via the CommandRegistry.runCommand(id:) method.
-
- Sidebar creates two CommandRegistry instanes: containerDeleteRegistry and containerRenameRegistry. These
- CommandRegistries are then added to the Environment with the \.containerDeleteRegistry and \.containerRenameRegistry
- environment keys. The List items are able to access the registries via the environment. On appear the
+ Sidebar creates CommandRegistry instances for container delete, container rename, and tag color actions.
+ These registries are added to the environment so list items can access them. On appear the
  list items register their delete and rename methods via their container IDs to the registries. On disappear
  they unregister them.
 
@@ -40,47 +33,7 @@ import SwiftUI
  the registries are non nil which lights up the Rename and Delete menubar commands as available, and then they are
  able to run the commands at the List item level by using the ID of the selected container to resolve the correct list
  item methods by way of the CommandRegistry instances.
-
- I think this is an utterly insane way to do this and feel SwiftUI should have some way to accomplish this natively
- or that there be some pattern devs can use to do this that doesn't require so much boilerplate and abstraction.
- However, I can find no such way. I can find no docuemntation from Apple on how this should be done. Nor can I find
- so much as a single article or blog post online where anyone deals with this same problem. Though I know others must
- have run into this.
  */
-
-/// FocusedValues are set by the List when it has focus and used by the Menubar Edit Commands
-extension FocusedValues {
-    @Entry var containerDeleteRegistry: CommandRegistry?
-    @Entry var containerRenameRegistry: CommandRegistry?
-    @Entry var selectedNoteContainer: NoteContainer?
-    @Entry var tagSetColorRegistry: CommandRegistry?
-}
-
-/// Allow our command registries for delete and rename commands to be accessed from the environment
-/// by keys, rather than by types. This allows us to have multiple CommandRegistry instances in the environment
-private struct ContainerDeleteRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct ContainerRenameRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-private struct TagSetColorRegistryKey: EnvironmentKey {
-    static let defaultValue: CommandRegistry = CommandRegistry()
-}
-extension EnvironmentValues {
-    var containerDeleteRegistry: CommandRegistry {
-        get { self[ContainerDeleteRegistryKey.self] }
-        set { self[ContainerDeleteRegistryKey.self] = newValue }
-    }
-    var containerRenameRegistry: CommandRegistry {
-        get { self[ContainerRenameRegistryKey.self] }
-        set { self[ContainerRenameRegistryKey.self] = newValue }
-    }
-    var tagSetColorRegistry: CommandRegistry {
-        get { self[TagSetColorRegistryKey.self] }
-        set { self[TagSetColorRegistryKey.self] = newValue }
-    }
-}
 
 private func systemFolderSortOrder(_ folder: NoteContainer) -> Int {
     if folder.isInbox { return 0 }
@@ -92,43 +45,75 @@ private func systemFolderSortOrder(_ folder: NoteContainer) -> Int {
 }
 
 struct Sidebar: View {
-    @Environment(SearchIndexService.self) var search
-    @Environment(TakeNoteVM.self) var takeNoteVM
-    @Environment(\.modelContext) var modelContext
+    @Environment(SearchIndexService.self) private var search
+    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(\.modelContext) private var modelContext
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in folder.isTag
         }
-    ) var tags: [NoteContainer]
+    ) private var tags: [NoteContainer]
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in
             !folder.isTag && !folder.isTrash && !folder.isInbox
-                && !folder.isBuffer && !folder.isAllNotes && !folder.isArchive
+                && !folder.isBuffer && !folder.isStarred && !folder.isAllNotes && !folder.isArchive
         }
-    ) var folders: [NoteContainer]
+    ) private var folders: [NoteContainer]
 
     @Query(
         filter: #Predicate<NoteContainer> { folder in
             folder.isTrash || folder.isInbox || folder.isStarred || folder.isAllNotes || folder.isArchive
         }
-    ) var systemFolders: [NoteContainer]
+    ) private var systemFolders: [NoteContainer]
 
     @State private var folderSectionExpanded: Bool = true
     @State private var tagSectionExpanded: Bool = true
-    @State private var showImportError: Bool = false
-    @State private var importErrorMessage: String = ""
+    @State private var importErrorMessage: String?
+    @State private var importTask: Task<Void, Never>?
+    @State private var importTaskToken: UUID?
 
     @State private var containerDeleteRegistry: CommandRegistry = CommandRegistry()
     @State private var containerRenameRegistry: CommandRegistry = CommandRegistry()
     @State private var tagSetColorRegistry: CommandRegistry = CommandRegistry()
 
-    var tagsExist: Bool {
-        return tags.isEmpty == false
+    private var tagsExist: Bool {
+        !tags.isEmpty
     }
 
     private var sortedSystemFolders: [NoteContainer] {
         systemFolders.sorted(by: { systemFolderSortOrder($0) < systemFolderSortOrder($1) })
+    }
+
+    private func importDroppedFolders(_ items: [URL]) {
+        importTask?.cancel()
+        let token = UUID()
+        importTaskToken = token
+        importTask = Task { @MainActor in
+            defer {
+                if importTaskToken == token {
+                    importTask = nil
+                    importTaskToken = nil
+                }
+            }
+
+            let outcome = folderImport(
+                items: items,
+                modelContext: modelContext,
+                searchIndex: search
+            )
+            guard !Task.isCancelled else { return }
+            importErrorMessage = outcome.result.errorsEncountered
+                ? outcome.result.toString()
+                : nil
+            await generateImportedNoteSummaries(for: outcome.importedNotes)
+        }
+    }
+
+    private func cancelImport() {
+        importTask?.cancel()
+        importTask = nil
+        importTaskToken = nil
     }
 
     var body: some View {
@@ -136,10 +121,13 @@ struct Sidebar: View {
         List(selection: $takeNoteVMBinding.selectedContainer) {
             Section(
                 content: {
-                    ForEach(sortedSystemFolders, id: \.self) { folder in
+                    ForEach(sortedSystemFolders) { folder in
                         FolderListEntry(
                             folder: folder
                         )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .tag(folder)
                     }
                 }
             )
@@ -170,34 +158,30 @@ struct Sidebar: View {
 
             }
         }
-        /// Add the command registries to the environment so that the list entries can access them
+        // Add the command registries to the environment so list entries can access them.
         .environment(\.containerDeleteRegistry, containerDeleteRegistry)
         .environment(\.containerRenameRegistry, containerRenameRegistry)
         .environment(\.tagSetColorRegistry, tagSetColorRegistry)
-        /// Make the command registries the focused values for this list so that the menubar commands can access them
+        // Expose the same registries to menu commands via focused values.
         .focusedValue(\.containerDeleteRegistry, containerDeleteRegistry)
         .focusedValue(\.containerRenameRegistry, containerRenameRegistry)
         .focusedValue(\.tagSetColorRegistry, tagSetColorRegistry)
-        /// Make the selected container available to the menubar commands so we can use its ID to resolve the correct commands in the
-        /// command registries
+        // Menu commands use the selected container's ID to resolve registered commands.
         .focusedValue(
             \.selectedNoteContainer,
-            takeNoteVMBinding.selectedContainer
+            takeNoteVM.selectedContainer
         )
-        .dropDestination(for: URL.self, isEnabled: true) { items, location in
-            let importResult = folderImport(
-                items: items,
-                modelContext: modelContext,
-                searchIndex: search
-            )
-            importErrorMessage = importResult.toString()
-            showImportError = importResult.errorsEncountered
+        .dropDestination(for: URL.self, isEnabled: true) { items, _ in
+            importDroppedFolders(items)
         }
-        .alert(importErrorMessage, isPresented: $showImportError) {
-            Button("OK") {
-                showImportError.toggle()
-            }
+        .alert("Import Failed", item: $importErrorMessage) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { message in
+            Text(message)
         }
         .listStyle(.sidebar)
+        .onDisappear {
+            cancelImport()
+        }
     }
 }

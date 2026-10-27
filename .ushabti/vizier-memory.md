@@ -1,5 +1,9 @@
 # Vizier Memory
 
+## OS 27 migration update (October 2026)
+
+The audit notes below predate the OS 27 migration and are historical. Current behavior is documented in `.ushabti/docs/architecture.md`, `search-system.md`, and `ai-features.md`. Minimum OS versions are 27. Search uses Core Spotlight and SpotlightSearchTool, with serialized index writes and hidden-note filtering. Chat uses a fresh session per response with explicit visible history. Folder/tag App Entities use encoded saved SwiftData identities rather than names, with no persisted model/schema change. The shared TakeNote scheme includes Swift Testing migration tests with an isolated host and in-memory stores. SQLite/FTS/vector and OS 26 statements below no longer describe current code.
+
 ## Project Context
 
 TakeNote is a multi-platform (macOS, iOS, visionOS) notes app built with SwiftUI and SwiftData, backed by CloudKit sync. It features on-device AI via Apple FoundationModels (Apple Intelligence), a RAG-based chat feature, and a widget extension.

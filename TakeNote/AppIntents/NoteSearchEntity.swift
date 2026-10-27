@@ -19,14 +19,18 @@ struct NoteSearchEntity: IndexedEntity {
     let title: String
     let content: String
     let folderName: String?
+    let tagName: String?
     let createdDate: Date
     let updatedDate: Date
     let isStarred: Bool
 
     var displayRepresentation: DisplayRepresentation {
-        let subtitle = folderName.map { LocalizedStringResource(stringLiteral: $0) }
+        let titleResource: LocalizedStringResource = "\(title)"
+        let subtitle = folderName.map { folderName -> LocalizedStringResource in
+            "\(folderName)"
+        }
         return DisplayRepresentation(
-            title: LocalizedStringResource(stringLiteral: title),
+            title: titleResource,
             subtitle: subtitle,
             image: DisplayRepresentation.Image(named: "AppIcon")
         )
@@ -36,6 +40,7 @@ struct NoteSearchEntity: IndexedEntity {
         let attributes = CSSearchableItemAttributeSet(contentType: .item)
         attributes.title = title
         attributes.displayName = title
+        attributes.subject = title
         attributes.contentDescription = plainTextSummary
         attributes.textContent = plainTextContent
         attributes.keywords = keywords
@@ -56,6 +61,17 @@ struct NoteSearchEntity: IndexedEntity {
         return attributes
     }
 
+    var searchableItem: CSSearchableItem {
+        let item = CSSearchableItem(
+            uniqueIdentifier: id.uuidString,
+            domainIdentifier: NoteSpotlightIndex.domainIdentifier,
+            attributeSet: attributeSet
+        )
+        item.expirationDate = .distantFuture
+        item.associateAppEntity(self)
+        return item
+    }
+
     var urlString: String {
         "takenote://note/\(id.uuidString)"
     }
@@ -71,9 +87,12 @@ struct NoteSearchEntity: IndexedEntity {
     }
 
     private var keywords: [String] {
-        var values = ["TakeNote", "note", title]
+        var values = [title]
         if let folderName {
             values.append(folderName)
+        }
+        if let tagName {
+            values.append(tagName)
         }
         if isStarred {
             values.append("starred")
@@ -88,12 +107,14 @@ struct NoteSearchEntity: IndexedEntity {
         folderName: String?,
         createdDate: Date,
         updatedDate: Date,
-        isStarred: Bool
+        isStarred: Bool,
+        tagName: String? = nil
     ) {
         self.id = id
         self.title = title
         self.content = content
         self.folderName = folderName
+        self.tagName = tagName
         self.createdDate = createdDate
         self.updatedDate = updatedDate
         self.isStarred = isStarred
@@ -107,7 +128,8 @@ struct NoteSearchEntity: IndexedEntity {
             folderName: note.folder?.name,
             createdDate: note.createdDate,
             updatedDate: note.updatedDate,
-            isStarred: note.starred
+            isStarred: note.starred,
+            tagName: note.tag?.name
         )
     }
 }
@@ -139,7 +161,7 @@ struct NoteSearchEntityQuery: EntityStringQuery, EnumerableEntityQuery {
         guard !tokens.isEmpty else { return searchableNotes }
 
         return searchableNotes.filter { note in
-            let haystack = "\(note.title) \(note.content) \(note.folderName ?? "")"
+            let haystack = "\(note.title) \(note.content) \(note.folderName ?? "") \(note.tagName ?? "")"
                 .localizedLowercase
             return tokens.allSatisfy { haystack.contains($0) }
         }

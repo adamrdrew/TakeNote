@@ -13,28 +13,24 @@ struct FileCommands: Commands {
     @FocusedValue(SearchIndexService.self) private var search:
         SearchIndexService?
     @FocusedValue(\.modelContext) private var modelContext: ModelContext?
-    @FocusedValue(\.showDeleteEverything) private var showDeleteEverything : (() -> Void)?
+    @FocusedValue(\.mainWindowActions) private var mainWindowActions:
+        MainWindowActions?
 
-    var vmOrModelContextAreNil: Bool {
+    private var vmOrModelContextAreNil: Bool {
         takeNoteVM == nil || modelContext == nil
     }
 
     var body: some Commands {
-
         CommandGroup(after: .newItem) {
             #if DEBUG && os(macOS)
             Button("Delete Everything", systemImage: "flame") {
-                guard let sde = showDeleteEverything else {
-                    return
-                }
-                sde()
+                mainWindowActions?.showDeleteEverything()
             }
             .disabled(
-                showDeleteEverything == nil
+                mainWindowActions == nil
             )
             #endif
-            
-            /// Create a new note
+
             Button("New Note", systemImage: "note.text.badge.plus") {
                 if let vm = takeNoteVM, let mc = modelContext {
                     if let newNote = vm.addNote(mc) {
@@ -47,7 +43,6 @@ struct FileCommands: Commands {
             )
             .keyboardShortcut("N", modifiers: [.command])
 
-            /// Create a new folder
             Button("New Folder", systemImage: "folder.badge.plus") {
                 if let vm = takeNoteVM, let mc = modelContext {
                     vm.addFolder(mc)
@@ -58,7 +53,6 @@ struct FileCommands: Commands {
             )
             .keyboardShortcut("F", modifiers: [.command])
 
-            /// Create a new tag
             Button("New Tag", systemImage: "tag") {
                 if let vm = takeNoteVM, let mc = modelContext {
                     vm.addTag("New Tag", modelContext: mc)
@@ -69,11 +63,8 @@ struct FileCommands: Commands {
             )
             .keyboardShortcut("T", modifiers: [.command])
 
-            /// Create a new tag
             Button("Empty Trash", systemImage: "trash.slash") {
-                if let vm = takeNoteVM {
-                    vm.showEmptyTrashAlert()
-                }
+                takeNoteVM?.showEmptyTrashAlert()
             }
             .disabled(
                 vmOrModelContextAreNil

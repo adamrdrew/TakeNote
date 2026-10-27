@@ -9,6 +9,7 @@ import WidgetKit
 import SwiftUI
 
 
+#if !os(visionOS)
 struct NewNoteControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(
@@ -22,6 +23,7 @@ struct NewNoteControl: ControlWidget {
         .description("Create a new note in your Inbox.")
     }
 }
+#endif
 
 
 

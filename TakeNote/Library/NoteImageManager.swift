@@ -5,16 +5,15 @@
 //  Created by Adam Drew on 2/27/26.
 //
 
+import Foundation
 import os
 import SwiftData
-import SwiftUI
 
 @MainActor
-@Observable
 final class NoteImageManager {
 
-    var modelContext: ModelContext
-    let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteImageManager")
+    private let modelContext: ModelContext
+    private let logger = Logger(subsystem: "com.adamdrew.takenote", category: "NoteImageManager")
 
     init(modelContext: ModelContext) {
         self.modelContext = modelContext
@@ -26,7 +25,13 @@ final class NoteImageManager {
     /// Culling is lazy and eventually consistent: runs on note deselection and after emptyTrash.
     func cullOrphanedImages() {
         // Fetch all NoteImage records
-        let allImages = (try? modelContext.fetch(FetchDescriptor<NoteImage>())) ?? []
+        let allImages: [NoteImage]
+        do {
+            allImages = try modelContext.fetch(FetchDescriptor<NoteImage>())
+        } catch {
+            logger.error("Failed to fetch NoteImage records: \(error.localizedDescription)")
+            return
+        }
 
         if allImages.isEmpty {
             return
@@ -36,9 +41,15 @@ final class NoteImageManager {
         let activePredicate = #Predicate<Note> {
             $0.folder?.isTrash != true && $0.folder?.isBuffer != true
         }
-        let activeNotes = (try? modelContext.fetch(
-            FetchDescriptor<Note>(predicate: activePredicate)
-        )) ?? []
+        let activeNotes: [Note]
+        do {
+            activeNotes = try modelContext.fetch(
+                FetchDescriptor<Note>(predicate: activePredicate)
+            )
+        } catch {
+            logger.error("Failed to fetch active notes while culling images: \(error.localizedDescription)")
+            return
+        }
 
         // Build the set of all referenced image UUIDs by scanning each note's content
         let imageURLPattern =
@@ -64,8 +75,12 @@ final class NoteImageManager {
         }
 
         if deletedCount > 0 {
-            try? modelContext.save()
-            logger.info("Culled \(deletedCount) orphaned NoteImage record(s).")
+            do {
+                try modelContext.save()
+                logger.info("Culled \(deletedCount) orphaned NoteImage record(s).")
+            } catch {
+                logger.error("Failed to cull orphaned NoteImage records: \(error.localizedDescription)")
+            }
         }
     }
 }

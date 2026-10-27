@@ -5,28 +5,29 @@
 //  Created by Adam Drew on 8/3/25.
 //
 
+import CoreTransferable
 import CryptoKit
+import Foundation
 import FoundationModels
 import os
 import SwiftData
-import SwiftUI
 import UniformTypeIdentifiers
 import WidgetKit
 
 extension UTType {
-    static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
+    nonisolated static let noteID = UTType(exportedAs: "com.adamdrew.takenote.noteid")
 }
 
 enum TakeNoteLanguageModels {
-    static let chat = SystemLanguageModel(useCase: .general)
-    static let contentTagging = SystemLanguageModel(useCase: .contentTagging)
-    static let contentTransformation = SystemLanguageModel(
+    nonisolated static let chat = SystemLanguageModel(useCase: .general)
+    nonisolated static let contentTagging = SystemLanguageModel(useCase: .contentTagging)
+    nonisolated static let contentTransformation = SystemLanguageModel(
         useCase: .general,
         guardrails: .permissiveContentTransformations
     )
-    static let contentTransformationFallback = SystemLanguageModel(useCase: .general)
+    nonisolated static let contentTransformationFallback = SystemLanguageModel(useCase: .general)
 
-    static func profile(
+    nonisolated static func profile(
         instructions: String,
         model: SystemLanguageModel = chat,
         toolCallingMode: GenerationOptions.ToolCallingMode = .disallowed,
@@ -48,41 +49,33 @@ enum TakeNoteLanguageModels {
         .toolCallingMode(toolCallingMode)
     }
 
-    static func instructions(_ text: String) -> Instructions {
+    nonisolated static func instructions(_ text: String) -> Instructions {
         Instructions {
             text
         }
     }
 
-    static func prompt(_ text: String) -> Prompt {
+    nonisolated static func prompt(_ text: String) -> Prompt {
         Prompt {
             text
         }
     }
 }
 
-// Hey!
-// Hey you!
-// If you change model schema remember to bump ckBootstrapVersionCurrent
-// in TakeNoteApp.swift
-//
-// And don't forget to promote to prod!!!
+// If persisted fields change, bump ckBootstrapVersionCurrent in TakeNoteApp.swift,
+// run a DEBUG build to update the CloudKit development schema, then promote it.
 
 struct NoteIDWrapper: Hashable, Codable, Transferable {
     let id: PersistentIdentifier
-    private let snapshot: Data  // eager bytes to avoid work-at-quit
 
     init(id: PersistentIdentifier) {
         self.id = id
-        self.snapshot = (try? JSONEncoder().encode(id)) ?? Data()
     }
 
     static var transferRepresentation: some TransferRepresentation {
         DataRepresentation(contentType: .noteID) { wrapper in
-            // Export: no SwiftData touched during app termination
-            wrapper.snapshot
+            try JSONEncoder().encode(wrapper.id)
         } importing: { data in
-            // Import: decode when pasting (normal app runtime)
             let id = try JSONDecoder().decode(
                 PersistentIdentifier.self,
                 from: data
@@ -93,7 +86,7 @@ struct NoteIDWrapper: Hashable, Codable, Transferable {
 }
 
 @Model
-class Note: Identifiable {
+final class Note: Identifiable {
     var defaultTitle: String = "New Note"
     var title: String = ""
     var content: String = ""
@@ -102,6 +95,14 @@ class Note: Identifiable {
     var starred: Bool = false
     var aiSummary: String = ""
     var contentHash: String = ""
+    // Editor typing updates timestamps without reloading widgets on every keystroke.
+    var editorContent: String {
+        get { content }
+        set {
+            content = newValue
+            updatedDate = Date()
+        }
+    }
     @Transient
     var aiSummaryIsGenerating: Bool = false
     var isEmpty: Bool { return content.isEmpty }
@@ -168,8 +169,8 @@ class Note: Identifiable {
     }
 
     func generateContentHash() -> String {
-        let digest = Insecure.MD5.hash(data: content.data(using: .utf8)!)
-        return digest.map { String(format: "%02hhx", $0) }.joined()
+        let digest = SHA256.hash(data: Data(content.utf8))
+        return digest.map { String(format: "%02x", $0) }.joined()
     }
 
     func contentHasChanged() -> Bool {
@@ -224,6 +225,7 @@ class Note: Identifiable {
                 to: prompt,
                 options: GenerationOptions(samplingMode: .greedy, temperature: 0.0, maximumResponseTokens: 48)
             )
+            guard !Task.isCancelled else { return }
             let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !summary.isEmpty else {
                 Self.logger.warning("AI summary generation returned an empty response.")
@@ -231,6 +233,8 @@ class Note: Identifiable {
             }
             aiSummary = summary
             contentHash = newContentHash
+        } catch is CancellationError {
+            return
         } catch {
             Self.logger.warning("AI summary generation failed: \(error.localizedDescription)")
         }
@@ -246,9 +250,12 @@ class Note: Identifiable {
         let lines = content.components(separatedBy: "\n")
 
         if let firstLine = lines.first, !firstLine.isEmpty {
-            if let attributed = try? AttributedString(markdown: firstLine) {
+            do {
+                let attributed = try AttributedString(markdown: firstLine)
                 let plain = String(attributed.characters)
                 setTitle(plain)
+            } catch {
+                setTitle(firstLine)
             }
         }
         return

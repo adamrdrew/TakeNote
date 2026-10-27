@@ -10,52 +10,61 @@ import SwiftUI
 
 struct FolderListEntry: View {
     @Environment(\.modelContext) private var modelContext
-    @Environment(TakeNoteVM.self) var takeNoteVM
-    @Environment(\.containerRenameRegistry) var containerRenameRegistry
-    @Environment(\.containerDeleteRegistry) var containerDeleteRegistry
-    var folder: NoteContainer
+    @Environment(TakeNoteVM.self) private var takeNoteVM
+    @Environment(\.containerRenameRegistry) private var containerRenameRegistry
+    @Environment(\.containerDeleteRegistry) private var containerDeleteRegistry
+    let folder: NoteContainer
     @Query(
         filter: #Predicate<NoteContainer> { folder in !folder.isTag
         }
-    ) var folders: [NoteContainer]
+    ) private var folders: [NoteContainer]
     @State private var inRenameMode: Bool = false
     @State private var newName: String = ""
     @State private var showEmptyTrashWarning: Bool = false
-    @Query() var allNotes: [Note]
+    @Query() private var allNotes: [Note]
     @State private var showEditDetailsPopover: Bool = false
     @FocusState private var nameInputFocused: Bool
 
     @State private var inDeleteMode: Bool = false
 
-    func startDelete() {
+    private func startDelete() {
         inDeleteMode = true
     }
 
-    func deleteFolder() {
+    private func deleteFolder() {
+        let folderID = folder.persistentModelID
         takeNoteVM.folderDelete(
             folder,
             folders: folders,
             modelContext: modelContext
         )
         modelContext.delete(folder)
-        containerDeleteRegistry.unregisterCommand(id: folder.id)
-        containerRenameRegistry.unregisterCommand(id: folder.id)
-        try? modelContext.save()
+        containerDeleteRegistry?.unregisterCommand(id: folderID)
+        containerRenameRegistry?.unregisterCommand(id: folderID)
+        saveChanges()
     }
 
-    func startRename() {
+    private func startRename() {
         inRenameMode = true
         newName = folder.name
         nameInputFocused = true
     }
 
-    func finishRename() {
+    private func finishRename() {
         inRenameMode = false
         folder.name = newName
-        try? modelContext.save()
+        saveChanges()
     }
 
-    func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
+    private func saveChanges() {
+        do {
+            try modelContext.save()
+        } catch {
+            takeNoteVM.presentError(error.localizedDescription)
+        }
+    }
+
+    private func dropNoteToFolder(_ wrappedIDs: [NoteIDWrapper]) {
         for wrappedID in wrappedIDs {
             let id = wrappedID.id
             // Find the note we're going to move by ID
@@ -75,18 +84,23 @@ struct FolderListEntry: View {
         do {
             try modelContext.save()
         } catch {
+            takeNoteVM.presentError(error.localizedDescription)
             return
         }
         takeNoteVM.onMoveToFolder()
     }
 
-    var noteCount: Int {
+    private var noteCount: Int {
         if folder.isAllNotes {
             return allNotes.filter {
                 $0.folder?.isTrash != true && $0.folder?.isBuffer != true
             }.count
         }
         return folder.notes.count
+    }
+
+    private var folderSymbolColor: Color {
+        return folder.isSystemFolder ? .takeNotePink : folder.getColor()
     }
 
     var body: some View {
@@ -104,16 +118,17 @@ struct FolderListEntry: View {
                     }
             } else {
                 HStack {
-                    Label {
+                    HStack(spacing: 8) {
+                        SidebarContainerIcon(
+                            systemName: folder.getSystemImageName(),
+                            color: folderSymbolColor
+                        )
                         Text(folder.name)
                             .foregroundStyle(.primary)
-                    } icon: {
-                            Image(systemName: folder.getSystemImageName())
-                            .foregroundStyle(folder.isSystemFolder ? .takeNotePink : folder.getColor())
                     }
                     Spacer()
                     HStack {
-                        Text("\(noteCount)")
+                        Text(noteCount, format: .number)
                             .foregroundStyle(.secondary)
                         Image(systemName: "note.text")
                             .foregroundStyle(.secondary)
@@ -122,21 +137,21 @@ struct FolderListEntry: View {
             }
         }
         .onAppear {
-            containerDeleteRegistry.registerCommand(
-                id: folder.id,
+            containerDeleteRegistry?.registerCommand(
+                id: folder.persistentModelID,
                 command: startDelete
             )
-            containerRenameRegistry.registerCommand(
-                id: folder.id,
+            containerRenameRegistry?.registerCommand(
+                id: folder.persistentModelID,
                 command: startRename
             )
         }
         .onDisappear {
-            containerDeleteRegistry.unregisterCommand(
-                id: folder.id
+            containerDeleteRegistry?.unregisterCommand(
+                id: folder.persistentModelID
             )
-            containerRenameRegistry.unregisterCommand(
-                id: folder.id
+            containerRenameRegistry?.unregisterCommand(
+                id: folder.persistentModelID
             )
         }
         .popover(
@@ -203,7 +218,7 @@ struct FolderListEntry: View {
             }
         }
         .alert(
-            "Are you sure you want to empty the trash? This action cannot be undone.",
+            "Empty Trash?",
             isPresented: $showEmptyTrashWarning
         ) {
             Button("Empty Trash", role: .destructive) {
@@ -213,9 +228,11 @@ struct FolderListEntry: View {
             Button("Cancel", role: .cancel) {
                 showEmptyTrashWarning = false
             }
+        } message: {
+            Text("This action cannot be undone.")
         }
         .alert(
-            "Are you sure you want to delete \(folder.name)? Notes in this folder will be moved to the trash.",
+            "Delete Folder?",
             isPresented: $inDeleteMode
         ) {
             Button("Delete", role: .destructive) {
@@ -224,6 +241,11 @@ struct FolderListEntry: View {
             Button("Cancel", role: .cancel) {
                 inDeleteMode = false
             }
+        } message: {
+            Text(
+                "Notes in \(folder.name) will be moved to the trash.",
+                comment: "Folder deletion confirmation message; the variable is the folder name."
+            )
         }
     }
 

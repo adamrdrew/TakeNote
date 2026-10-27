@@ -6,17 +6,12 @@
 //
 
 import SwiftData
-import SwiftUI
 
-// Hey!
-// Hey you!
-// If you change model schema remember to bump ckBootstrapVersionCurrent
-// in TakeNoteApp.swift
-//
-// And don't forget to promote to prod!!!
+// If persisted fields change, bump ckBootstrapVersionCurrent in TakeNoteApp.swift,
+// run a DEBUG build to update the CloudKit development schema, then promote it.
 
 @Model
-class NoteLink {
+final class NoteLink {
     @Relationship(inverse: \Note.outgoingLinks)
     var sourceNote: Note?
     @Relationship(inverse: \Note.incomingLinks)
